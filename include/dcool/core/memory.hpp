@@ -1,6 +1,7 @@
 #ifndef DCOOL_CORE_MEMORY_HPP_INCLUDED_
 #	define DCOOL_CORE_MEMORY_HPP_INCLUDED_ 1
 
+#	include <dcool/core/alignment.hpp>
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/converter.hpp>
 #	include <dcool/core/member_detector.hpp>
@@ -9,7 +10,6 @@
 #	include <dcool/core/type_value_detector.hpp>
 #	include <dcool/core/min.hpp>
 
-#	include <limits>
 #	include <memory>
 #	include <new>
 #	include <stdexcept>
@@ -50,15 +50,6 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 
 namespace dcool::core {
-	constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-	constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
-	constexpr ::dcool::core::Alignment maxRepresentableAlignment =
-		minRepresentableAlignment << (::std::numeric_limits<::dcool::core::Alignment>::digits - 1)
-	;
-	template <::dcool::core::Size sizeC_> constexpr ::dcool::core::Alignment defaultAlignmentFor = alignof(
-		::std::aligned_storage_t<sizeC_>
-	);
-
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
 		return ::std::addressof(toPoint_);
 	}
