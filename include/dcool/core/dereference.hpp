@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_DEREF_HPP_INCLUDED_ 1
 
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/memory.hpp>
 
 namespace dcool::core {
 	template <::dcool::core::Dereferenceable PointerT_> struct Dereferencer {
@@ -26,6 +27,12 @@ namespace dcool::core {
 		const PointerT_& pointer_
 	) noexcept(noexcept(::dcool::core::commonDereferencer(pointer_))) {
 		return ::dcool::core::commonDereferencer(pointer_);
+	}
+
+	template <typename PointerT_> constexpr auto rawPointer(const PointerT_& pointer_) noexcept(
+		noexcept(::dcool::core::addressOf(::dcool::core::dereference(pointer_)))
+	) {
+		return ::dcool::core::addressOf(::dcool::core::dereference(pointer_));
 	}
 }
 

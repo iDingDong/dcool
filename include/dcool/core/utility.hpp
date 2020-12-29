@@ -9,14 +9,23 @@ namespace dcool::core {
 	using ::std::forward;
 	using ::std::move;
 
+	template <typename T_> void relocate(T_& source, void* destination_) noexcept(
+		noexcept(::dcool::core::isNoThrowRelocatable<T_>)
+	) {
+		new (static_cast<T_*>(destination_)) T_(::dcool::core::move(source));
+		source.~T();
+	}
+
 	template <typename T_> concept SwappableByMember = requires (T_ first_, T_ second_) {
 		first_.swapWith(second_);
 	};
 
-	template <typename T_> concept Intelliswappable = ::dcool::core::SwappableByMember<T_> || ::dcool::core::StandardSwappable<T_>;
+	template <typename T_> concept Intelliswappable =
+		::dcool::core::SwappableByMember<T_> || ::dcool::core::StandardSwappable<T_>
+	;
 
 	namespace detail_ {
-		template <typename T_> void intelliswapHelper_(T_& first_, T_& second_) {
+		template <typename T_> void intelliswapHelper_(T_& first_, T_& second_) noexcept(::dcool::core::isNoThrowSwappable<T_>) {
 			using ::std::swap;
 			swap(first_, second_);
 		}

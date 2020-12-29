@@ -922,10 +922,6 @@ namespace dcool::core {
 		}
 	};
 
-	template <::dcool::core::Object ValueT_> using CommonForwardLinkedChassis = ::dcool::core::ForwardLinkedChassis<
-		::dcool::core::ValueNested<ValueT_>
-	>;
-
 	template <
 		::dcool::core::Object ValueT_, ::dcool::core::ForwardLinkedConfigFor<ValueT_> ConfigT_ = ::dcool::core::Empty<>
 	> struct ForwardLinked {
@@ -1074,10 +1070,6 @@ namespace dcool::core {
 			return this->chassis().eraseAfter(this->engine(), position_);
 		}
 	};
-
-	template <::dcool::core::Object ValueT_> using CommonForwardLinked = ::dcool::core::ForwardLinked<
-		::dcool::core::ValueNested<ValueT_>
-	>;
 }
 
 #endif

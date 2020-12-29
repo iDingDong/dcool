@@ -26,6 +26,46 @@ namespace dcool::core {
 		::dcool::core::ConvertibleTo<T_, OtherT_> && ::dcool::core::ConvertibleTo<OtherT_, T_>
 	;
 
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowCopyConstructible =
+		::std::is_nothrow_copy_constructible_v<T_>
+	;
+
+	template <typename T_> concept NoThrowCopyConstructible = ::dcool::core::isNoThrowCopyConstructible<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowCopyAssignable = ::std::is_nothrow_copy_assignable_v<T_>;
+
+	template <typename T_> concept NoThrowCopyAssignable = ::dcool::core::isNoThrowCopyAssignable<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowCopyable =
+		::dcool::core::isNoThrowCopyConstructible<T_> && ::dcool::core::isNoThrowCopyAssignable<T_>
+	;
+
+	template <typename T_> concept NoThrowCopyable = ::dcool::core::isNoThrowCopyable<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMoveConstructible =
+		::std::is_nothrow_move_constructible_v<T_>
+	;
+
+	template <typename T_> concept NoThrowMoveConstructible = ::dcool::core::isNoThrowMoveConstructible<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMoveAssignable = ::std::is_nothrow_move_assignable_v<T_>;
+
+	template <typename T_> concept NoThrowMoveAssignable = ::dcool::core::isNoThrowMoveAssignable<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMovable =
+		::dcool::core::isNoThrowMoveConstructible<T_> && ::dcool::core::isNoThrowMoveAssignable<T_>
+	;
+
+	template <typename T_> concept NoThrowMovable = ::dcool::core::isNoThrowMovable<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowRelocatable = ::dcool::core::isNoThrowMoveConstructible<T_>;
+
+	template <typename T_> concept NoThrowRelocatable = ::dcool::core::isNoThrowRelocatable<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowSwappable = ::std::is_nothrow_swappable_v<T_>;
+
+	template <typename T_> concept NoThrowSwappable = ::dcool::core::isNoThrowSwappable<T_>;
+
 	template <typename T_> concept NonVoid = !::dcool::core::SameAs<T_, void>;
 
 	template <typename T_> concept Const = ::std::is_const_v<T_>;
