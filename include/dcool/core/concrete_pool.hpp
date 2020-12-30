@@ -1,7 +1,7 @@
 #ifndef DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_
 #	define DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_ 1
 
-#	include <dcool/core/alignment.hpp>
+#	include <dcool/core/storage.hpp>
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/memory.hpp>
 
@@ -21,7 +21,7 @@ namespace dcool::core {
 		public: static constexpr ::dcool::core::Alignment maxAlignment= alignmentC_;
 		public: static constexpr ::dcool::core::Alignment defaultAlignment= alignmentC_;
 
-		public: using Length = ::dcool::core::StorableUnsignedIntegerType<maxSize, maxAlignment>;
+		public: using Length = ::dcool::core::IntegerType<unitCount>;
 		public: using Index = Length;
 		public: using UnifiedHandle = Index;
 		public: using UnifiedConstHandle = Index;
@@ -30,7 +30,7 @@ namespace dcool::core {
 		private: using UnitStorage_ = ::dcool::core::AlignedStorage<maxSize, maxAlignment>;
 
 		static_assert(
-			unitCountC_ <= ::std::numeric_limits<Index>::max(),
+			::dcool::core::isStorable<Length, maxSize, maxAlignment>,
 			"'dcool::core::ConcretePool' need chunk suffitient to hold an index."
 		);
 
