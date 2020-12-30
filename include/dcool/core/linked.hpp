@@ -804,17 +804,14 @@ namespace dcool::core {
 		}
 
 		public: constexpr auto begin(Engine& engine_) noexcept -> Iterator {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
 			return fromLight(engine_, this->lightBegin(engine_));
 		}
 
 		public: constexpr auto end(Engine& engine_) const noexcept -> ConstIterator {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
 			return fromLight(engine_, this->lightEnd(engine_));
 		}
 
 		public: constexpr auto end(Engine& engine_) noexcept -> Iterator {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
 			return fromLight(engine_, this->lightEnd(engine_));
 		}
 

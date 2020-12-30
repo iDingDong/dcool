@@ -195,7 +195,9 @@ namespace dcool::core {
 		public: using Index = Length;
 		public: using StorageType = ::dcool::core::StorageFor<Value[capacity_]>;
 		public: using Iterator = Value*;
+		public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
 		public: using ConstIterator = Value const*;
+		public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
 		public: using LightIterator = ::dcool::core::detail_::ArrayLightIterator_<Self_, capacity_>;
 		public: using LightConstIterator = ::dcool::core::detail_::ArrayLightIterator_<Self_ const, capacity_>;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
@@ -277,7 +279,14 @@ namespace dcool::core {
 			}
 		}
 
-		private: constexpr void moveFrom_(Self_&& other_) noexcept(::dcool::core::isNoThrowMovable<Value>) {
+		private: constexpr void moveFrom_(Self_&& other_) noexcept(
+			(
+				exceptionSafetyStrategy.atAnyCost &&
+				(!::dcool::core::isNoThrowMovable<Value>) &&
+				::dcool::core::isNoThrowCopyable<Value>
+			) ||
+			::dcool::core::isNoThrowMovable<Value>
+		) {
 			if constexpr (
 				exceptionSafetyStrategy.atAnyCost &&
 				(!::dcool::core::isNoThrowMovable<Value>) &&
@@ -365,6 +374,23 @@ namespace dcool::core {
 			return this->begin() + this->length();
 		}
 
+		public: constexpr auto reverseBegin() const noexcept -> ReverseConstIterator {
+			return ::dcool::core::makeReverseIterator(this->end());
+		}
+
+		public: constexpr auto reverseBegin() noexcept -> ReverseIterator {
+			return ::dcool::core::makeReverseIterator(this->end());
+		}
+
+		public: constexpr auto reverseEnd() const noexcept -> ReverseConstIterator {
+			return ::dcool::core::makeReverseIterator(this->begin());
+		}
+
+		public: constexpr auto reverseEnd() noexcept -> ReverseIterator {
+			return ::dcool::core::makeReverseIterator(this->begin());
+		}
+
+
 		public: constexpr auto fromLight(LightConstIterator light_) const noexcept -> ConstIterator {
 			return this->begin() + (light_ - this->lightBegin());
 		}
@@ -414,25 +440,20 @@ namespace dcool::core {
 			}
 		}
 
-		private: constexpr void reclaimRoom_(Iterator gapBegin_, Length gapLength_ = 1) noexcept {
-			Difference lengthToMove_ = this->end() - gapBegin_;
-			Iterator beginToMove_ = gapBegin_ + gapLength_;
-			::std::uninitialized_move(beginToMove_, beginToMove_ + lengthToMove_, gapBegin_);
+		// This function will leave the gap uninitialized, making the list invalid.
+		private: constexpr void makeRoom_(
+			Iterator gapBegin_, Length gapLength_ = 1
+		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
+			::dcool::core::batchRelocateForward(gapBegin_, this->end(), gapBegin_ + gapLength_);
+			this->m_length_ += gapLength_;
 		}
 
-		private: constexpr void makeRoom_(Iterator gapBegin_, Length gapLength_ = 1) {
-			Iterator originalEnd_ = this->end();
-			Iterator current_ = originalEnd_;
-			try {
-				while (current_ > gapBegin_) {
-					--current_;
-					::dcool::core::relocate(::dcool::core::dereference(current_), ::dcool::core::rawPointer(current_ + gapLength_));
-				}
-			} catch (...) {
-				this->reclaimRoom_(current_ + 1, gapLength_);
-				throw;
-			}
-			this->m_length_ += gapLength_;
+		// This function is intended for recover a valid state after 'makeRoom_'. Failure of recovery would be considered fatal.
+		private: constexpr void reclaimRoom_(Iterator gapBegin_, Length gapLength_ = 1) noexcept {
+			ReverseIterator reverseBegin_ = this-reverseBegin();
+			::dcool::core::batchRelocateForward(
+				reverseBegin_, ::dcool::core::makeReverseIterator(gapBegin_ + gapLength_), reverseBegin_ + gapLength_
+			);
 		}
 
 		private: static constexpr void batchDestruct_(Iterator begin_, Iterator end_) noexcept {
@@ -450,8 +471,22 @@ namespace dcool::core {
 			batchDestructToEnd_(this->begin());
 		}
 
+		public: constexpr auto insert(Iterator position_, Value&& value_) noexcept(
+			noexcept(::dcool::core::isNoThrowMoveConstructible<Value>)
+		) {
+			this->makeRoom_(position_);
+			try {
+				new (::dcool::core::rawPointer(position_)) Value(::dcool::core::move(value_));
+			} catch (...) {
+				this->reclaimRoom_(position_);
+				throw;
+			}
+		}
+
 		public: template <typename... ArgumentTs__> constexpr auto emplace(
 			Iterator position_, ArgumentTs__&&... parameters_
+		) noexcept(
+			::dcool::core::isNoThrowRelocatable<Value> && noexcept(Value(::dcool::core::forward<ArgumentTs__>(parameters_)...))
 		) -> Iterator {
 			this->makeRoom_(position_);
 			try {
@@ -463,11 +498,15 @@ namespace dcool::core {
 			return position_;
 		}
 
-		public: template <typename... ArgumentTs__> constexpr auto emplaceFront(ArgumentTs__&&... parameters_) -> Iterator {
+		public: template <typename... ArgumentTs__> constexpr auto emplaceFront(ArgumentTs__&&... parameters_) noexcept(
+			::dcool::core::isNoThrowRelocatable<Value> && noexcept(Value(::dcool::core::forward<ArgumentTs__>(parameters_)...))
+		) -> Iterator {
 			return this->emplace(this->begin(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
-		public: template <typename... ArgumentTs__> constexpr auto emplaceback(ArgumentTs__&&... parameters_) -> Iterator {
+		public: template <typename... ArgumentTs__> constexpr auto emplaceback(ArgumentTs__&&... parameters_) noexcept(
+			noexcept(Value(::dcool::core::forward<ArgumentTs__>(parameters_)...))
+		) -> Iterator {
 			return this->emplace(this->end(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
