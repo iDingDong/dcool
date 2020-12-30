@@ -42,6 +42,36 @@ namespace dcool::core {
 
 	template <typename T_> concept NoThrowCopyable = ::dcool::core::isNoThrowCopyable<T_>;
 
+	template <typename T_> constexpr ::dcool::core::Boolean isTriviallyCopyable = ::std::is_trivially_copyable_v<T_>;
+
+	template <typename T_> concept TriviallyCopyable = ::dcool::core::isTriviallyCopyable<T_>;
+
+	template <
+		typename T_, typename... ArgumentTs_
+	> constexpr ::dcool::core::Boolean isTriviallyConstructible = ::std::is_trivially_constructible_v<T_, ArgumentTs_...>;
+
+	template <
+		typename T_, typename... ArgumentTs_
+	> concept TriviallyConstructible = ::dcool::core::isTriviallyConstructible<T_, ArgumentTs_...>;
+
+	template <
+		typename T_
+	> constexpr ::dcool::core::Boolean isTriviallyCopyConstructible = ::std::is_trivially_copy_constructible_v<T_>;
+
+	template <typename T_> concept TriviallyCopyConstructible = ::dcool::core::isTriviallyCopyConstructible<T_>;
+
+	template <
+		typename T_
+	> constexpr ::dcool::core::Boolean isTriviallyMoveConstructible = ::std::is_trivially_move_constructible_v<T_>;
+
+	template <typename T_> concept TriviallyMoveConstructible = ::dcool::core::isTriviallyMoveConstructible<T_>;
+
+	template <
+		typename T_
+	> constexpr ::dcool::core::Boolean isTriviallyRelocatable =::dcool::core::isTriviallyCopyable<T_>;
+
+	template <typename T_> concept TriviallyRelocatable = ::dcool::core::isTriviallyRelocatable<T_>;
+
 	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMoveConstructible =
 		::std::is_nothrow_move_constructible_v<T_>
 	;
