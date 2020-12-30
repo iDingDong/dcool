@@ -69,9 +69,7 @@ namespace dcool::core {
 		}
 
 		// The distiguisher is intended to prevent node or iterator from being convertible between different type of linked.
-		template <
-			typename HandleT_, typename DistinguisherT_ = ::dcool::core::Empty<HandleT_>
-		> struct DefaultForwardLinkedNodeHeader_ {
+		template <typename HandleT_, typename DistinguisherT_ = void> struct DefaultForwardLinkedNodeHeader_ {
 			public: using Handle = HandleT_;
 			private: HandleT_ m_next_;
 
@@ -85,12 +83,10 @@ namespace dcool::core {
 		};
 
 		template <
-			typename HandleT_, typename ValueT_, typename DistinguisherT_ = ::dcool::core::Empty<HandleT_, ValueT_>
-		> struct DefaultForwardLinkedNode_: public ::dcool::core::detail_::DefaultForwardLinkedNodeHeader_<
-			HandleT_, DistinguisherT_
-		> {
+			typename HandleT_, typename ValueT_, typename DistinguisherT_ = void
+		> struct DefaultForwardLinkedNode_: public ::dcool::core::detail_::DefaultForwardLinkedNodeHeader_<HandleT_> {
 			private: using Self_ = DefaultForwardLinkedNode_<HandleT_, ValueT_, DistinguisherT_>;
-			private: using Super_ = ::dcool::core::detail_::DefaultForwardLinkedNodeHeader_<HandleT_, DistinguisherT_>;
+			private: using Super_ = ::dcool::core::detail_::DefaultForwardLinkedNodeHeader_<HandleT_>;
 			public: using Value = ValueT_;
 
 			public: using Header = Super_;
@@ -926,10 +922,6 @@ namespace dcool::core {
 		}
 	};
 
-	template <::dcool::core::Object ValueT_> using CommonForwardLinkedChassis = ::dcool::core::ForwardLinkedChassis<
-		::dcool::core::ValueNested<ValueT_>
-	>;
-
 	template <
 		::dcool::core::Object ValueT_, ::dcool::core::ForwardLinkedConfigFor<ValueT_> ConfigT_ = ::dcool::core::Empty<>
 	> struct ForwardLinked {
@@ -1078,10 +1070,6 @@ namespace dcool::core {
 			return this->chassis().eraseAfter(this->engine(), position_);
 		}
 	};
-
-	template <::dcool::core::Object ValueT_> using CommonForwardLinked = ::dcool::core::ForwardLinked<
-		::dcool::core::ValueNested<ValueT_>
-	>;
 }
 
 #endif

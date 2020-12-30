@@ -80,6 +80,10 @@ namespace dcool::core {
 	template <typename T_> using PointedConstantizedType = ::dcool::core::IdenticallyQualifiedType<
 		::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>, T_
 	>;
+
+	template <typename FirstT_, typename SecondT_> using SmallerType = ::std::conditional_t<
+		sizeof(FirstT_) <= sizeof(SecondT_), FirstT_, SecondT_
+	>::type;
 }
 
 #endif
