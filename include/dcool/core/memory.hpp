@@ -1,7 +1,7 @@
 #ifndef DCOOL_CORE_MEMORY_HPP_INCLUDED_
 #	define DCOOL_CORE_MEMORY_HPP_INCLUDED_ 1
 
-#	include <dcool/core/alignment.hpp>
+#	include <dcool/core/storage.hpp>
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/converter.hpp>
 #	include <dcool/core/member_detector.hpp>
@@ -55,12 +55,6 @@ namespace dcool::core {
 	}
 
 	using BadAllocation = ::std::bad_alloc;
-
-	template <
-		::dcool::core::Size sizeC_, ::dcool::core::Alignment alignmentC_ = ::dcool::core::defaultAlignmentFor<sizeC_>
-	> using AlignedStorage = ::std::aligned_storage_t<sizeC_, alignmentC_>;
-
-	template <::dcool::core::Object ValueT_> using StorageFor = ::dcool::core::AlignedStorage<sizeof(ValueT_), alignof(ValueT_)>;
 
 	template <typename T_> concept ClassicPool = requires (
 		T_ pool_, void* pointer_, ::dcool::core::SizeType<T_> size_, ::dcool::core::Alignment alignment_

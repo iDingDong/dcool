@@ -1,7 +1,7 @@
 #ifndef DCOOL_CORE_HPP_INCLUDED_
 #	define DCOOL_CORE_HPP_INCLUDED_ 1
 
-#	include <dcool/core/alignment.hpp>
+#	include <dcool/core/storage.hpp>
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/concrete_pool.hpp>
 #	include <dcool/core/compare.hpp>
