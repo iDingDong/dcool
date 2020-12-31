@@ -9,14 +9,51 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 
 namespace dcool::core {
-	struct ExceptionSafetyStrategy {
-		::dcool::core::Boolean atAnyCost: 1;
-		::dcool::core::Boolean strongOrTerminate: 1;
+#	if defined(__GNUC__)
+	// TODO: After GCC bug 95291 gets fixed, withdraw this workaround.
+	using ExceptionSafetyStrategy = unsigned char;
+
+	constexpr auto atAnyCost(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept -> ::dcool::core::Boolean {
+		return strategy_ & 0b01;
+	}
+
+	constexpr auto strongOrTerminate(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept -> ::dcool::core::Boolean {
+		return strategy_ & 0b10;
+	}
+
+	template <
+		::dcool::core::Boolean atAnyCostC_ = false,
+		::dcool::core::Boolean strongOrTerminateC_ = false
+	> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+		(atAnyCostC_ ? 0b01 : 0) | (strongOrTerminate ? 0b10 : 0)
+	;
+#	else
+	using ExceptionSafetyStrategy {
+		private: using Self_ = ExceptionSafetyStrategy;
+
+		public: ::dcool::core::Boolean atAnyCost: 1;
+		public: ::dcool::core::Boolean strongOrTerminate: 1;
+
+		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
-	constexpr ::dcool::core::ExceptionSafetyStrategy defaultExceptionSafetyStrategy = {
-		.atAnyCost = false, .strongOrTerminate = false
+	constexpr auto atAnyCost(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept -> ::dcool::core::Boolean {
+		return strategy_.atAnyCost;
+	}
+
+	constexpr auto strongOrTerminate(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept -> ::dcool::core::Boolean {
+		return strategy_.strongOrTerminate;
+	}
+
+	template <
+		::dcool::core::Boolean atAnyCostC_ = false,
+		::dcool::core::Boolean strongOrTerminateC_ = false
+	> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy = {
+		.atAnyCost = atAnyCostC_, .strongOrTerminate = strongOrTerminateC_
 	};
+#	endif
+
+	constexpr ::dcool::core::ExceptionSafetyStrategy defaultExceptionSafetyStrategy = exceptionSafetyStrategy<>;
 
 	template <typename T_> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategyOf =
 		::dcool::core::extractedExceptionSafetyStrategyValue<T_>(defaultExceptionSafetyStrategy)

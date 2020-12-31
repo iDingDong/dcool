@@ -196,13 +196,13 @@ namespace dcool::core {
 		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
 	) noexcept(noexcept(::std::uninitialized_move(begin_, end_, destination_))) -> DestinationIteratorT_ {
 		DestinationIteratorT_ result_;
-		if constexpr (strategyC_.atAnyCost && (!noexcept(::std::uninitialized_move(begin_, end_, destination_)))) {
+		if constexpr (::dcool::core::atAnyCost(strategyC_) && (!noexcept(::std::uninitialized_move(begin_, end_, destination_)))) {
 			result_ = ::std::uninitialized_copy(begin_, end_, destination_);
 		} else {
 			try {
 				result_ = ::std::uninitialized_move(begin_, end_, destination_);
 			} catch (...) {
-				if constexpr (strategyC_.strongOrTerminate()) {
+				if constexpr (::dcool::core::strongOrTerminate(strategyC_)) {
 					::dcool::core::terminate();
 				}
 				throw;
@@ -235,13 +235,13 @@ namespace dcool::core {
 			DestinationIteratorT_ currentDestination_ = destination_;
 			while (current_ != begin_) {
 				try {
-					if constexpr (strategyC_.atAnyCost && (!noexcept(ValueT_(::dcool::core::move(*current_))))) {
+					if constexpr (::dcool::core::atAnyCost(strategyC_) && (!noexcept(ValueT_(::dcool::core::move(*current_))))) {
 						new (::dcool::core::rawPointer(currentDestination_)) ValueT_(*begin_);
 					} else {
 						try {
 							new (::dcool::core::rawPointer(currentDestination_)) ValueT_(::dcool::core::move(*current_));
 						} catch (...) {
-							if (strategyC_.strongOrTerminate) {
+							if (::dcool::core::strongOrTerminate(strategyC_)) {
 								::dcool::core::terminate();
 							}
 							throw;

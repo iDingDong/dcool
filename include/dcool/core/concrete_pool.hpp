@@ -1,9 +1,9 @@
 #ifndef DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_
 #	define DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_ 1
 
-#	include <dcool/core/storage.hpp>
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/memory.hpp>
+#	include <dcool/core/storage.hpp>
 
 #	include <array>
 #	include <limits>
@@ -11,15 +11,11 @@
 
 namespace dcool::core {
 	template <
-		::dcool::core::Length unitCountC_,
-		::dcool::core::Size unitSizeC_,
-		::dcool::core::Size alignmentC_ = ::dcool::core::defaultAlignmentFor<unitSizeC_>
-	> class ConcretePool {
-		private: using Self_ = ConcretePool<unitCountC_, unitSizeC_, alignmentC_>;
+		::dcool::core::Length unitCountC_, ::dcool::core::StorageRequirement unitStorageRequirementC_
+	> class ConcretePinnedPool {
+		private: using Self_ = ConcretePinnedPool<unitCountC_, unitStorageRequirementC_>;
 		public: static constexpr ::dcool::core::Length unitCount = unitCountC_;
-		public: static constexpr ::dcool::core::Size maxSize = unitSizeC_;
-		public: static constexpr ::dcool::core::Alignment maxAlignment= alignmentC_;
-		public: static constexpr ::dcool::core::Alignment defaultAlignment= alignmentC_;
+		public: static constexpr ::dcool::core::StorageRequirement unitStorageRequirement = unitStorageRequirementC_;
 
 		public: using Length = ::dcool::core::IntegerType<unitCount>;
 		public: using Index = Length;
@@ -27,24 +23,26 @@ namespace dcool::core {
 		public: using UnifiedConstHandle = Index;
 		public: using Handle = UnifiedHandle;
 		public: using ConstHandle = UnifiedConstHandle;
-		private: using UnitStorage_ = ::dcool::core::AlignedStorage<maxSize, maxAlignment>;
+		private: using UnitStorage_ = ::dcool::core::AlignedStorage<unitStorageRequirementC_>;
+		public: static constexpr ::dcool::core::Alignment maxAlignment = ::dcool::core::alignment(unitStorageRequirement);
+		public: static constexpr ::dcool::core::Alignment defaultAlignment = ::dcool::core::alignment(unitStorageRequirement);
 
 		static_assert(
-			::dcool::core::isStorable<Length, maxSize, maxAlignment>,
-			"'dcool::core::ConcretePool' need chunk suffitient to hold an index."
+			::dcool::core::isStorable<Length, unitStorageRequirementC_>,
+			"'dcool::core::ConcretePinnedPool' need chunk suffitient to hold an index."
 		);
 
 		private: ::std::array<UnitStorage_, unitCount> m_storage_;
 		private: Index m_first_;
 
-		public: constexpr ConcretePool() noexcept: m_first_(0) {
+		public: constexpr ConcretePinnedPool() noexcept: m_first_(0) {
 			for (Index i = 0; i < unitCount; ++i) {
 				this->link_(i, i + 1);
 			}
 		}
 
-		public: ConcretePool(Self_ const&) = delete;
-		public: ConcretePool(Self_&&) = delete;
+		public: ConcretePinnedPool(Self_ const&) = delete;
+		public: ConcretePinnedPool(Self_&&) = delete;
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
@@ -57,17 +55,15 @@ namespace dcool::core {
 		}
 
 		public: constexpr auto exhausted() const noexcept {
-			return this->m_first_ = unitCount;
+			return this->m_first_ == unitCount;
 		}
 
-		public: template <
-			::dcool::core::Size sizeC__, ::dcool::core::Size alignmentC__ = defaultAlignment
-		> constexpr auto allocate() -> Handle {
-			if constexpr (sizeC__ > maxSize || alignmentC__ > maxAlignment) {
-				throw ::std::bad_alloc("'dcool::core::ConcretePool' cannot provide requested chunk.");
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto allocate() -> Handle {
+			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
+				throw ::std::bad_alloc();
 			}
 			if (this->exhausted()) {
-				throw ::std::bad_alloc("Attempted to allocate from an exhausted 'dcool::core::ConcretePool'.");
+				throw ::std::bad_alloc();
 			}
 			Index result_ = this->m_first_;
 			this->m_first_ = this->nextAvailableOf_(result_);
@@ -75,9 +71,9 @@ namespace dcool::core {
 		}
 
 		public: template <
-			::dcool::core::Size sizeC__, ::dcool::core::Size alignmentC__ = defaultAlignment
-		> constexpr void deallocate(Handle handle_) {
-			if constexpr (sizeC__ > maxSize || alignmentC__ > maxAlignment) {
+			::dcool::core::StorageRequirement storageRequirementC__
+		> constexpr void deallocate(Handle handle_) noexcept {
+			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
 				::dcool::core::terminate();
 			}
 			this->link_(handle_, this->m_first_);
@@ -100,16 +96,63 @@ namespace dcool::core {
 
 		public: using ConstHandleConverter = HandleConverter;
 
-		public: template <
-			::dcool::core::Size sizeC__, ::dcool::core::Size alignmentC__ = defaultAlignment
-		> constexpr auto handleConverter() noexcept {
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto handleConverter() noexcept {
 			return HandleConverter(this);
 		}
 
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto constHandleConverter() noexcept {
+			return this->handleConverter<storageRequirementC__>();
+		}
+	};
+
+	template <
+		::dcool::core::Length unitCountC_,
+		::dcool::core::StorageRequirement unitStorageRequirementC_,
+		typename DistinguisherT_ = void
+	> class ConcreteReferencePool {
+		private: using Self_ = ConcreteReferencePool<unitCountC_, unitStorageRequirementC_, DistinguisherT_>;
+		public: static constexpr ::dcool::core::Length unitCount = unitCountC_;
+		public: static constexpr ::dcool::core::StorageRequirement unitStorageRequirement = unitStorageRequirementC_;
+
+		public: using Nexus = ConcretePinnedPool<unitCount, unitStorageRequirement>;
+		public: using Index = Nexus::Index;
+		public: using UnifiedHandle = Nexus::UnifiedHandle;
+		public: using UnifiedConstHandle = Nexus::UnifiedConstHandle;
+		public: using Handle = Nexus::Handle;
+		public: using ConstHandle = Nexus::ConstHandle;
+		public: using HandleConverter = Nexus::HandleConverter;
+		public: using ConstHandleConverter = Nexus::ConstHandleConverter;
+		public: static constexpr ::dcool::core::Alignment maxAlignment = Nexus::maxAlignment;
+		public: static constexpr ::dcool::core::Alignment defaultAlignment = Nexus::defaultAlignment;
+
+		private: Nexus* m_pinned_;
+
+		public: constexpr ConcreteReferencePool() noexcept: Self_(::dcool::core::instance<Nexus, Self_>) {
+		}
+
+		public: constexpr ConcreteReferencePool(Nexus& pinned_) noexcept: m_pinned_(::dcool::core::addressOf(pinned_)) {
+		}
+
+		public: constexpr auto exhausted() const noexcept {
+			return this->m_pinned_->exhausted();
+		}
+
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto allocate() -> Handle {
+			return this->m_pinned_->template allocate<storageRequirementC__>();
+		}
+
 		public: template <
-			::dcool::core::Size sizeC__, ::dcool::core::Size alignmentC__ = defaultAlignment
-		> constexpr auto constHandleConverter() noexcept {
-			return this->handleConverter();
+			::dcool::core::StorageRequirement storageRequirementC__
+		> constexpr void deallocate(Handle handle_) noexcept {
+			return this->m_pinned_->template deallocate<storageRequirementC__>(handle_);
+		}
+
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto handleConverter() noexcept {
+			return this->m_pinned_->template handleConverter<storageRequirementC__>();
+		}
+
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto constHandleConverter() noexcept {
+			return this->m_pinned_->template constHandleConverter<storageRequirementC__>();
 		}
 	};
 }

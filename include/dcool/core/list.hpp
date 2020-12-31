@@ -230,7 +230,7 @@ namespace dcool::core {
 				try {
 					::std::move(this->begin(), this->end(), other_->begin());
 				} catch (...) {
-					if constexpr (exceptionSafetyStrategy.strongOrTerminate) {
+					if constexpr (::dcool::core::strongOrTerminate(exceptionSafetyStrategy)) {
 						::dcool::core::terminate();
 					}
 					throw;
@@ -256,7 +256,7 @@ namespace dcool::core {
 
 		private: constexpr void copyFrom_(Self_ const& other_) noexcept(::dcool::core::isNoThrowCopyable<Value>) {
 			if constexpr (
-				exceptionSafetyStrategy.atAnyCost &&
+				::dcool::core::atAnyCost(exceptionSafetyStrategy) &&
 				(!::dcool::core::isNoThrowCopyable<Value>) &&
 				::dcool::core::isNoThrowMovable<Value>
 			) {
@@ -270,7 +270,7 @@ namespace dcool::core {
 					this->batchDestructToEnd_(endOfWritten_);
 					::std::uninitialized_copy(endOfCopied_, other_.end(), this->end());
 				} catch (...) {
-					if constexpr (exceptionSafetyStrategy.strongOrTerminate) {
+					if constexpr (::dcool::core::strongOrTerminate(exceptionSafetyStrategy)) {
 						::dcool::core::terminate();
 					}
 					throw;
@@ -281,14 +281,14 @@ namespace dcool::core {
 
 		private: constexpr void moveFrom_(Self_&& other_) noexcept(
 			(
-				exceptionSafetyStrategy.atAnyCost &&
+				::dcool::core::atAnyCost(exceptionSafetyStrategy) &&
 				(!::dcool::core::isNoThrowMovable<Value>) &&
 				::dcool::core::isNoThrowCopyable<Value>
 			) ||
 			::dcool::core::isNoThrowMovable<Value>
 		) {
 			if constexpr (
-				exceptionSafetyStrategy.atAnyCost &&
+				::dcool::core::atAnyCost(exceptionSafetyStrategy) &&
 				(!::dcool::core::isNoThrowMovable<Value>) &&
 				::dcool::core::isNoThrowCopyable<Value>
 			) {
@@ -301,7 +301,7 @@ namespace dcool::core {
 					this->batchDestructToEnd_(endOfWritten_);
 					::std::uninitialized_move(endOfMoved_, other_.end(), this->end());
 				} catch (...) {
-					if constexpr (exceptionSafetyStrategy.strongOrTerminate) {
+					if constexpr (::dcool::core::strongOrTerminate(exceptionSafetyStrategy)) {
 						::dcool::core::terminate();
 					}
 					throw;

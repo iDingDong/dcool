@@ -24,6 +24,8 @@ namespace dcool::core {
 	template <typename... Ts_> struct Empty {
 	};
 
+	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
+
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
 };
