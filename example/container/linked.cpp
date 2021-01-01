@@ -1,3 +1,4 @@
+#include <dcool/container.hpp>
 #include <dcool/core.hpp>
 
 #include <iostream>
@@ -7,7 +8,7 @@ struct Config {
 };
 
 int main(void) {
-	dcool::core::ForwardLinked<int, Config> linked1;
+	dcool::container::ForwardLinked<int, Config> linked1;
 	linked1.emplaceFront(1);
 	linked1.emplaceFront(2);
 	linked1.emplaceFront(3);
@@ -15,7 +16,7 @@ int main(void) {
 		std::cout << i << ", ";
 	}
 	std::cout << std::endl;
-	dcool::core::ForwardLinked<int, Config> linked2 = linked1;
+	dcool::container::ForwardLinked<int, Config> linked2 = linked1;
 	linked1.eraseAfter(linked1.begin());
 	for (int i: linked1) {
 		std::cout << i << ", ";

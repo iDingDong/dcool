@@ -10,8 +10,6 @@
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/functional.hpp>
 #	include <dcool/core/integer.hpp>
-#	include <dcool/core/linked.hpp>
-#	include <dcool/core/list.hpp>
 #	include <dcool/core/member_detector.hpp>
 #	include <dcool/core/memory.hpp>
 #	include <dcool/core/min.hpp>

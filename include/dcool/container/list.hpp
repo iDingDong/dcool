@@ -1,22 +1,13 @@
-#ifndef DCOOL_CORE_LIST_HPP_INCLUDED_
-#	define DCOOL_CORE_LIST_HPP_INCLUDED_ 1
+#ifndef DCOOL_CONTAINER_LIST_HPP_INCLUDED_
+#	define DCOOL_CONTAINER_LIST_HPP_INCLUDED_ 1
 
-#	include <dcool/core/basic.hpp>
-#	include <dcool/core/compare.hpp>
-#	include <dcool/core/dereference.hpp>
-#	include <dcool/core/exception.hpp>
-#	include <dcool/core/integer.hpp>
-#	include <dcool/core/memory.hpp>
-#	include <dcool/core/min.hpp>
-#	include <dcool/core/range.hpp>
-#	include <dcool/core/type_value_detector.hpp>
-#	include <dcool/core/utility.hpp>
+#	include <dcool/core.hpp>
 
 #	include <algorithm>
 #	include <limits>
 #	include <stdexcept>
 
-namespace dcool::core {
+namespace dcool::container {
 	template <typename T_> concept StaticListConfig = true;
 
 	namespace detail_ {
@@ -96,9 +87,9 @@ namespace dcool::core {
 			::dcool::core::RandomAccessRange RangeT_,
 			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
 			typename DistinguisherT_ = void
-		> struct ArrayLightIterator_: private ::dcool::core::detail_::ArrayLightIteratorBase_<maxIndexC_> {
+		> struct ArrayLightIterator_: private ::dcool::container::detail_::ArrayLightIteratorBase_<maxIndexC_> {
 			private: using Self_ = ArrayLightIterator_<RangeT_, maxIndexC_, DistinguisherT_>;
-			private: using Super_ = ::dcool::core::detail_::ArrayLightIteratorBase_<maxIndexC_>;
+			private: using Super_ = ::dcool::container::detail_::ArrayLightIteratorBase_<maxIndexC_>;
 			public: using Range = RangeT_;
 			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
 
@@ -161,7 +152,7 @@ namespace dcool::core {
 	}
 
 	template <
-		typename ValueT_, ::dcool::core::Length capacityC_, ::dcool::core::StaticListConfig ConfigT_ = ::dcool::core::Empty<>
+		typename ValueT_, ::dcool::core::Length capacityC_, ::dcool::container::StaticListConfig ConfigT_ = ::dcool::core::Empty<>
 	> struct StaticList {
 		private: using Self_ = StaticList<ValueT_, capacityC_, ConfigT_>;
 		public: using Value = ValueT_;
@@ -175,8 +166,8 @@ namespace dcool::core {
 		public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
 		public: using ConstIterator = Value const*;
 		public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
-		public: using LightIterator = ::dcool::core::detail_::ArrayLightIterator_<Self_, capacity_>;
-		public: using LightConstIterator = ::dcool::core::detail_::ArrayLightIterator_<Self_ const, capacity_>;
+		public: using LightIterator = ::dcool::container::detail_::ArrayLightIterator_<Self_, capacity_>;
+		public: using LightConstIterator = ::dcool::container::detail_::ArrayLightIterator_<Self_ const, capacity_>;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			::dcool::core::exceptionSafetyStrategyOf<Config>
 		;
@@ -398,22 +389,22 @@ namespace dcool::core {
 
 		private: constexpr void insertionIteratorCheck_(Iterator toCheck_) const noexcept {
 			if (toCheck_ < this->begin() || toCheck_ > this->end()) [[unlikely]] {
-				throw ::std::out_of_range("'dcool::core::StaticList' accessed out of range.");
+				throw ::std::out_of_range("'dcool::container::StaticList' accessed out of range.");
 			}
 		}
 
 		private: constexpr void iteratorCheck_(Iterator toCheck_) const noexcept {
 			if (toCheck_ < this->begin() || toCheck_ >= this->end()) [[unlikely]] {
-				throw ::std::out_of_range("'dcool::core::StaticList' accessed out of range.");
+				throw ::std::out_of_range("'dcool::container::StaticList' accessed out of range.");
 			}
 		}
 
 		private: constexpr void iteratorCheck_(Iterator begin_, Iterator end_) const noexcept {
 			if (begin_ > end_) [[unlikely]] {
-				throw ::std::out_of_range("'dcool::core::StaticList' encountered negative length range.");
+				throw ::std::out_of_range("'dcool::container::StaticList' encountered negative length range.");
 			}
 			if (begin_ < this->begin() || end_ > this->end()) [[unlikely]] {
-				throw ::std::out_of_range("'dcool::core::StaticList' accessed out of range.");
+				throw ::std::out_of_range("'dcool::container::StaticList' accessed out of range.");
 			}
 		}
 
@@ -492,7 +483,7 @@ namespace dcool::core {
 		) -> Iterator {
 			this->insertionIteratorCheck_(position_);
 			if (this->full()) {
-				throw ::std::out_of_range("'dcool::core::StaticList' found no room for insertion.");
+				throw ::std::out_of_range("'dcool::container::StaticList' found no room for insertion.");
 			}
 			return this->emplace(position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
@@ -501,7 +492,7 @@ namespace dcool::core {
 			Iterator position_, ArgumentTs__&&... parameters_
 		) -> Iterator {
 			if (this->full()) {
-				throw ::std::out_of_range("'dcool::core::StaticList' found no room for insertion.");
+				throw ::std::out_of_range("'dcool::container::StaticList' found no room for insertion.");
 			}
 			return this->emplaceFront(::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
@@ -510,7 +501,7 @@ namespace dcool::core {
 			Iterator position_, ArgumentTs__&&... parameters_
 		) -> Iterator {
 			if (this->full()) {
-				throw ::std::out_of_range("'dcool::core::StaticList' found no room for insertion.");
+				throw ::std::out_of_range("'dcool::container::StaticList' found no room for insertion.");
 			}
 			return this->emplaceBack(::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
