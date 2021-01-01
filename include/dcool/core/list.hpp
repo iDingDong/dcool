@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_LIST_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
+#	include <dcool/core/compare.hpp>
 #	include <dcool/core/dereference.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/integer.hpp>
@@ -60,21 +61,9 @@ namespace dcool::core {
 				return static_cast<Difference>(other_.index()) - static_cast<Difference>(this->index());
 			}
 
-			public: constexpr auto equalsTo(Self_ const& other_) const noexcept -> ::dcool::core::Boolean {
-				return this->index() == other_.index();
-			}
-
-			public: static constexpr auto equal(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean {
-				return first_.equalsTo(second_);
-			}
-
-			public: friend constexpr auto operator ==(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean {
-				return equal(first_, second_);
-			}
-
-			public: friend constexpr auto operator !=(
-				Self_ const& first_, Self_ const& second_
-			) noexcept -> ::dcool::core::Boolean = default;
+			public: friend constexpr auto operator <=>(
+				Self_ const&, Self_ const&
+			) noexcept -> ::dcool::core::StrongOrdering = default;
 
 			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
 				this->advance(step_);
@@ -139,21 +128,9 @@ namespace dcool::core {
 				return this->Super_::distanceTo(other_);
 			}
 
-			public: constexpr auto equalsTo(Self_ const& other_) const noexcept -> ::dcool::core::Boolean {
-				return this->Super_::equalsTo(other_);
-			}
-
-			public: static constexpr auto equal(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean {
-				return first_.equalsTo(second_);
-			}
-
-			public: friend constexpr auto operator ==(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean {
-				return equal(first_, second_);
-			}
-
-			public: friend constexpr auto operator !=(
-				Self_ const& first_, Self_ const& second_
-			) noexcept -> ::dcool::core::Boolean = default;
+			public: friend constexpr auto operator <=>(
+				Self_ const&, Self_ const&
+			) noexcept -> ::dcool::core::StrongOrdering = default;
 
 			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
 				this->advance(step_);
