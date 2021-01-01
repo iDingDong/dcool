@@ -14,6 +14,8 @@ namespace dcool::core {
 	using Difference = decltype(::dcool::core::declval<char*>() - ::dcool::core::declval<char*>());
 	using Alignment = decltype(alignof(char));
 	using Length = ::dcool::core::Size;
+	using SignedMaxInteger = ::std::intmax_t;
+	using	UnsignedMaxInteger = ::std::uintmax_t;
 
 	template <typename T_> constexpr auto constantize(T_& input_) -> T_ const& {
 		return input_;
@@ -26,8 +28,9 @@ namespace dcool::core {
 
 	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
 
-	using SignedMaxInteger = ::std::intmax_t;
-	using	UnsignedMaxInteger = ::std::uintmax_t;
+	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
+		return ::std::addressof(toPoint_);
+	}
 };
 
 #endif

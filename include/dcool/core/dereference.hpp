@@ -1,8 +1,8 @@
-#ifndef DCOOL_CORE_DEREF_HPP_INCLUDED_
-#	define DCOOL_CORE_DEREF_HPP_INCLUDED_ 1
+#ifndef DCOOL_CORE_DEREFERENCE_HPP_INCLUDED_
+#	define DCOOL_CORE_DEREFERENCE_HPP_INCLUDED_ 1
 
+#	include <dcool/core/basic.hpp>
 #	include <dcool/core/concept.hpp>
-#	include <dcool/core/memory.hpp>
 
 namespace dcool::core {
 	template <::dcool::core::Dereferenceable PointerT_> struct Dereferencer {

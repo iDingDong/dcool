@@ -11,9 +11,9 @@
 #	include <dcool/core/functional.hpp>
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/member_detector.hpp>
-#	include <dcool/core/memory.hpp>
 #	include <dcool/core/min.hpp>
 #	include <dcool/core/node.hpp>
+#	include <dcool/core/pool.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/storage.hpp>
 #	include <dcool/core/tuple.hpp>
