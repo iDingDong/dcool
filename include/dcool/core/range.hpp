@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_RANGE_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
+#	include <dcool/core/compare.hpp>
 #	include <dcool/core/dereference.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/member_detector.hpp>
@@ -115,37 +116,13 @@ namespace dcool::core {
 			return ::dcool::core::rawPointer(this->iterator);
 		}
 
-		public: friend constexpr auto operator ==(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator !=(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator ==(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator <(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator >(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator <=(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator >=(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
-
-		public: friend constexpr auto operator <=>(
-			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator >(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator <=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator >=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 
 		public: constexpr operator Iterator() const noexcept {
 			return this->iterator;

@@ -209,6 +209,9 @@ namespace dcool::core {
 		public: void deallocate(void* pointer_, Size size_, ::dcool::core::Alignment alignment_) noexcept {
 			::operator delete(pointer_, size_, ::std::align_val_t(alignment_));
 		}
+
+		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
 	template <typename T_> using UnifiedHandleType = ::dcool::core::detail_::ExtractedUnifiedHandleType_<T_, void>;
@@ -456,7 +459,9 @@ namespace dcool::core {
 		::dcool::core::detail_::ArrayPoolWithProperHandle_<T_, storageRequirementC_> &&
 		::dcool::core::Pool<T_, storageRequirementC_> &&
 		requires (
-			T_ pool_, ::dcool::core::detail_::ArrayPoolHandleType_<T_, storageRequirementC_> handle_, ::dcool::core::LengthType<T_> length_
+			T_ pool_,
+			::dcool::core::detail_::ArrayPoolHandleType_<T_, storageRequirementC_> handle_,
+			::dcool::core::LengthType<T_> length_
 		)	{
 			handle_ = pool_.template allocate<storageRequirementC_>(length_);
 			pool_.template deallocate<storageRequirementC_>(handle_, length_);
@@ -733,7 +738,7 @@ namespace dcool::core {
 		public: using Length = ClassicPoolAdaptor_::Size;
 		public: using Difference = ::dcool::core::Difference;
 
-		public: ClassicPool classicPool;
+		public: [[no_unique_address]] ClassicPool classicPool;
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC__
@@ -756,9 +761,12 @@ namespace dcool::core {
 			}
 			return ClassicPoolAdaptor_::deallocate(this->classicPool, handle_, totalSize);
 		}
+
+		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
-	using DefaultPool = ::dcool::core::PoolFromClassic<DefaultClassicPool>;
+	using DefaultPool = ::dcool::core::PoolFromClassic<::dcool::core::DefaultClassicPool>;
 }
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypePool, ExtractedPoolType, Pool)

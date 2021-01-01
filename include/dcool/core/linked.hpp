@@ -397,7 +397,7 @@ namespace dcool::core {
 				return equal(first_, second_);
 			}
 
-			public: friend auto operator !=(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean = default;
+			public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		};
 
 		template <
@@ -493,7 +493,7 @@ namespace dcool::core {
 				return equal(first_, second_);
 			}
 
-			public: friend auto operator !=(Self_ const& first_, Self_ const& second_) noexcept -> ::dcool::core::Boolean = default;
+			public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		};
 
 		template <

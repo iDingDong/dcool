@@ -103,6 +103,12 @@ namespace dcool::core {
 		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto constHandleConverter() noexcept {
 			return this->handleConverter<storageRequirementC__>();
 		}
+
+		public: friend constexpr auto operator ==(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::Boolean {
+			return ::dcool::core::addressOf(left_) == ::dcool::core::addressOf(right_);
+		}
+
+		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
 	template <
@@ -154,6 +160,12 @@ namespace dcool::core {
 		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto constHandleConverter() noexcept {
 			return this->m_pinned_->template constHandleConverter<storageRequirementC__>();
 		}
+
+		public: friend constexpr auto operator ==(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::Boolean {
+			return left_.m_pinned_ == right_.m_pinned_;
+		}
+
+		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 }
 
