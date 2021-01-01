@@ -2,7 +2,6 @@
 #	define DCOOL_CORE_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
-#	include <dcool/core/concrete_pool.hpp>
 #	include <dcool/core/compare.hpp>
 #	include <dcool/core/concept.hpp>
 #	include <dcool/core/converter.hpp>
@@ -13,7 +12,6 @@
 #	include <dcool/core/member_detector.hpp>
 #	include <dcool/core/min.hpp>
 #	include <dcool/core/node.hpp>
-#	include <dcool/core/pool.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/storage.hpp>
 #	include <dcool/core/tuple.hpp>
