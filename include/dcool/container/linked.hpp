@@ -2,6 +2,7 @@
 #	define DCOOL_CONTAINER_LINKED_HPP_INCLUDED_ 1
 
 #	include <dcool/core.hpp>
+#	include <dcool/memory.hpp>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 	dcool::container::detail_, HasTypeDefaultForwardLinkedNode_, ExtractedForwardLinkedNodeType_, ForwardLinkedNode
@@ -122,24 +123,24 @@ namespace dcool::container {
 
 		template <typename ValueT_> struct HandleConverterOfEngineForHelper_ {
 			template <typename EngineT__> static constexpr auto get_(EngineT__& engine_) noexcept {
-				return ::dcool::core::adaptedHandleConverterFor<ValueT_>(engine_.pool);
+				return ::dcool::memory::adaptedHandleConverterFor<ValueT_>(engine_.pool);
 			}
 		};
 
 		template <typename ValueT_> struct HandleConverterOfEngineForHelper_<ValueT_ const> {
 			template <typename EngineT__> static constexpr auto get_(EngineT__& engine_) noexcept {
-				return ::dcool::core::adaptedConstHandleConverterFor<ValueT_>(engine_.pool);
+				return ::dcool::memory::adaptedConstHandleConverterFor<ValueT_>(engine_.pool);
 			}
 		};
 
 		template <typename EngineT_, typename ValueT_> struct UnifiedHandleOf_ {
-			using Result_ = ::dcool::core::PoolAdaptorFor<
+			using Result_ = ::dcool::memory::PoolAdaptorFor<
 				decltype(::dcool::core::declval<EngineT_&>().pool), ValueT_
 			>::UnifiedHandle;
 		};
 
 		template <typename EngineT_, typename ValueT_> struct UnifiedHandleOf_<EngineT_, ValueT_ const> {
-			using Result_ = ::dcool::core::PoolAdaptorFor<
+			using Result_ = ::dcool::memory::PoolAdaptorFor<
 				decltype(::dcool::core::declval<EngineT_&>().pool), ValueT_
 			>::UnifiedConstHandle;
 		};
@@ -496,7 +497,7 @@ namespace dcool::container {
 		> using ForwardLinkedNodeType_ = ::dcool::container::detail_::ExtractedForwardLinkedNodeType_<
 			ConfigT_,
 			::dcool::container::detail_::DefaultForwardLinkedNode_<
-				typename ::dcool::core::PoolType<ConfigT_>::UnifiedHandle, ValueT_, ::dcool::core::Empty<ValueT_, ConfigT_>
+				typename ::dcool::memory::PoolType<ConfigT_>::UnifiedHandle, ValueT_, ::dcool::core::Empty<ValueT_, ConfigT_>
 			>
 		>;
 
@@ -506,7 +507,7 @@ namespace dcool::container {
 			public: using NodeHeader = NodeHeaderT_;
 			public: using Engine = EngineT_;
 
-			private: using PoolAdaptor_ = ::dcool::core::PoolAdaptorFor<Pool, NodeHeader>;
+			private: using PoolAdaptor_ = ::dcool::memory::PoolAdaptorFor<Pool, NodeHeader>;
 			public: using Handle = PoolAdaptor_::UnifiedHandle;
 			public: using ConstHandle = PoolAdaptor_::UnifiedConstHandle;
 			public: using HandleConverter = PoolAdaptor_::HandleConverter;
@@ -561,14 +562,14 @@ namespace dcool::container {
 		};
 
 		template <
-			typename NodeHeaderT_, ::dcool::core::PoolWithBijectiveHandleConverterFor<NodeHeaderT_> PoolT_, typename EngineT_
+			typename NodeHeaderT_, ::dcool::memory::PoolWithBijectiveHandleConverterFor<NodeHeaderT_> PoolT_, typename EngineT_
 		> struct LinkedSentryHolder_<NodeHeaderT_, PoolT_, EngineT_> {
 			private: using Self_ = LinkedSentryHolder_<NodeHeaderT_, PoolT_, EngineT_>;
 			public: using Pool = PoolT_;
 			public: using NodeHeader = NodeHeaderT_;
 			public: using Engine = EngineT_;
 
-			private: using PoolAdaptor_ = ::dcool::core::PoolAdaptorFor<Pool, NodeHeader>;
+			private: using PoolAdaptor_ = ::dcool::memory::PoolAdaptorFor<Pool, NodeHeader>;
 			public: using Handle = PoolAdaptor_::UnifiedHandle;
 			public: using ConstHandle = PoolAdaptor_::UnifiedConstHandle;
 			public: using HandleConverter = PoolAdaptor_::HandleConverter;
@@ -615,7 +616,7 @@ namespace dcool::container {
 			using Config = ConfigT_;
 			using Value = ValueT_;
 
-			using Pool = ::dcool::core::PoolType<Config>;
+			using Pool = ::dcool::memory::PoolType<Config>;
 
 			struct Engine {
 				public: [[no_unique_address]] Pool pool;
@@ -623,8 +624,8 @@ namespace dcool::container {
 
 			using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
 			using ForwardLinkedNodeHeader = ::dcool::core::NodeHeaderType<ForwardLinkedNode>;
-			using PoolAdaptorForForwardLinkedNode = ::dcool::core::PoolAdaptorFor<Pool, ForwardLinkedNode>;
-			using PoolAdaptorForForwardLinkedNodeHeader = ::dcool::core::PoolAdaptorFor<Pool, ForwardLinkedNodeHeader>;
+			using PoolAdaptorForForwardLinkedNode = ::dcool::memory::PoolAdaptorFor<Pool, ForwardLinkedNode>;
+			using PoolAdaptorForForwardLinkedNodeHeader = ::dcool::memory::PoolAdaptorFor<Pool, ForwardLinkedNodeHeader>;
 			using Handle = PoolAdaptorForForwardLinkedNode::UnifiedHandle;
 			using ConstHandle = PoolAdaptorForForwardLinkedNode::UnifiedConstHandle;
 			using HandleConverter = PoolAdaptorForForwardLinkedNode::HandleConverter;
@@ -646,8 +647,8 @@ namespace dcool::container {
 			typename T_, typename ValueT_, typename AdaptorHelperT_ = ForwardLinkedConfigAdaptorHelper_<ValueT_, T_>
 		> concept ForwardLinkedConfigWithAdaptorHelper_ =
 			::dcool::core::Object<ValueT_> &&
-			::dcool::core::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNode> &&
-			::dcool::core::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNodeHeader> &&
+			::dcool::memory::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNode> &&
+			::dcool::memory::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNodeHeader> &&
 			::dcool::core::SameAs<
 				typename AdaptorHelperT_::Value, ::dcool::core::NodeValueType<typename AdaptorHelperT_::ForwardLinkedNode>
 			> &&
