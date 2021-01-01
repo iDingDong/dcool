@@ -2,7 +2,7 @@
 #	define DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_ 1
 
 #	include <dcool/core/integer.hpp>
-#	include <dcool/core/memory.hpp>
+#	include <dcool/core/pool.hpp>
 #	include <dcool/core/storage.hpp>
 
 #	include <array>
