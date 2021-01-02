@@ -795,7 +795,6 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto begin(Engine& engine_) const noexcept -> ConstIterator {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
 			return fromLight(engine_, this->lightBegin(engine_));
 		}
 
@@ -832,8 +831,7 @@ namespace dcool::container {
 		}
 
 		private: static constexpr void destroyNode_(Pool& pool_, Handle nodeHandle_) {
-			HandleConverter converter_ = PoolAdaptorForNode_::handleConverter(pool_);
-			auto node_ = static_cast<Node*>(converter_(nodeHandle_));
+			auto node_ = static_cast<Node*>(PoolAdaptorForNode_::fromHandle(pool_, nodeHandle_));
 			node_->~Node();
 			PoolAdaptorForNode_::deallocate(pool_, nodeHandle_);
 		}
@@ -867,8 +865,9 @@ namespace dcool::container {
 		public: constexpr auto insertNodeAfter(
 			Engine& engine_, LightIterator position_, Handle toInsert_
 		) noexcept -> LightIterator {
-			HandleConverter converter_ = PoolAdaptorForNode_::handleConverter(engine_.pool);
-			return this->insertNodeAfter(engine_, position_, *static_cast<Node*>(converter_(toInsert_)));
+			return this->insertNodeAfter(
+				engine_, position_, *static_cast<Node*>(PoolAdaptorForNode_::fromHandle(engine_.pool, toInsert_))
+			);
 		}
 
 		public: constexpr auto insertNodeAfter(Iterator position_, Node& toInsert_) noexcept -> Iterator {
@@ -897,12 +896,11 @@ namespace dcool::container {
 
 		public: constexpr auto eraseAfter_(Pool& pool_, LightIterator positionBefore_) noexcept -> LightIterator {
 			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(pool_);
-			HandleConverter converter_ = PoolAdaptorForNode_::handleConverter(pool_);
 			NodeHeader& erasedNodeHeader_ = ::dcool::container::detail_::popForwardNodeHeaderAfter_(
 				positionBefore_.nodeHeader(headerConverter_), headerConverter_
 			);
 			destroyNode_(
-				pool_, converter_(static_cast<void*>(::dcool::core::addressOf(Node::retrieveFromHeader(erasedNodeHeader_))))
+				pool_, PoolAdaptorForNode_::toHandle(pool_, ::dcool::core::addressOf(Node::retrieveFromHeader(erasedNodeHeader_)))
 			);
 			return positionBefore_.next(headerConverter_);
 		}

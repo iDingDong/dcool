@@ -517,12 +517,12 @@ namespace dcool::resource {
 
 			public: using UnifiedHandle = ::dcool::resource::UnifiedHandleType<Pool>;
 			public: using UnifiedConstHandle = ::dcool::resource::UnifiedConstHandleType<Pool>;
-			public: using Handle = ::dcool::resource::detail_::PoolHandleType_<Pool, storageRequirementC_>;
 			public: using ConstHandle = ::dcool::resource::detail_::PoolConstHandleType_<Pool, storageRequirementC_>;
-			public: using HandleConverter = ::dcool::resource::detail_::PoolHandleConverterType_<Pool, storageRequirementC_>;
+			public: using Handle = ::dcool::resource::detail_::PoolHandleType_<Pool, storageRequirementC_>;
 			public: using ConstHandleConverter = ::dcool::resource::detail_::PoolConstHandleConverterType_<
 				Pool, storageRequirementC_
 			>;
+			public: using HandleConverter = ::dcool::resource::detail_::PoolHandleConverterType_<Pool, storageRequirementC_>;
 			public: using Difference = ::dcool::core::DifferenceType<Pool>;
 			public: using Size = ::dcool::core::SizeType<Pool>;
 			public: using Length = ::dcool::core::LengthType<Pool>;
@@ -535,12 +535,32 @@ namespace dcool::resource {
 				pool_.template deallocate<storageRequirement>(handle_);
 			}
 
-			public: static constexpr auto handleConverter(Pool& pool_) noexcept {
-				return ::dcool::resource::detail_::handleConverterOfPool_<storageRequirement>(pool_);
+			public: static constexpr void deallocatePointer(Pool& pool_, void* pointer_) noexcept {
+				deallocate(pool_, toHandle(pool_, pointer_));
 			}
 
 			public: static constexpr auto constHandleConverter(Pool& pool_) noexcept {
 				return ::dcool::resource::detail_::constHandleConverterOfPool_<storageRequirement>(pool_);
+			}
+
+			public: static constexpr auto handleConverter(Pool& pool_) noexcept {
+				return ::dcool::resource::detail_::handleConverterOfPool_<storageRequirement>(pool_);
+			}
+
+			public: static constexpr auto toConstHandle(Pool& pool_, void const* pointer_) noexcept -> ConstHandle {
+				return constHandleConverter(pool_)(pointer_);
+			}
+
+			public: static constexpr auto toHandle(Pool& pool_, void* pointer_) noexcept -> Handle {
+				return handleConverter(pool_)(pointer_);
+			}
+
+			public: static constexpr auto fromConstHandle(Pool& pool_, ConstHandle handle_) noexcept -> void const* {
+				return constHandleConverter(pool_)(handle_);
+			}
+
+			public: static constexpr auto fromHandle(Pool& pool_, Handle handle_) noexcept -> void* {
+				return handleConverter(pool_)(handle_);
 			}
 		};
 
@@ -636,7 +656,9 @@ namespace dcool::resource {
 		public: using typename Super_::Handle;
 		public: using Super_::storageRequirement;
 
+		public: using UnifiedArrayConstHandle = ::dcool::resource::UnifiedArrayConstHandleType<Pool>;
 		public: using UnifiedArrayHandle = ::dcool::resource::UnifiedArrayHandleType<Pool>;
+		public: using ArrayConstHandle = ::dcool::resource::detail_::ArrayPoolConstHandleType_<Pool, storageRequirementC_>;
 		public: using ArrayHandle = ::dcool::resource::detail_::ArrayPoolHandleType_<Pool, storageRequirementC_>;
 		public: using ArrayConstHandleConverter =
 			::dcool::resource::detail_::ArrayPoolConstHandleConverterType_<Pool, storageRequirementC_>
@@ -651,20 +673,44 @@ namespace dcool::resource {
 
 		public: using Super_::deallocate;
 
-		static constexpr void deallocate(Pool& pool_, ArrayHandle handle_, Length length_) noexcept {
+		public: static constexpr void deallocate(Pool& pool_, ArrayHandle handle_, Length length_) noexcept {
 			pool_.deallocate<storageRequirement>(handle_, length_);
 		}
 
-		static constexpr auto expandBack(Pool& pool_, ArrayHandle handle_, Length length_, Size extra_) noexcept {
+		public: static constexpr void deallocatePointer(Pool& pool_, void* pointer_, Length length_) noexcept {
+			deallocate(pool_, toArrayHandle(pool_, pointer_), length_);
+		}
+
+		public: static constexpr auto expandBack(Pool& pool_, ArrayHandle handle_, Length length_, Length extra_) noexcept {
 			return ::dcool::resource::detail_::expandBack_<storageRequirement_>(pool_, handle_, length_, extra_);
 		}
 
-		static constexpr auto arrayHandleConverter(Pool& pool_) noexcept {
+		public: static constexpr auto expandBackPointer(Pool& pool_, void* pointer_, Length length_, Length extra_) noexcept {
+			return expandBack(pool_, toArrayHandle(pool_, pointer_), length_, extra_);
+		}
+
+		public: static constexpr auto arrayConstHandleConverter(Pool& pool_) noexcept {
+			return ::dcool::resource::detail_::constHandleConverterOfArrayPool_<storageRequirement>(pool_);
+		}
+
+		public: static constexpr auto arrayHandleConverter(Pool& pool_) noexcept {
 			return ::dcool::resource::detail_::handleConverterOfArrayPool_<storageRequirement>(pool_);
 		}
 
-		static constexpr auto arrayConstHandleConverter(Pool& pool_) noexcept {
-			return ::dcool::resource::detail_::constHandleConverterOfArrayPool_<storageRequirement>(pool_);
+		public: static constexpr auto toArrayConstHandle(Pool& pool_, void const* pointer_) noexcept -> ArrayConstHandle {
+			return arrayConstHandleConverter(pool_)(pointer_);
+		}
+
+		public: static constexpr auto toArrayHandle(Pool& pool_, void* pointer_) noexcept -> ArrayHandle {
+			return arrayHandleConverter(pool_)(pointer_);
+		}
+
+		public: static constexpr auto fromArrayConstHandle(Pool& pool_, ArrayConstHandle handle_) noexcept -> void const* {
+			return arrayConstHandleConverter(pool_)(handle_);
+		}
+
+		public: static constexpr auto fromArrayHandle(Pool& pool_, ArrayHandle handle_) noexcept -> void* {
+			return arrayHandleConverter(pool_)(handle_);
 		}
 	};
 
