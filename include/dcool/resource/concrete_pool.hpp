@@ -58,7 +58,9 @@ namespace dcool::resource {
 			return this->m_first_ == unitCount;
 		}
 
-		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto allocate() -> Handle {
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC__
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle {
 			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
 				throw ::dcool::resource::BadAllocation();
 			}
@@ -143,7 +145,9 @@ namespace dcool::resource {
 			return this->m_pinned_->exhausted();
 		}
 
-		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto allocate() -> Handle {
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC__
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle {
 			return this->m_pinned_->template allocate<storageRequirementC__>();
 		}
 
