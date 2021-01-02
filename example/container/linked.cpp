@@ -1,10 +1,10 @@
 #include <dcool/container.hpp>
-#include <dcool/memory.hpp>
+#include <dcool/resource.hpp>
 
 #include <iostream>
 
 struct Config {
-	using Pool = dcool::memory::ConcreteReferencePool<8, dcool::core::storageRequirement<8, 4>>;
+	using Pool = dcool::resource::ConcreteReferencePool<8, dcool::core::storageRequirement<8, 4>>;
 };
 
 int main(void) {

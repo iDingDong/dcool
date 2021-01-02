@@ -1,7 +1,7 @@
-#ifndef DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_
-#	define DCOOL_CORE_CONCRETE_POOL_HPP_INCLUDED_ 1
+#ifndef DCOOL_RESOURCE_CONCRETE_POOL_HPP_INCLUDED_
+#	define DCOOL_RESOURCE_CONCRETE_POOL_HPP_INCLUDED_ 1
 
-#	include <dcool/memory/pool.hpp>
+#	include <dcool/resource/pool.hpp>
 
 #	include <dcool/core.hpp>
 
@@ -9,7 +9,7 @@
 #	include <limits>
 #	include <stdexcept>
 
-namespace dcool::memory {
+namespace dcool::resource {
 	template <
 		::dcool::core::Length unitCountC_, ::dcool::core::StorageRequirement unitStorageRequirementC_
 	> class ConcretePinnedPool {
@@ -29,7 +29,7 @@ namespace dcool::memory {
 
 		static_assert(
 			::dcool::core::isStorable<Length, unitStorageRequirementC_>,
-			"'dcool::memory::ConcretePinnedPool' need chunk suffitient to hold an index."
+			"'dcool::resource::ConcretePinnedPool' need chunk suffitient to hold an index."
 		);
 
 		private: ::std::array<UnitStorage_, unitCount> m_storage_;
@@ -60,10 +60,10 @@ namespace dcool::memory {
 
 		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto allocate() -> Handle {
 			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
-				throw ::dcool::memory::BadAllocation();
+				throw ::dcool::resource::BadAllocation();
 			}
 			if (this->exhausted()) {
-				throw ::dcool::memory::BadAllocation();
+				throw ::dcool::resource::BadAllocation();
 			}
 			Index result_ = this->m_first_;
 			this->m_first_ = this->nextAvailableOf_(result_);
