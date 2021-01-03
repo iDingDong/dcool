@@ -26,6 +26,16 @@ namespace dcool::core {
 	template <typename... Ts_> struct Empty {
 	};
 
+	namespace detail_ {
+		template <typename... Ts_> struct StandardLayoutBreakerBase_ {
+			private: [[no_unique_address]] ::dcool::core::Empty<Ts_...> m_helper_;
+		};
+	}
+
+	template <typename... Ts_> struct StandardLayoutBreaker: public ::dcool::core::detail_::StandardLayoutBreakerBase_<Ts_...> {
+		private: [[no_unique_address]] ::dcool::core::Empty<Ts_...> m_helper_;
+	};
+
 	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
 
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
