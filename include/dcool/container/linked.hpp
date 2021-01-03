@@ -612,7 +612,7 @@ namespace dcool::container {
 			}
 		};
 
-		template <typename ValueT_, typename ConfigT_> struct ForwardLinkedConfigAdaptorHelper_ {
+		template <typename ConfigT_, typename ValueT_> struct ForwardLinkedConfigAdaptor_ {
 			using Config = ConfigT_;
 			using Value = ValueT_;
 
@@ -644,7 +644,7 @@ namespace dcool::container {
 		};
 
 		template <
-			typename T_, typename ValueT_, typename AdaptorHelperT_ = ForwardLinkedConfigAdaptorHelper_<ValueT_, T_>
+			typename T_, typename ValueT_, typename AdaptorHelperT_ = ForwardLinkedConfigAdaptor_<T_, ValueT_>
 		> concept ForwardLinkedConfigWithAdaptorHelper_ =
 			::dcool::core::Object<ValueT_> &&
 			::dcool::resource::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNode> &&
@@ -659,23 +659,24 @@ namespace dcool::container {
 		;
 	}
 
-	template <typename T_, typename ValueT_> concept ForwardLinkedConfigFor =
+	template <typename T_, typename ValueT_> concept ForwardLinkedConfig =
 		::dcool::container::detail_::ForwardLinkedConfigWithAdaptorHelper_<T_, ValueT_>
 	;
 
 	template <
-		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfigFor<ValueT_> ConfigT_ = ::dcool::core::Empty<>
-	> struct ForwardLinkedConfigAdaptor: ::dcool::container::detail_::ForwardLinkedConfigAdaptorHelper_<ValueT_, ConfigT_> {
-	};
+		typename ConfigT_, typename ValueT_
+	> requires ::dcool::container::ForwardLinkedConfig<ConfigT_, ValueT_> using ForwardLinkedConfigAdaptor =
+		::dcool::container::detail_::ForwardLinkedConfigAdaptor_<ConfigT_, ValueT_>
+	;
 
 	template <
-		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfigFor<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
 	> struct ForwardLinkedChassis {
 		private: using Self_ = ForwardLinkedChassis<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Value, Config>;
+		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Config, Value>;
 		public: using Node = ConfigAdaptor_::ForwardLinkedNode;
 		public: using NodeHeader = ConfigAdaptor_::ForwardLinkedNodeHeader;
 		public: using Pool = ConfigAdaptor_::Pool;
@@ -916,13 +917,13 @@ namespace dcool::container {
 	};
 
 	template <
-		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfigFor<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
 	> struct ForwardLinked {
 		private: using Self_ = ForwardLinked<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Value, Config>;
+		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Config, Value>;
 		public: using Chassis = ::dcool::container::ForwardLinkedChassis<Value, Config>;
 		public: using Node = ConfigAdaptor_::ForwardLinkedNode;
 		public: using NodeHeader = ConfigAdaptor_::ForwardLinkedNodeHeader;
@@ -935,8 +936,9 @@ namespace dcool::container {
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
 
-		private: [[no_unique_address]] mutable Engine m_engine_;
 		private: Chassis m_chassis_;
+		private: [[no_unique_address]] mutable Engine m_engine_;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
 
 		public: constexpr ForwardLinked() noexcept(Chassis::noexceptInitializeable) {
 			this->chassis().initialize(this->engine());

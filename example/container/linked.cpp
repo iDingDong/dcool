@@ -8,6 +8,25 @@ struct Config {
 };
 
 int main(void) {
+	dcool::container::ForwardLinked<int> linkedNormal1;
+	linkedNormal1.emplaceFront(1);
+	linkedNormal1.emplaceFront(2);
+	linkedNormal1.emplaceFront(3);
+	for (int i: linkedNormal1) {
+		std::cout << i << ", ";
+	}
+	std::cout << std::endl;
+	dcool::container::ForwardLinked<int> linkedNormal2 = linkedNormal1;
+	linkedNormal1.eraseAfter(linkedNormal1.begin());
+	for (int i: linkedNormal1) {
+		std::cout << i << ", ";
+	}
+	std::cout << std::endl;
+	for (int i: linkedNormal2) {
+		std::cout << i << ", ";
+	}
+	std::cout << std::endl;
+
 	dcool::container::ForwardLinked<int, Config> linked1;
 	linked1.emplaceFront(1);
 	linked1.emplaceFront(2);
