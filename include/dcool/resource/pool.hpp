@@ -1,14 +1,7 @@
 #ifndef DCOOL_RESOURCE_POOL_HPP_INCLUDED_
 #	define DCOOL_RESOURCE_POOL_HPP_INCLUDED_ 1
 
-#	include <dcool/core/basic.hpp>
-#	include <dcool/core/converter.hpp>
-#	include <dcool/core/member_detector.hpp>
-#	include <dcool/core/storage.hpp>
-#	include <dcool/core/type_difference_detector.hpp>
-#	include <dcool/core/type_size_detector.hpp>
-#	include <dcool/core/type_value_detector.hpp>
-#	include <dcool/core/min.hpp>
+#	include <dcool/core.hpp>
 
 #	include <memory>
 #	include <new>
