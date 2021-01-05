@@ -5,28 +5,28 @@
 #	include <dcool/core/concept.hpp>
 
 namespace dcool::core {
-	template <::dcool::core::Dereferenceable PointerT_> struct Dereferencer {
+	template <::dcool::core::Dereferenceable PointerT_> struct DefaultDereferencerFor {
 		constexpr decltype(auto) operator()(const PointerT_& pointer_) const noexcept(noexcept(*pointer_)) {
 			return *pointer_;
 		}
 	};
 
-	template <typename PointerT_> constexpr ::dcool::core::Dereferencer<PointerT_> dereferencer;
+	template <typename PointerT_> constexpr ::dcool::core::DefaultDereferencerFor<PointerT_> defaultDereferencerFor;
 
-	struct CommonDereferencer {
+	struct DefaultDereferencer {
 		template <typename PointerT_> constexpr decltype(auto) operator()(const PointerT_& pointer_) const noexcept(
-			noexcept(::dcool::core::dereferencer<PointerT_>(pointer_))
+			noexcept(::dcool::core::defaultDereferencerFor<PointerT_>(pointer_))
 		) {
-			return ::dcool::core::dereferencer<PointerT_>(pointer_);
+			return ::dcool::core::defaultDereferencerFor<PointerT_>(pointer_);
 		}
 	};
 
-	constexpr ::dcool::core::CommonDereferencer commonDereferencer;
+	constexpr ::dcool::core::DefaultDereferencer defaultDereferencer;
 
 	template <typename PointerT_> constexpr decltype(auto) dereference(
 		const PointerT_& pointer_
-	) noexcept(noexcept(::dcool::core::commonDereferencer(pointer_))) {
-		return ::dcool::core::commonDereferencer(pointer_);
+	) noexcept(noexcept(::dcool::core::defaultDereferencer(pointer_))) {
+		return ::dcool::core::defaultDereferencer(pointer_);
 	}
 
 	template <typename PointerT_> constexpr auto rawPointer(const PointerT_& pointer_) noexcept(

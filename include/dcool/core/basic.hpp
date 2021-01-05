@@ -16,6 +16,9 @@ namespace dcool::core {
 	using Length = ::dcool::core::Size;
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
+	using NullPointer = decltype(nullptr);
+
+	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
 
 	template <typename T_> constexpr auto constantize(T_& input_) -> T_ const& {
 		return input_;
