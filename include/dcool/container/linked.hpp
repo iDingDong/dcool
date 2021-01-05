@@ -985,7 +985,7 @@ namespace dcool::container {
 			return this->m_chassis_;
 		}
 
-		public: constexpr auto chassis() noexcept -> Chassis& {
+		private: constexpr auto chassis() noexcept -> Chassis& {
 			return this->m_chassis_;
 		}
 

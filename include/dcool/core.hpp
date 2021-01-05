@@ -4,6 +4,7 @@
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/compare.hpp>
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/counter.hpp>
 #	include <dcool/core/converter.hpp>
 #	include <dcool/core/dereference.hpp>
 #	include <dcool/core/exception.hpp>

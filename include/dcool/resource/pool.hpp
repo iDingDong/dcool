@@ -1,14 +1,7 @@
 #ifndef DCOOL_RESOURCE_POOL_HPP_INCLUDED_
 #	define DCOOL_RESOURCE_POOL_HPP_INCLUDED_ 1
 
-#	include <dcool/core/basic.hpp>
-#	include <dcool/core/converter.hpp>
-#	include <dcool/core/member_detector.hpp>
-#	include <dcool/core/storage.hpp>
-#	include <dcool/core/type_difference_detector.hpp>
-#	include <dcool/core/type_size_detector.hpp>
-#	include <dcool/core/type_value_detector.hpp>
-#	include <dcool/core/min.hpp>
+#	include <dcool/core.hpp>
 
 #	include <memory>
 #	include <new>
@@ -68,13 +61,15 @@ namespace dcool::resource {
 			pointer_ = pool_.allocate(size_, alignment_);
 		};
 
-		template <::dcool::resource::ClassicPool PoolT_> auto alignedAllocate_(
+		template <::dcool::resource::ClassicPool PoolT_> [[nodiscard("Might leak memory.")]] constexpr auto alignedAllocate_(
 			PoolT_& pool_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::Alignment alignment_
 		) -> void* {
 			return pool_.allocate(size_);
 		}
 
-		template <::dcool::resource::detail_::AlignedAllocateableClassicPool_ PoolT_> auto alignedAllocate_(
+		template <
+			::dcool::resource::detail_::AlignedAllocateableClassicPool_ PoolT_
+		> [[nodiscard("Might leak memory.")]] constexpr auto alignedAllocate_(
 			PoolT_& pool_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::Alignment alignment_
 		) -> void* {
 			return pool_.allocate(size_, alignment_);
@@ -104,13 +99,17 @@ namespace dcool::resource {
 			{ pool_.expandFront(pointer_, size_, extra_) } -> ::dcool::core::ConvertibleTo<::dcool::core::Boolean>;
 		};
 
-		template <::dcool::resource::ClassicPool PoolT_> constexpr auto expandFront_(
+		template <
+			::dcool::resource::ClassicPool PoolT_
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandFront_(
 			PoolT_& pool_, void* pointer_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::SizeType<PoolT_> extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return false;
 		}
 
-		template <::dcool::resource::detail_::FrontExpandableClassicPool_ PoolT_> constexpr auto expandFront_(
+		template <
+			::dcool::resource::detail_::FrontExpandableClassicPool_ PoolT_
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandFront_(
 			PoolT_& pool_, void* pointer_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::SizeType<PoolT_> extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return pool_.expandFront(pointer_, size_, extra_);
@@ -122,13 +121,17 @@ namespace dcool::resource {
 			{ pool_.expandBack(pointer_, size_, extra_) } -> ::dcool::core::ConvertibleTo<::dcool::core::Boolean>;
 		};
 
-		template <::dcool::resource::ClassicPool PoolT_> constexpr auto expandBack_(
+		template <
+			::dcool::resource::ClassicPool PoolT_
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandBack_(
 			PoolT_& pool_, void* pointer_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::SizeType<PoolT_> extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return false;
 		}
 
-		template <::dcool::resource::detail_::BackExpandableClassicPool_ PoolT_> constexpr auto expandBack_(
+		template <
+			::dcool::resource::detail_::BackExpandableClassicPool_ PoolT_
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandBack_(
 			PoolT_& pool_, void* pointer_, ::dcool::core::SizeType<PoolT_> size_, ::dcool::core::SizeType<PoolT_> extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return pool_.expandBack(pointer_, size_, extra_);
@@ -153,11 +156,13 @@ namespace dcool::resource {
 
 		static_assert(defaultAlignment <= maxAlignment);
 
-		public: static constexpr auto allocate(Pool& pool_, Size size_) -> void* {
+		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(Pool& pool_, Size size_) -> void* {
 			return pool_.allocate(size_);
 		}
 
-		public: static constexpr auto allocate(Pool& pool_, Size size_, ::dcool::core::Alignment alignment_) -> void* {
+		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(
+			Pool& pool_, Size size_, ::dcool::core::Alignment alignment_
+		) -> void* {
 			return ::dcool::resource::detail_::alignedAllocate_(pool_, size_, alignment_);
 		}
 
@@ -171,13 +176,13 @@ namespace dcool::resource {
 			::dcool::resource::detail_::alignedDeallocate_(pool_, pointer_, size_, alignemt_);
 		}
 
-		public: static constexpr auto expandFront(
+		public: [[nodiscard("Might make wrong assumption on result of expand.")]] static constexpr auto expandFront(
 			Pool& pool_, void* pointer_, Size size_, Size extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return ::dcool::resource::detail_::expandFront_(pool_, pointer_, size_, extra_);
 		}
 
-		public: static constexpr auto expandBack(
+		public: [[nodiscard("Might make wrong assumption on result of expand.")]] static constexpr auto expandBack(
 			Pool& pool_, void* pointer_, Size size_, Size extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return ::dcool::resource::detail_::expandBack_(pool_, pointer_, size_, extra_);
@@ -192,11 +197,11 @@ namespace dcool::resource {
 		public: static constexpr ::dcool::core::Alignment maxAlignment = ::dcool::core::maxRepresentableAlignment;
 		public: static constexpr ::dcool::core::Alignment defaultAlignment = ::dcool::core::defaultNewAlignment;
 
-		public: auto allocate(Size size_) -> void* {
+		public: [[nodiscard("Might leak memory.")]] auto allocate(Size size_) -> void* {
 			return ::operator new(size_);
 		}
 
-		public: auto allocate(Size size_, ::dcool::core::Alignment alignment_) -> void* {
+		public: [[nodiscard("Might leak memory.")]] auto allocate(Size size_, ::dcool::core::Alignment alignment_) -> void* {
 			return ::operator new(size_, ::std::align_val_t(alignment_));
 		}
 
@@ -527,8 +532,12 @@ namespace dcool::resource {
 			public: using Size = ::dcool::core::SizeType<Pool>;
 			public: using Length = ::dcool::core::LengthType<Pool>;
 
-			public: static constexpr auto allocate(Pool& pool_) -> Handle {
+			public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(Pool& pool_) -> Handle {
 				return pool_.template allocate<storageRequirement>();
+			}
+
+			public: [[nodiscard("Might leak memory.")]] static constexpr auto allocatePointer(Pool& pool_) -> void* {
+				return fromHandle(pool_, allocate(pool_));
 			}
 
 			public: static constexpr void deallocate(Pool& pool_, Handle handle_) noexcept {
@@ -609,7 +618,7 @@ namespace dcool::resource {
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC_, ::dcool::resource::ArrayPool<storageRequirementC_> PoolT_
-		> constexpr auto expandBack_(
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandBack_(
 			PoolT_& pool_,
 			::dcool::resource::detail_::ArrayPoolHandleType_<PoolT_, storageRequirementC_> handle_,
 			::dcool::core::LengthType<PoolT_> length_,
@@ -621,7 +630,7 @@ namespace dcool::resource {
 		template <
 			::dcool::core::StorageRequirement storageRequirementC_,
 			::dcool::resource::detail_::BackExpandableArrayPool_<storageRequirementC_> PoolT_
-		> constexpr auto expandBack_(
+		> [[nodiscard("Might make wrong assumption on result of expand.")]] constexpr auto expandBack_(
 			PoolT_& pool_,
 			::dcool::resource::detail_::ArrayPoolHandleType_<PoolT_, storageRequirementC_> handle_,
 			::dcool::core::LengthType<PoolT_> length_,
@@ -667,8 +676,12 @@ namespace dcool::resource {
 
 		public: using Super_::allocate;
 
-		static constexpr auto allocate(Pool& pool_, Length length_) -> ArrayHandle {
+		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(Pool& pool_, Length length_) -> ArrayHandle {
 			return pool_.template allocate<storageRequirement>(length_);
+		}
+
+		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocatePointer(Pool& pool_, Length length_) -> void* {
+			return fromArrayHandle(pool_, allocate(pool_, length_));
 		}
 
 		public: using Super_::deallocate;
@@ -681,11 +694,15 @@ namespace dcool::resource {
 			deallocate(pool_, toArrayHandle(pool_, pointer_), length_);
 		}
 
-		public: static constexpr auto expandBack(Pool& pool_, ArrayHandle handle_, Length length_, Length extra_) noexcept {
+		public: [[nodiscard("Might make wrong assumption on result of expand.")]] static constexpr auto expandBack(
+			Pool& pool_, ArrayHandle handle_, Length length_, Length extra_
+		) noexcept {
 			return ::dcool::resource::detail_::expandBack_<storageRequirement_>(pool_, handle_, length_, extra_);
 		}
 
-		public: static constexpr auto expandBackPointer(Pool& pool_, void* pointer_, Length length_, Length extra_) noexcept {
+		public: [[nodiscard("Might make wrong assumption on result of expand.")]] static constexpr auto expandBackPointer(
+			Pool& pool_, void* pointer_, Length length_, Length extra_
+		) noexcept {
 			return expandBack(pool_, toArrayHandle(pool_, pointer_), length_, extra_);
 		}
 
@@ -718,14 +735,28 @@ namespace dcool::resource {
 		PoolT_, ::dcool::core::storageRequirementFor<ValueT_>
 	>;
 
-	template <typename ValueT_, typename PoolT_> constexpr auto adaptedAllocateFor(PoolT_& pool_) {
+	template <
+		typename ValueT_, typename PoolT_
+	> [[nodiscard("Might leak memory.")]] constexpr auto adaptedAllocateFor(PoolT_& pool_) {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::allocate(pool_);
 	}
 
 	template <
+		typename ValueT_, typename PoolT_
+	> [[nodiscard("Might leak memory.")]] constexpr auto adaptedAllocatePointerFor(PoolT_& pool_) {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::allocatePointer(pool_);
+	}
+
+	template <
 		typename ValueT_, typename PoolT_, typename LengthT_
-	> constexpr auto adaptedAllocateFor(PoolT_& pool_, LengthT_ length_) {
+	> [[nodiscard("Might leak memory.")]] constexpr auto adaptedAllocateFor(PoolT_& pool_, LengthT_ length_) {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::allocate(pool_, length_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename LengthT_
+	> [[nodiscard("Might leak memory.")]] constexpr auto adaptedAllocatePointerFor(PoolT_& pool_, LengthT_ length_) {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::allocatePointer(pool_, length_);
 	}
 
 	template <
@@ -735,9 +766,21 @@ namespace dcool::resource {
 	}
 
 	template <
+		typename ValueT_, typename PoolT_
+	> constexpr void adaptedDeallocatePointerFor(PoolT_& pool_, void* pointer_) noexcept {
+		::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::deallocatePointer(pool_, pointer_);
+	}
+
+	template <
 		typename ValueT_, typename PoolT_, typename HandleT_, typename LengthT_
 	> constexpr void adaptedDeallocateFor(PoolT_& pool_, HandleT_ handle_, LengthT_ length_) noexcept {
 		::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::deallocate(pool_, handle_, length_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename LengthT_
+	> constexpr void adaptedDeallocatePointerFor(PoolT_& pool_, void* pointer_, LengthT_ length_) noexcept {
+		::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::deallocatePointer(pool_, pointer_, length_);
 	}
 
 	template <typename ValueT_, typename PoolT_> constexpr auto adaptedHandleConverterFor(PoolT_& pool_) {
@@ -754,6 +797,19 @@ namespace dcool::resource {
 
 	template <typename ValueT_, typename PoolT_> constexpr auto adaptedArrayConstHandleConverterFor(PoolT_& pool_) {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::arrayConstHandleConverter(pool_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename... ArgumentTs_
+	> constexpr auto createPointerByPool(PoolT_& pool_, ArgumentTs_&&... arguments_) {
+		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedAllocatePointerFor<ValueT_>(pool_));
+		try {
+			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(arguments_)...);
+		} catch (...) {
+			::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
+			throw;
+		}
+		return pointer_;
 	}
 
 	template <
@@ -815,7 +871,7 @@ namespace dcool::resource {
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> constexpr auto allocate(Length length_ = 1) noexcept -> Handle {
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate(Length length_ = 1) noexcept -> Handle {
 			Size totalSize = ::dcool::core::size(storageRequirementC__) * length_;
 			if constexpr (::dcool::core::alignment(storageRequirementC__) != ClassicPoolAdaptor_::defaultAlignment) {
 				return ClassicPoolAdaptor_::allocate(this->classicPool, totalSize, ::dcool::core::alignment(storageRequirementC__));
