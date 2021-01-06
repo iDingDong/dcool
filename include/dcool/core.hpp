@@ -17,6 +17,7 @@
 #	include <dcool/core/storage.hpp>
 #	include <dcool/core/tuple.hpp>
 #	include <dcool/core/type_difference_detector.hpp>
+#	include <dcool/core/type_engine_detector.hpp>
 #	include <dcool/core/type_size_detector.hpp>
 #	include <dcool/core/type_transformer.hpp>
 #	include <dcool/core/type_value_detector.hpp>

@@ -613,34 +613,38 @@ namespace dcool::container {
 		};
 
 		template <typename ConfigT_, typename ValueT_> struct ForwardLinkedConfigAdaptor_ {
-			using Config = ConfigT_;
-			using Value = ValueT_;
+			private: using Self_ = ForwardLinkedConfigAdaptor_<ConfigT_, ValueT_>;
+			public: using Config = ConfigT_;
+			public: using Value = ValueT_;
 
-			using Pool = ::dcool::resource::PoolType<Config>;
+			public: using Pool = ::dcool::resource::PoolType<Config>;
 
-			struct Engine {
+			private: struct DefaultEngine_ {
 				public: [[no_unique_address]] Pool pool;
 			};
 
-			using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
-			using ForwardLinkedNodeHeader = ::dcool::core::NodeHeaderType<ForwardLinkedNode>;
-			using PoolAdaptorForForwardLinkedNode = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNode>;
-			using PoolAdaptorForForwardLinkedNodeHeader = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNodeHeader>;
-			using Handle = PoolAdaptorForForwardLinkedNode::UnifiedHandle;
-			using ConstHandle = PoolAdaptorForForwardLinkedNode::UnifiedConstHandle;
-			using HandleConverter = PoolAdaptorForForwardLinkedNode::HandleConverter;
-			using ConstHandleConverter = PoolAdaptorForForwardLinkedNode::ConstHandleConverter;
-			using HeaderHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::HandleConverter;
-			using HeaderConstHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::ConstHandleConverter;
-			using ForwardLinkedIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
+			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
+			static_assert(::dcool::core::isSame<decltype(Engine::pool), Pool>, "User-defined 'Pool' does not match 'Engine::pool'");
+
+			public: using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
+			public: using ForwardLinkedNodeHeader = ::dcool::core::NodeHeaderType<ForwardLinkedNode>;
+			public: using PoolAdaptorForForwardLinkedNode = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNode>;
+			public: using PoolAdaptorForForwardLinkedNodeHeader = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNodeHeader>;
+			public: using Handle = PoolAdaptorForForwardLinkedNode::UnifiedHandle;
+			public: using ConstHandle = PoolAdaptorForForwardLinkedNode::UnifiedConstHandle;
+			public: using HandleConverter = PoolAdaptorForForwardLinkedNode::HandleConverter;
+			public: using ConstHandleConverter = PoolAdaptorForForwardLinkedNode::ConstHandleConverter;
+			public: using HeaderHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::HandleConverter;
+			public: using HeaderConstHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::ConstHandleConverter;
+			public: using ForwardLinkedIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
 				HeaderHandleConverter, Engine, ForwardLinkedNode
 			>;
-			using ForwardLinkedConstIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
+			public: using ForwardLinkedConstIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
 				HeaderConstHandleConverter, Engine, ForwardLinkedNode const
 			>;
-			using ForwardLinkedLightIterator = ForwardLinkedIterator::Light;
-			using ForwardLinkedLightConstIterator = ForwardLinkedConstIterator::Light;
-			using SentryHolder = ::dcool::container::detail_::LinkedSentryHolder_<ForwardLinkedNodeHeader, Pool, Engine>;
+			public: using ForwardLinkedLightIterator = ForwardLinkedIterator::Light;
+			public: using ForwardLinkedLightConstIterator = ForwardLinkedConstIterator::Light;
+			public: using SentryHolder = ::dcool::container::detail_::LinkedSentryHolder_<ForwardLinkedNodeHeader, Pool, Engine>;
 		};
 
 		template <
