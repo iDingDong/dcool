@@ -306,7 +306,7 @@ namespace dcool::resource {
 
 			public: using StrongCountUnderlying = ::dcool::core::IntegerType<maxStrongReferenceCount_>;
 			public: using WeakCountUnderlying =
-				::std::conditional<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
+				::std::conditional_t<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
 			>;
 			private: static constexpr ::dcool::core::CounterScenario counterScenario_ = (
 				atomicallyCounted ? ::dcool::core::CounterScenario::synchronized : ::dcool::core::CounterScenario::logicDependent
@@ -343,7 +343,6 @@ namespace dcool::resource {
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Dismissor = ConfigAdaptor_::Dismissor;
 		public: using Counters = ConfigAdaptor_::Counters;
-		public: friend Dismissor;
 
 		private: Value* m_value_;
 		private: Counters m_counters_;
@@ -359,12 +358,11 @@ namespace dcool::resource {
 			this->m_value_ = ::dcool::core::addressOf(value_);
 		}
 
-		private: constexpr void uninitialize_(ConfigAdaptor_::Dismissor& dismissor_) noexcept {
-			dismissor_(this->value());
+		private: constexpr void invalidate_(Engine& engine_) noexcept {
+			engine_.dismissor(this->value(engine_));
 		}
 
-		private: constexpr void uninitialize_(Engine& engine_) noexcept {
-			this->uninitialize_(engine_.dismissor);
+		public: constexpr void uninitialize(Engine& engine_) noexcept {
 		}
 
 		public: constexpr auto counters(Engine& engine_) const noexcept -> Counters const& {
@@ -385,7 +383,7 @@ namespace dcool::resource {
 
 		public: constexpr auto unrecordStrongReferenceToDestroy(Engine& engine_) noexcept -> ::dcool::core::Boolean {
 			if (this->counters(engine_).strong.decrement() == 0) {
-				this->chassis().uninitialize_(this->engine());
+				this->invalidate_(engine_);
 				if (::dcool::resource::detail_::noWeakCount_(this->counters(engine_))) {
 					return true;
 				}
@@ -427,25 +425,30 @@ namespace dcool::resource {
 		private: using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<Config, Value>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Chassis = ::dcool::resource::SharedAgentChassis<Value, Config>;
+		public: using Dismissor = ConfigAdaptor_::Dismissor;
 		public: using Counters = ConfigAdaptor_::Counters;
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
 		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
 
-		private: constexpr SharedAgent(Value& value_) {
-			this->m_chassis_.initialize(this->engine(), value_);
+		public: constexpr SharedAgent(Value& value_) {
+			this->chassis().initialize(this->engine(), value_);
 		}
 
-		private: template <
+		public: template <
 			::dcool::core::FormOfSame<Engine> EngineT__
 		> constexpr SharedAgent(Value& value_, EngineT__&& engine_): m_engine_(::dcool::core::forward<EngineT__>(engine_)) {
-			this->m_chassis_.initialize(this->engine(), value_);
+			this->chassis().initialize(this->engine(), value_);
 		}
 
 		public: SharedAgent(Self_ const&) = delete;
 		public: constexpr SharedAgent(Self_&&) = delete;
-		private: constexpr ~SharedAgent() noexcept = default;
+
+		public: constexpr ~SharedAgent() noexcept {
+			this->chassis().uninitialize(this->engine());
+		}
+
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: constexpr auto operator =(Self_&&) -> Self_& = delete;
 
@@ -519,6 +522,7 @@ namespace dcool::resource {
 		public: template <typename ValueT__, typename ValueDismissorT__, typename AgentPoolT__> friend constexpr auto wrapToShare(
 			ValueT__& value_, ValueDismissorT__ valueDismissor_, AgentPoolT__ agentPool_
 		);
+		public: template <typename ValueT__> friend constexpr auto wrapToShare(ValueT__& value_);
 
 		private: Intrusive m_intrusive_;
 
@@ -529,7 +533,7 @@ namespace dcool::resource {
 		public: constexpr SharedStrongPointer(::dcool::core::NullPointer) noexcept: Self_() {
 		}
 
-		private: constexpr SharedStrongPointer(Agent& agent_) noexcept: m_intrusive_(agent_) {
+		private: constexpr SharedStrongPointer(Agent& agent_) noexcept: m_intrusive_(::dcool::core::addressOf(agent_)) {
 		}
 
 		public: constexpr ~SharedStrongPointer() noexcept = default;
@@ -587,6 +591,7 @@ namespace dcool::resource {
 	}
 
 	namespace detail_ {
+		// TODO: After GCC bug 61596 gets fixed, withdraw this workaround by defining the config type inside body of 'wrapToShare'.
 		template <typename DismissorT_> struct AgentConfigForWrapToShare_ {
 			using Dismissor = DismissorT_;
 		};
@@ -610,6 +615,11 @@ namespace dcool::resource {
 			}
 		);
 		return ::dcool::resource::SharedStrongPointer<ValueT_, AgentConfig_>(*agentPointer_);
+	}
+
+	template <typename ValueT_> constexpr auto wrapToShare(ValueT_& value_) {
+		auto agentPointer_ = new ::dcool::resource::SharedAgent<ValueT_>(value_);
+		return ::dcool::resource::SharedStrongPointer<ValueT_>(*agentPointer_);
 	}
 }
 
