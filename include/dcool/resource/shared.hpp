@@ -431,6 +431,7 @@ namespace dcool::resource {
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
 
 		private: constexpr SharedAgent(Value& value_) {
 			this->m_chassis_.initialize(this->engine(), value_);
