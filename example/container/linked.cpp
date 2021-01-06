@@ -7,7 +7,7 @@ struct Config {
 	using Pool = dcool::resource::ConcreteReferencePool<8, dcool::core::storageRequirement<8, 4>>;
 };
 
-int main(void) {
+int main() {
 	dcool::container::ForwardLinked<int> linkedNormal1;
 	linkedNormal1.emplaceFront(1);
 	linkedNormal1.emplaceFront(2);
