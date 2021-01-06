@@ -783,20 +783,80 @@ namespace dcool::resource {
 		::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::deallocatePointer(pool_, pointer_, length_);
 	}
 
-	template <typename ValueT_, typename PoolT_> constexpr auto adaptedHandleConverterFor(PoolT_& pool_) {
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_, typename LengthT_
+	> constexpr void adaptedExpandBackFor(PoolT_& pool_, HandleT_ handle_, LengthT_ length_, LengthT_ extra_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::expandBack(pool_, handle_, length_, extra_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename LengthT_
+	> constexpr void adaptedExpandBackPointerFor(PoolT_& pool_, void* pointer_, LengthT_ length_, LengthT_ extra_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::expandBackPointer(pool_, pointer_, length_, extra_);
+	}
+
+	template <typename ValueT_, typename PoolT_> constexpr auto adaptedHandleConverterFor(PoolT_& pool_) noexcept {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::handleConverter(pool_);
 	}
 
-	template <typename ValueT_, typename PoolT_> constexpr auto adaptedConstHandleConverterFor(PoolT_& pool_) {
+	template <typename ValueT_, typename PoolT_> constexpr auto adaptedConstHandleConverterFor(PoolT_& pool_) noexcept {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::constHandleConverter(pool_);
 	}
 
-	template <typename ValueT_, typename PoolT_> constexpr auto adaptedArrayHandleConverterFor(PoolT_& pool_) {
+	template <typename ValueT_, typename PoolT_> constexpr auto adaptedArrayHandleConverterFor(PoolT_& pool_) noexcept {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::arrayHandleConverter(pool_);
 	}
 
-	template <typename ValueT_, typename PoolT_> constexpr auto adaptedArrayConstHandleConverterFor(PoolT_& pool_) {
+	template <typename ValueT_, typename PoolT_> constexpr auto adaptedArrayConstHandleConverterFor(PoolT_& pool_) noexcept {
 		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::arrayConstHandleConverter(pool_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_
+	> constexpr auto adaptedFromConstHandle(PoolT_& pool_, HandleT_ handle_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::fromConstHandle(handle_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_
+	> constexpr auto adaptedFromHandle(PoolT_& pool_, HandleT_ handle_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::fromHandle(handle_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_
+	> constexpr auto adaptedToConstHandle(PoolT_& pool_, void const* pointer_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::toConstHandle(pointer_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_
+	> constexpr auto adaptedToHandle(PoolT_& pool_, void* pointer_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::toHandle(pointer_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_
+	> constexpr auto adaptedFromArrayConstHandle(PoolT_& pool_, HandleT_ handle_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::fromArrayConstHandle(handle_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_
+	> constexpr auto adaptedFromArrayHandle(PoolT_& pool_, HandleT_ handle_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::fromArrayHandle(handle_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_
+	> constexpr auto adaptedToArrayConstHandle(PoolT_& pool_, void const* pointer_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::toArrayConstHandle(pointer_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_
+	> constexpr auto adaptedToArrayHandle(PoolT_& pool_, void* pointer_) noexcept {
+		return ::dcool::resource::PoolAdaptorFor<PoolT_, ValueT_>::toArrayHandle(pointer_);
 	}
 
 	template <

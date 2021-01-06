@@ -2,6 +2,7 @@
 #	define DCOOL_CONTAINER_LIST_HPP_INCLUDED_ 1
 
 #	include <dcool/core.hpp>
+#	include <dcool/resource.hpp>
 
 #	include <algorithm>
 #	include <limits>
@@ -540,6 +541,164 @@ namespace dcool::container {
 		public: constexpr auto cautiousErase(Iterator position_) noexcept -> Iterator {
 			this->iteratorCheck_(position_);
 			return erase(position_);
+		}
+	};
+
+	namespace detail_ {
+		template <typename ConfigT_, typename ValueT_> struct ListConfigAdaptor_ {
+			private: using Self_ = ListConfigAdaptor_<ConfigT_, ValueT_>;
+			public: using Config = ConfigT_;
+			public: using Value = ValueT_;
+
+			public: using Pool = ::dcool::resource::PoolType<Config>;
+
+			private: struct DefaultEngine_ {
+				public: [[no_unique_address]] Pool pool;
+			};
+
+			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
+			static_assert(::dcool::core::isSame<decltype(Engine::pool), Pool>, "User-defined 'Pool' does not match 'Engine::pool'");
+
+			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
+			public: using Handle = PoolAdaptor::Handle;
+			public: using Length = PoolAdaptor::Length;
+			public: using Iterator = Value*;
+			public: using ConstIterator = Value const*;
+			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+				::dcool::core::exceptionSafetyStrategyOf<Config>
+			;
+		};
+	}
+
+	template <typename T_, typename ValueT_> concept ListConfig = ::dcool::resource::ArrayPoolFor<
+		typename ::dcool::container::detail_::ListConfigAdaptor_<T_, ValueT_>::Pool, ValueT_
+	>;
+
+	template <typename ConfigT_, typename ValueT_> requires ::dcool::container::ListConfig<
+		ConfigT_, ValueT_
+	> using ListConfigAdaptor = ::dcool::container::detail_::ListConfigAdaptor_<ConfigT_, ValueT_>;
+
+	template <typename ValueT_, ::dcool::container::ListConfig<ValueT_> ConfigT_> struct ListChassis {
+		private: using Self_ = ListChassis<ValueT_, ConfigT_>;
+		public: using Value = ValueT_;
+		public: using Config = ConfigT_;
+
+		private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Value, Config>;
+		public: using Engine = ConfigAdaptor_::Engine;
+		public: using Handle = ConfigAdaptor_::Handle;
+		public: using Length = ConfigAdaptor_::Length;
+		public: using Iterator = ConfigAdaptor_::Iterator;
+		public: using ConstIterator = ConfigAdaptor_::ConstIterator;
+		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+			ConfigAdaptor_::exceptionSafetyStrategy
+		;
+
+		private: Handle m_storage_;
+		private: Length m_length_;
+		private: Length m_capacity_;
+
+		public: constexpr void initialize(Engine& engine_) noexcept {
+			this->m_length_ = 0;
+			this->m_capacity_ = 0;
+		}
+
+		public: constexpr void initialize(Engine& engine_, Length capacity_) {
+			this->m_length_ = 0;
+			this->m_capacity_ = capacity_;
+			if (capacity_ > 0) {
+				this->m_storage_ = ::dcool::resource::adaptedAllocateFor<Value>(engine_.pool, capacity_);
+			}
+		}
+
+		public: constexpr void uninitialize(Engine& engine_) noexcept {
+			::dcool::core::batchDestruct(this->begin(), this->end());
+			::dcool::resource::adaptedDeallocateFor<Value>(engine_.pool, this->m_storage_, this->capacity());
+		}
+
+		public: constexpr auto length(Engine& engine_) const noexcept -> Length {
+			return this->m_length_;
+		}
+
+		public: constexpr auto capacity(Engine& engine_) const noexcept -> Length {
+			return this->m_capacity_;
+		}
+
+		public: constexpr auto leftOver(Engine& engine_) const noexcept -> Length {
+			return this->capacity(engine_) - this->length(engine_);
+		}
+
+		public: constexpr auto full(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return this->length(engine_) >= this->capacity(engine_);
+		}
+
+		public: constexpr auto data(Engine& engine_) const noexcept -> Value const* {
+			return static_cast<Value const*>(::dcool::resource::adaptedFromArrayHandle<Value>(this->m_storage_));
+		}
+
+		public: constexpr auto data(Engine& engine_) noexcept -> Value* {
+			return static_cast<Value*>(::dcool::resource::adaptedFromArrayHandle<Value>(this->m_storage_));
+		}
+
+		public: constexpr auto begin(Engine& engine_) const noexcept -> ConstIterator {
+			return this->data(engine_);
+		}
+
+		public: constexpr auto begin(Engine& engine_) noexcept -> Iterator {
+			return this->data(engine_);
+		}
+
+		public: constexpr auto end(Engine& engine_) const noexcept -> ConstIterator {
+			return this->begin(engine_) + this->length(engine_);
+		}
+
+		public: constexpr auto end(Engine& engine_) noexcept -> Iterator {
+			return this->begin(engine_) + this->length(engine_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC_ = exceptionSafetyStrategy
+		> constexpr void expandBack(Engine& engine_, Length extra_) {
+			if (extra_ == 0) {
+				return;
+			}
+			if (this->capacity(engine_) == 0) {
+				this->initialize(engine_, extra_);
+				return;
+			}
+			Length newCapacity_ = this->capacity(engine_) + extra_;
+			if (!::dcool::resource::adaptedExpandBackFor<Value>(engine_.pool, this->m_storage_, this->length(engine_), extra_)) {
+				Handle newStorage_ = ::dcool::resource::adaptedAllocateFor<Value>(engine_.pool, newCapacity_);
+				auto newStoragePointer_ = static_cast<Value*>(::dcool::resource::adaptedFromArrayHandle<Value>(newStorage_));
+				try {
+					::dcool::core::batchRelocate<strategyC_>(this->begin(engine_), this->end(engine_), newStoragePointer_);
+				} catch (...) {
+					::dcool::resource::adaptedDeallocateFor<Value>(engine_.pool, newStorage_, newCapacity_);
+					throw;
+				}
+				::dcool::resource::adaptedDeallocateFor<Value>(engine_.pool, this->m_storage_, this->capacity(engine_));
+				this->m_storage_ = newStorage_;
+			}
+			this->m_capacity_ = newCapacity_;
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC_ = exceptionSafetyStrategy
+		> constexpr void reserve(Engine& engine_) {
+			this->expandBack<strategyC_>(engine_, this->capacity() + 1);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC_, ::dcool::core::FormOfSame<Value> ValueT__
+		> constexpr void pushBack(Engine& engine_, ValueT__&& value_) {
+			if (this->full(engine_)) {
+				this->reserve<strategyC_>(engine_);
+			}
+			new (::dcool::core::rawPointer(this->end())) Value(::dcool::core::forward<ValueT__>(value_));
+			++(this->m_length_);
+		}
+
+		public: template <::dcool::core::FormOfSame<Value> ValueT__> constexpr void pushBack(Engine& engine_, ValueT__&& value_) {
+			this->pushBack(engine_, ::dcool::core::forward<ValueT__>(value_));
 		}
 	};
 }
