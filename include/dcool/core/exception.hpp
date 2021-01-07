@@ -25,7 +25,7 @@ namespace dcool::core {
 		::dcool::core::Boolean atAnyCostC_ = false,
 		::dcool::core::Boolean strongOrTerminateC_ = false
 	> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-		(atAnyCostC_ ? 0b01 : 0) | (strongOrTerminate ? 0b10 : 0)
+		(atAnyCostC_ ? 0b01 : 0) | (strongOrTerminateC_ ? 0b10 : 0)
 	;
 #	else
 	using ExceptionSafetyStrategy {
