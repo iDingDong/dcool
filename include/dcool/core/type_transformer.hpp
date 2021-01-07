@@ -1,6 +1,8 @@
 #ifndef DCOOL_CORE_TYPE_TRANSFORMER_HPP_INCLUDED_
 #	define DCOOL_CORE_TYPE_TRANSFORMER_HPP_INCLUDED_ 1
 
+#	include <dcool/core/basic.hpp>
+
 #	include <type_traits>
 
 namespace dcool::core {
