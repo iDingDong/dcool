@@ -316,9 +316,15 @@ namespace dcool::resource {
 				StrongCountUnderlying, WeakCountUnderlying, counterScenario_
 			>;
 
-			public: struct Engine {
+			private: struct DefaultEngine_ {
 				[[no_unique_address]] Dismissor dismissor;
 			};
+
+			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
+			static_assert(
+				::dcool::core::isSame<decltype(Engine::dismissor), Dismissor>,
+				"User-defined 'Dismissor' does not match 'Engine::dismissor'"
+			);
 		};
 	}
 
