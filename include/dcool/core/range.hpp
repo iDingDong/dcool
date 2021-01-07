@@ -15,7 +15,7 @@
 #	include <ranges>
 #	include <cstring>
 
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCatagory, ExtractedIteratorCatagoryType, IteratorCatagory)
+DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCatagory, ExtractedIteratorCatagoryType, IteratorCategory)
 
 namespace dcool::core {
 	using ContiguousIteratorTag = ::std::contiguous_iterator_tag;
@@ -29,7 +29,7 @@ namespace dcool::core {
 	>;
 
 	template <typename IteratorT_> using IteratorCatagoryType = ::dcool::core::ExtractedIteratorCatagoryType<
-		IteratorT_, typename ::std::iterator_traits<IteratorT_>::iterator_catagory
+		IteratorT_, typename ::std::iterator_traits<IteratorT_>::iterator_category
 	>;
 
 	template <typename IteratorT_> using ReverseIterator = ::std::reverse_iterator<IteratorT_>;
@@ -46,13 +46,13 @@ namespace dcool::core {
 		public: using Value = ::dcool::core::IteratorValueType<Iterator>;
 		public: using Pointer = ::std::iterator_traits<Iterator>::pointer;
 		public: using Reference = ::std::iterator_traits<Iterator>::reference;
-		public: using IteratorCatagory = ::dcool::core::IteratorCatagoryType<Iterator>;
+		public: using IteratorCategory = ::dcool::core::IteratorCatagoryType<Iterator>;
 
 		public: using difference_type = Difference;
 		public: using value_type = Value;
 		public: using pointer = Pointer;
 		public: using reference = Reference;
-		public: using iterator_catagory = IteratorCatagory;
+		public: using iterator_category = IteratorCategory;
 
 		public: Iterator iterator;
 
@@ -158,7 +158,8 @@ namespace dcool::core {
 	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
 		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
 		while (begin_ != end_) {
-			(*begin_).~Value_();
+			::dcool::core::dereference(begin_).~Value_();
+			++begin_;
 		}
 	}
 
