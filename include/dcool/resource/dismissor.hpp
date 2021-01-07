@@ -70,11 +70,16 @@ namespace dcool::resource {
 	};
 
 	template <typename PrimaryDismissorT_, typename SecondaryDismissorT_> class MixedDismissor {
-		public: [[no_unique_address]] PrimaryDismissorT_ primaryDismissor;
-		public: [[no_unique_address]] SecondaryDismissorT_ secondaryDismissor;
+		private: using Self_ = MixedDismissor<PrimaryDismissorT_, SecondaryDismissorT_>;
+		public: using PrimaryDismissor = PrimaryDismissorT_;
+		public: using SecondaryDismissor = SecondaryDismissorT_;
+
+		public: [[no_unique_address]] PrimaryDismissor primaryDismissor;
+		public: [[no_unique_address]] SecondaryDismissor secondaryDismissor;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
 
 		public: template <
-			::dcool::core::UnaryArgumentFor<PrimaryDismissorT_> ValueT__
+			::dcool::core::UnaryArgumentFor<PrimaryDismissor> ValueT__
 		> constexpr void operator ()(ValueT__& toDestroy_) noexcept {
 			this->primaryDismissor(toDestroy_);
 		}
