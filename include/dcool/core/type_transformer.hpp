@@ -81,7 +81,11 @@ namespace dcool::core {
 		::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>, T_
 	>;
 
-	template <typename FirstT_, typename SecondT_> using SmallerType = ::std::conditional_t<
+	template <::dcool::core::Boolean predicateC_, typename TrueT_, typename FalseT_> using ConditionalType = ::std::conditional_t<
+		predicateC_, TrueT_, FalseT_
+	>;
+
+	template <typename FirstT_, typename SecondT_> using SmallerType = ::dcool::core::ConditionalType<
 		sizeof(FirstT_) <= sizeof(SecondT_), FirstT_, SecondT_
 	>::type;
 }

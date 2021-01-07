@@ -306,7 +306,7 @@ namespace dcool::resource {
 
 			public: using StrongCountUnderlying = ::dcool::core::IntegerType<maxStrongReferenceCount_>;
 			public: using WeakCountUnderlying =
-				::std::conditional_t<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
+				::dcool::core::ConditionalType<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
 			>;
 			private: static constexpr ::dcool::core::CounterScenario counterScenario_ = (
 				atomicallyCounted ? ::dcool::core::CounterScenario::synchronized : ::dcool::core::CounterScenario::logicDependent
@@ -436,7 +436,7 @@ namespace dcool::resource {
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
-		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
 
 		public: constexpr SharedAgent(Value& value_) {
 			this->chassis().initialize(this->engine(), value_);
@@ -612,7 +612,7 @@ namespace dcool::resource {
 		using AgentConfig_ = ::dcool::resource::detail_::AgentConfigForWrapToShare_<Dismissor_>;
 		using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<AgentConfig_, ValueT_>;
 		using Engine_ = ConfigAdaptor_::Engine;
-		auto agentPointer_ = ::dcool::resource::createPointerByPool<::dcool::resource::SharedAgent<ValueT_, AgentConfig_>>(
+		auto agentPointer_ = ::dcool::resource::createPointerByPoolFor<::dcool::resource::SharedAgent<ValueT_, AgentConfig_>>(
 			agentPool_, value_, Engine_{
 				.dismissor = Dismissor_{
 					.valueDismissor = valueDismissor_,

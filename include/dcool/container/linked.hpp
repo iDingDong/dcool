@@ -722,7 +722,7 @@ namespace dcool::container {
 			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
 			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>& other_
 		) const {
-			other_.initialize(engine_);
+			other_.initialize(otherEngine_);
 			try {
 				LightConstIterator begin_ = this->lightBegin(engine_);
 				LightConstIterator end_ = this->lightEnd(engine_);
@@ -733,7 +733,7 @@ namespace dcool::container {
 					current_ = other_.emplaceAfter(otherEngine_, current_, begin_.dereferenceSelf(engine_));
 				}
 			} catch (...) {
-				other_.uninitialize(engine_);
+				other_.uninitialize(otherEngine_);
 				throw;
 			}
 		}
@@ -942,7 +942,7 @@ namespace dcool::container {
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
-		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
 
 		public: constexpr ForwardLinked() noexcept(Chassis::noexceptInitializeable) {
 			this->chassis().initialize(this->engine());

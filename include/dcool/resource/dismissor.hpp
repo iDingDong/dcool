@@ -76,7 +76,7 @@ namespace dcool::resource {
 
 		public: [[no_unique_address]] PrimaryDismissor primaryDismissor;
 		public: [[no_unique_address]] SecondaryDismissor secondaryDismissor;
-		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standard_layout_breaker_;
+		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
 
 		public: template <
 			::dcool::core::UnaryArgumentFor<PrimaryDismissor> ValueT__
