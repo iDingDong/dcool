@@ -80,7 +80,7 @@ namespace dcool::core {
 	}
 
 	template <typename T_> using PointedConstantizedType = ::dcool::core::IdenticallyQualifiedType<
-		::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>, T_
+		typename ::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>::Result_, T_
 	>;
 
 	template <::dcool::core::Boolean predicateC_, typename TrueT_, typename FalseT_> using ConditionalType = ::std::conditional_t<

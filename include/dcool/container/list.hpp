@@ -186,26 +186,43 @@ namespace dcool::container {
 			public: using Pool = ::dcool::resource::PoolType<Config>;
 
 			private: struct DefaultEngine_ {
-				public: [[no_unique_address]] Pool pool;
+				public: [[no_unique_address]] Pool partPool;
+
+				public: constexpr auto pool() noexcept -> Pool& {
+					return this->partPool;
+				}
 			};
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
-			static_assert(::dcool::core::isSame<decltype(Engine::pool), Pool>, "User-defined 'Pool' does not match 'Engine::pool'");
+			static_assert(
+				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
+				"User-defined 'Pool' does not match return value of 'Engine::listPool'"
+			);
 
 			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
 			public: using Handle = PoolAdaptor::Handle;
 			public: using Length = PoolAdaptor::Length;
 		};
 
-		template <typename ConfigT_, typename ValueT_> struct ListConfigAdaptor_: public ListConfigAdaptorBase_<
+		template <
+			typename ConfigT_, typename ValueT_
+		> struct ListConfigAdaptor_: public ::dcool::container::detail_::ListConfigAdaptorBase_<
 			::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::container::dynamicExtent),
 			ConfigT_,
 			ValueT_
 		> {
 			private: using Self_ = ListConfigAdaptor_<ConfigT_, ValueT_>;
+			private: using Super_ = ::dcool::container::detail_::ListConfigAdaptorBase_<
+				::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::container::dynamicExtent),
+				ConfigT_,
+				ValueT_
+			>;
 			public: using Config = ConfigT_;
 			public: using Value = ValueT_;
 
+			public: using typename Super_::Length;
+
+			public: using Index = Length;
 			public: using Iterator = Value*;
 			public: using ConstIterator = Value const*;
 			public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
@@ -261,23 +278,28 @@ namespace dcool::container {
 			public: constexpr void initialize(Engine& engine_, Length capacity_) {
 				this->m_capacity_ = capacity_;
 				if (capacity_ > 0) {
-					this->m_storage_ = ::dcool::resource::adaptedAllocateFor<Value>(engine_.pool, capacity_);
+					this->m_storage_ = ::dcool::resource::adaptedAllocateFor<Value>(engine_.pool(), capacity_);
 					return;
 				}
 				if constexpr (::dcool::resource::PoolWithBijectiveHandleConverter<Pool, ::dcool::core::storageRequirementFor<Value>>) {
-					this->m_storage_ = ::dcool::resource::adaptedToArrayHandleFor<Value>(engine_.pool, ::dcool::core::nullPointer);
+					this->m_storage_ = ::dcool::resource::adaptedToArrayHandleFor<Value>(engine_.pool(), ::dcool::core::nullPointer);
 				}
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
 				if (this->m_capacity_ > 0) {
-					::dcool::resource::adaptedDeallocateFor<Value>(engine_.pool, this->m_storage_, this->capacity(engine_));
+					::dcool::resource::adaptedDeallocateFor<Value>(engine_.pool(), this->m_storage_, this->capacity(engine_));
 				}
 			}
 
 			public: constexpr void relocateTo(Self_& other_) noexcept {
 				other_.m_storage_ = this->m_storage_;
 				other_.m_capacity_ = this->m_capacity_;
+			}
+
+			public: constexpr void swapWith(Self_& other_) noexcept {
+				::dcool::core::intelliswap(this->m_storage_, other_.m_storage_);
+				::dcool::core::intelliswap(this->m_capacity_, other_.m_capacity_);
 			}
 
 			public: constexpr auto capacity(Engine& engine_) const noexcept -> Length {
@@ -290,15 +312,15 @@ namespace dcool::container {
 						return ::dcool::core::nullPointer;
 					}
 				}
-				return static_cast<Value const*>(::dcool::resource::adaptedFromArrayHandleFor<Value>(engine_.pool, this->m_storage_));
+				return static_cast<Value const*>(::dcool::resource::adaptedFromArrayHandleFor<Value>(engine_.pool(), this->m_storage_));
 			}
 
 			public: constexpr auto data(Engine& engine_) noexcept -> Value* {
-				return static_cast<Value*>(::dcool::resource::adaptedFromArrayHandleFor<Value>(engine_.pool, this->m_storage_));
+				return static_cast<Value*>(::dcool::resource::adaptedFromArrayHandleFor<Value>(engine_.pool(), this->m_storage_));
 			}
 
 			public: constexpr auto expandBack(Engine& engine_, Length extra_ = 1) -> ::dcool::core::Boolean {
-				if (::dcool::resource::adaptedExpandBackFor<Value>(engine_.pool, this->m_storage_, this->capacity(engine_), extra_)) {
+				if (::dcool::resource::adaptedExpandBackFor<Value>(engine_.pool(), this->m_storage_, this->capacity(engine_), extra_)) {
 					this->m_capacity_ += extra_;
 					return true;
 				}
@@ -374,6 +396,7 @@ namespace dcool::container {
 		private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Config, Value>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Length = ConfigAdaptor_::Length;
+		public: using Index = ConfigAdaptor_::Index;
 		public: using Iterator = ConfigAdaptor_::Iterator;
 		public: using ConstIterator = ConfigAdaptor_::ConstIterator;
 		public: using ReverseIterator = ConfigAdaptor_::ReverseIterator;
@@ -447,6 +470,45 @@ namespace dcool::container {
 			} catch (...) {
 				other_.uninitialize(otherEngine_);
 				throw;
+			}
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void swapWith(Self_& other_) noexcept {
+			if constexpr (!capacityFixed) {
+				this->m_storage_.swapWith(other_.m_storage_);
+			} else {
+				if constexpr (::dcool::core::atAnyCost(strategyC__)) {
+				} else {
+					Length commonLength_ = ::dcool::core::min(this->m_length_, other_.m_length_);
+					auto selfBegin_ = this->m_storage_.data();
+					auto otherBegin_ = other_.m_storage_.data();
+					Index index_ = 0;
+					try {
+						while (index_ < commonLength_) {
+							::dcool::core::intelliswap(selfBegin_[index_], otherBegin_[index_]);
+						}
+						// At least one of the following call of 'batchRelocate' will be no-op.
+						::dcool::core::batchRelocate<strategyC__>(
+							selfBegin_ + commonLength_, selfBegin_ + this->m_length_, otherBegin_ + commonLength_
+						);
+						::dcool::core::batchRelocate<strategyC__>(
+							otherBegin_ + commonLength_, otherBegin_ + other_.m_length_, selfBegin_ + commonLength_
+						);
+						::dcool::core::intelliswap(this->m_length_, other_.m_length_);
+					} catch (...) {
+						try {
+							while (index_ > 0) {
+								--index_;
+								::dcool::core::intelliswap(selfBegin_[index_], otherBegin_[index_]);
+							}
+						} catch (...) {
+							::dcool::core::goWeak<strategyC__>();
+						}
+						throw;
+					}
+				}
 			}
 		}
 
@@ -607,10 +669,7 @@ namespace dcool::container {
 								try {
 									::std::move(newStorage_.data(engine_), newPosition_, this->begin(engine_));
 								} catch(...) {
-									if constexpr (::dcool::core::strongOrTerminate(strategyC__)) {
-										::dcool::core::terminate();
-									}
-									throw;
+									::dcool::core::goWeak<strategyC__>();
 								}
 								::dcool::core::batchDestruct(newStorage_.data(engine_), newPosition_);
 								throw;
@@ -689,9 +748,7 @@ namespace dcool::container {
 				try {
 					::std::move(position_ + 1, this->end(engine_), position_);
 				} catch(...) {
-					if constexpr (::dcool::core::strongOrTerminate(strategyC__)) {
-						::dcool::core::terminate();
-					}
+					::dcool::core::goWeak<strategyC__>();
 					throw;
 				}
 				this->popBack(engine_);
@@ -736,6 +793,23 @@ namespace dcool::container {
 
 		public: constexpr ~List() noexcept {
 			this->chassis().uninitialize(this->engine());
+		}
+
+		public: constexpr auto operator =(Self_ const& other_) -> Self_& {
+			Self_ middleMan_(other_);
+			this->swapWith(middleMan_);
+			return *this;
+		}
+
+		public: constexpr auto operator =(Self_&& other_) -> Self_& {
+			Self_ middleMan_(::dcool::core::move(other_));
+			this->swapWith(middleMan_);
+			return *this;
+		}
+
+		public: constexpr void swapWith(Self_& other_) {
+			this->chassis().swapWith(other_.chassis());
+			::dcool::core::intelliswap(this->engine(), other_.engine());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {

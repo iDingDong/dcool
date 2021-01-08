@@ -58,6 +58,12 @@ namespace dcool::core {
 	template <typename T_> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategyOf =
 		::dcool::core::extractedExceptionSafetyStrategyValue<T_>(defaultExceptionSafetyStrategy)
 	;
+
+	template <::dcool::core::ExceptionSafetyStrategy strategyC_> constexpr void goWeak() noexcept {
+		if constexpr (::dcool::core::strongOrTerminate(strategyC_)) {
+			::dcool::core::terminate();
+		}
+	}
 }
 
 #endif

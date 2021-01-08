@@ -317,13 +317,17 @@ namespace dcool::resource {
 			>;
 
 			private: struct DefaultEngine_ {
-				[[no_unique_address]] Dismissor dismissor;
+				public: [[no_unique_address]] Dismissor partDismissor;
+
+				public: constexpr auto dismissor() noexcept -> Dismissor& {
+					return this->partDismissor;
+				}
 			};
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
 			static_assert(
-				::dcool::core::isSame<decltype(Engine::dismissor), Dismissor>,
-				"User-defined 'Dismissor' does not match 'Engine::dismissor'"
+				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().dismissor()), Dismissor&>,
+				"User-defined 'Dismissor' does not match return value of 'Engine::sharedAgentDismissor'"
 			);
 		};
 	}
@@ -365,7 +369,7 @@ namespace dcool::resource {
 		}
 
 		private: constexpr void invalidate_(Engine& engine_) noexcept {
-			engine_.dismissor(this->value(engine_));
+			engine_.dismissor()(this->value(engine_));
 		}
 
 		public: constexpr void uninitialize(Engine& engine_) noexcept {
@@ -479,7 +483,7 @@ namespace dcool::resource {
 		}
 
 		private: constexpr void destroySelf_() noexcept {
-			this->engine().dismissor(*this);
+			this->engine().dismissor()(*this);
 		}
 
 		public: constexpr void recordStrongReference() noexcept {
