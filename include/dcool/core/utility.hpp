@@ -20,27 +20,27 @@ namespace dcool::core {
 		first_.swapWith(second_);
 	};
 
-	template <typename T_> concept Intelliswappable =
+	template <typename T_> concept IntelliSwappable =
 		::dcool::core::SwappableByMember<T_> || ::dcool::core::StandardSwappable<T_>
 	;
 
 	namespace detail_ {
-		template <typename T_> void intelliswapHelper_(T_& first_, T_& second_) noexcept(::dcool::core::isNoThrowSwappable<T_>) {
+		template <typename T_> void intelliSwapHelper_(T_& first_, T_& second_) noexcept(::dcool::core::isNoThrowSwappable<T_>) {
 			using ::std::swap;
 			swap(first_, second_);
 		}
 
-		template <::dcool::core::SwappableByMember T_> void intelliswapHelper_(
+		template <::dcool::core::SwappableByMember T_> void intelliSwapHelper_(
 			T_& first_, T_& second_
 		) noexcept(noexcept(first_.swapWith(second_))) {
 			first_.swapWith(second_);
 		}
 	}
 
-	template <::dcool::core::Intelliswappable T_> void intelliswap(T_& first_, T_& second_) noexcept(
-		noexcept(::dcool::core::detail_::intelliswapHelper_(first_, second_))
+	template <::dcool::core::IntelliSwappable T_> void intelliSwap(T_& first_, T_& second_) noexcept(
+		noexcept(::dcool::core::detail_::intelliSwapHelper_(first_, second_))
 	) {
-		::dcool::core::detail_::intelliswapHelper_(first_, second_);
+		::dcool::core::detail_::intelliSwapHelper_(first_, second_);
 	}
 
 	using InPlaceTag = ::std::in_place_t;

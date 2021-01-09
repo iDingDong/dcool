@@ -108,7 +108,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
-			::dcool::core::intelliswap(this->m_pointer_, other_.m_pointer_);
+			::dcool::core::intelliSwap(this->m_pointer_, other_.m_pointer_);
 		}
 
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
@@ -195,7 +195,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
-			::dcool::core::intelliswap(this->m_pointer_, other_.m_pointer_);
+			::dcool::core::intelliSwap(this->m_pointer_, other_.m_pointer_);
 		}
 
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {

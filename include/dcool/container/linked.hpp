@@ -988,8 +988,8 @@ namespace dcool::container {
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
-			::dcool::core::intelliswap(this->engine(), other_.engine());
-			::dcool::core::intelliswap(this->chassis(), other_.chassis());
+			::dcool::core::intelliSwap(this->engine(), other_.engine());
+			::dcool::core::intelliSwap(this->chassis(), other_.chassis());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {
