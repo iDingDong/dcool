@@ -298,8 +298,8 @@ namespace dcool::container {
 			}
 
 			public: constexpr void swapWith(Self_& other_) noexcept {
-				::dcool::core::intelliswap(this->m_storage_, other_.m_storage_);
-				::dcool::core::intelliswap(this->m_capacity_, other_.m_capacity_);
+				::dcool::core::intelliSwap(this->m_storage_, other_.m_storage_);
+				::dcool::core::intelliSwap(this->m_capacity_, other_.m_capacity_);
 			}
 
 			public: constexpr auto capacity(Engine& engine_) const noexcept -> Length {
@@ -487,7 +487,7 @@ namespace dcool::container {
 					Index index_ = 0;
 					try {
 						while (index_ < commonLength_) {
-							::dcool::core::intelliswap(selfBegin_[index_], otherBegin_[index_]);
+							::dcool::core::intelliSwap(selfBegin_[index_], otherBegin_[index_]);
 						}
 						// At least one of the following call of 'batchRelocate' will be no-op.
 						::dcool::core::batchRelocate<strategyC__>(
@@ -496,12 +496,12 @@ namespace dcool::container {
 						::dcool::core::batchRelocate<strategyC__>(
 							otherBegin_ + commonLength_, otherBegin_ + other_.m_length_, selfBegin_ + commonLength_
 						);
-						::dcool::core::intelliswap(this->m_length_, other_.m_length_);
+						::dcool::core::intelliSwap(this->m_length_, other_.m_length_);
 					} catch (...) {
 						try {
 							while (index_ > 0) {
 								--index_;
-								::dcool::core::intelliswap(selfBegin_[index_], otherBegin_[index_]);
+								::dcool::core::intelliSwap(selfBegin_[index_], otherBegin_[index_]);
 							}
 						} catch (...) {
 							::dcool::core::goWeak<strategyC__>();
@@ -809,7 +809,7 @@ namespace dcool::container {
 
 		public: constexpr void swapWith(Self_& other_) {
 			this->chassis().swapWith(other_.chassis());
-			::dcool::core::intelliswap(this->engine(), other_.engine());
+			::dcool::core::intelliSwap(this->engine(), other_.engine());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {

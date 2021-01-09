@@ -22,6 +22,7 @@
 #	include <dcool/core/type_size_detector.hpp>
 #	include <dcool/core/type_transformer.hpp>
 #	include <dcool/core/type_value_detector.hpp>
+#	include <dcool/core/unused_representation.hpp>
 #	include <dcool/core/utility.hpp>
 
 #endif

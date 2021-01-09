@@ -108,7 +108,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
-			::dcool::core::intelliswap(this->m_pointer_, other_.m_pointer_);
+			::dcool::core::intelliSwap(this->m_pointer_, other_.m_pointer_);
 		}
 
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
@@ -195,7 +195,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
-			::dcool::core::intelliswap(this->m_pointer_, other_.m_pointer_);
+			::dcool::core::intelliSwap(this->m_pointer_, other_.m_pointer_);
 		}
 
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
@@ -601,7 +601,8 @@ namespace dcool::resource {
 	}
 
 	namespace detail_ {
-		// TODO: After GCC bug 61596 gets fixed, withdraw this workaround by defining the config type inside body of 'wrapToShare'.
+		// Workaround for a compiler bug.
+	// See document/dependency_bugs#Bug_2 for mor details.
 		template <typename DismissorT_> struct AgentConfigForWrapToShare_ {
 			using Dismissor = DismissorT_;
 		};

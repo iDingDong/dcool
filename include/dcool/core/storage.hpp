@@ -18,7 +18,8 @@ namespace dcool::core {
 	);
 
 #	if defined(__GNUC__)
-	// TODO: After GCC bug 95291 gets fixed, withdraw this workaround.
+	// Workaround for a compiler bug.
+	// See document/dependency_bugs#Bug_1 for mor details.
 	using StorageRequirement = unsigned __int128;
 
 	constexpr auto size(StorageRequirement requirement_) -> ::dcool::core::Size {
