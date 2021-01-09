@@ -112,10 +112,6 @@ namespace dcool::core {
 
 	template <typename T_> concept Integer = ::std::is_integral_v<T_>;
 
-	template <typename T_, typename... Ts_> concept FormOfSame = ::dcool::core::SameAs<
-		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
-	>;
-
 	template <typename T_, typename... Ts_> constexpr ::dcool::core::Boolean isOneOf = false;
 
 	template <
@@ -125,6 +121,14 @@ namespace dcool::core {
 	;
 
 	template <typename T_, typename... Ts_> concept OneOf = ::dcool::core::isOneOf<T_, Ts_...>;
+
+	template <typename T_, typename... Ts_> concept FormOfSame = ::dcool::core::SameAs<
+		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
+	>;
+
+	template <typename T_, typename... Ts_> concept FormOfOneOf = ::dcool::core::OneOf<
+		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
+	>;
 
 	template <typename T_> concept Dereferenceable = requires (T_ toDereference_) {
 		{ *toDereference_ } -> ::dcool::core::Reference;
