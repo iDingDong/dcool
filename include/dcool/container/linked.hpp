@@ -123,25 +123,25 @@ namespace dcool::container {
 
 		template <typename ValueT_> struct HandleConverterOfEngineForHelper_ {
 			template <typename EngineT__> static constexpr auto get_(EngineT__& engine_) noexcept {
-				return ::dcool::resource::adaptedHandleConverterFor<ValueT_>(engine_.pool);
+				return ::dcool::resource::adaptedHandleConverterFor<ValueT_>(engine_.pool());
 			}
 		};
 
 		template <typename ValueT_> struct HandleConverterOfEngineForHelper_<ValueT_ const> {
 			template <typename EngineT__> static constexpr auto get_(EngineT__& engine_) noexcept {
-				return ::dcool::resource::adaptedConstHandleConverterFor<ValueT_>(engine_.pool);
+				return ::dcool::resource::adaptedConstHandleConverterFor<ValueT_>(engine_.pool());
 			}
 		};
 
 		template <typename EngineT_, typename ValueT_> struct UnifiedHandleOf_ {
 			using Result_ = ::dcool::resource::PoolAdaptorFor<
-				decltype(::dcool::core::declval<EngineT_&>().pool), ValueT_
+				::dcool::core::ReferenceRemovedType<decltype(::dcool::core::declval<EngineT_&>().pool())>, ValueT_
 			>::UnifiedHandle;
 		};
 
 		template <typename EngineT_, typename ValueT_> struct UnifiedHandleOf_<EngineT_, ValueT_ const> {
 			using Result_ = ::dcool::resource::PoolAdaptorFor<
-				decltype(::dcool::core::declval<EngineT_&>().pool), ValueT_
+				::dcool::core::ReferenceRemovedType<decltype(::dcool::core::declval<EngineT_&>().pool())>, ValueT_
 			>::UnifiedConstHandle;
 		};
 
@@ -524,7 +524,7 @@ namespace dcool::container {
 			public: auto operator =(Self_&&) -> Self_& = delete;
 
 			public: constexpr void initialize(Engine& engine_) {
-				this->m_sentry_ = PoolAdaptor_::allocate(engine_.pool);
+				this->m_sentry_ = PoolAdaptor_::allocate(engine_.pool());
 				new (this->sentryAddress_(engine_)) NodeHeader();
 			}
 
@@ -533,7 +533,7 @@ namespace dcool::container {
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
-				PoolAdaptor_::deallocate(engine_.pool, this->m_sentry_);
+				PoolAdaptor_::deallocate(engine_.pool(), this->m_sentry_);
 			}
 
 			public: constexpr auto sentryHandle(Engine& engine_) const noexcept -> ConstHandle {
@@ -545,11 +545,11 @@ namespace dcool::container {
 			}
 
 			private: constexpr auto sentryAddress_(Engine& engine_) const noexcept -> NodeHeader const* {
-				return static_cast<NodeHeader const*>(PoolAdaptor_::constHandleConverter(engine_.pool)(this->m_sentry_));
+				return static_cast<NodeHeader const*>(PoolAdaptor_::constHandleConverter(engine_.pool())(this->m_sentry_));
 			}
 
 			private: constexpr auto sentryAddress_(Engine& engine_) noexcept -> NodeHeader* {
-				return static_cast<NodeHeader*>(PoolAdaptor_::handleConverter(engine_.pool)(this->m_sentry_));
+				return static_cast<NodeHeader*>(PoolAdaptor_::handleConverter(engine_.pool())(this->m_sentry_));
 			}
 
 			public: constexpr auto sentry(Engine& engine_) const noexcept -> NodeHeader const& {
@@ -596,11 +596,11 @@ namespace dcool::container {
 			}
 
 			public: constexpr auto sentryHandle(Engine& engine_) const noexcept -> ConstHandle {
-				return PoolAdaptor_::constHandleConverter(engine_.pool)(static_cast<void const*>(&(this->m_sentry_)));
+				return PoolAdaptor_::constHandleConverter(engine_.pool())(static_cast<void const*>(&(this->m_sentry_)));
 			}
 
 			public: constexpr auto sentryHandle(Engine& engine_) noexcept -> Handle {
-				return PoolAdaptor_::handleConverter(engine_.pool)(static_cast<void*>(&(this->m_sentry_)));
+				return PoolAdaptor_::handleConverter(engine_.pool())(static_cast<void*>(&(this->m_sentry_)));
 			}
 
 			public: constexpr auto sentry(Engine& engine_) const noexcept -> NodeHeader const& {
@@ -620,11 +620,18 @@ namespace dcool::container {
 			public: using Pool = ::dcool::resource::PoolType<Config>;
 
 			private: struct DefaultEngine_ {
-				public: [[no_unique_address]] Pool pool;
+				public: [[no_unique_address]] Pool partPool;
+
+				public: constexpr auto pool() noexcept -> Pool& {
+					return this->partPool;
+				}
 			};
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
-			static_assert(::dcool::core::isSame<decltype(Engine::pool), Pool>, "User-defined 'Pool' does not match 'Engine::pool'");
+			static_assert(
+				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
+				"User-defined 'Pool' does not match return value of 'Engine::listPool'"
+			);
 
 			public: using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
 			public: using ForwardLinkedNodeHeader = ::dcool::core::NodeHeaderType<ForwardLinkedNode>;
@@ -709,7 +716,7 @@ namespace dcool::container {
 		public: constexpr void initialize(Engine& engine_) noexcept(noexceptInitializeable) {
 			this->m_sentryHolder_.initialize(engine_);
 			NodeHeader& sentry_ = this->m_sentryHolder_.sentry(engine_);
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
 			::dcool::container::detail_::connectForwardNodeHeader_(sentry_, sentry_, headerConverter_);
 		}
 
@@ -739,8 +746,8 @@ namespace dcool::container {
 		}
 
 		public: constexpr void uninitialize(Engine& engine_) noexcept {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
-			HandleConverter converter_ = PoolAdaptorForNode_::handleConverter(engine_.pool);
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
+			HandleConverter converter_ = PoolAdaptorForNode_::handleConverter(engine_.pool());
 			LightIterator begin_ = this->lightBegin(engine_);
 			LightIterator end_ = this->lightEnd(engine_);
 			while (!(begin_.equalsTo(end_, headerConverter_))) {
@@ -832,7 +839,7 @@ namespace dcool::container {
 		private: template <typename... ArgumentTs__> static constexpr auto createNode_(
 			Engine& engine_, ArgumentTs__&&... parameters_
 		) -> Handle {
-			return createNode_(engine_.pool, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+			return createNode_(engine_.pool(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
 		private: static constexpr void destroyNode_(Pool& pool_, Handle nodeHandle_) {
@@ -842,7 +849,7 @@ namespace dcool::container {
 		}
 
 		private: static constexpr void destroyNode_(Engine& engine_, Handle nodeHandle_) {
-			destroyNode_(engine_.pool, nodeHandle_);
+			destroyNode_(engine_.pool(), nodeHandle_);
 		}
 
 		private: constexpr auto insertNodeHeaderAfter_(
@@ -862,7 +869,7 @@ namespace dcool::container {
 		public: constexpr auto insertNodeAfter(
 			Engine& engine_, LightIterator position_, Node& toInsert_
 		) noexcept -> LightIterator {
-			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool);
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
 			return this->insertNodeAfter_(headerConverter_, position_, toInsert_);
 		}
 
@@ -871,7 +878,7 @@ namespace dcool::container {
 			Engine& engine_, LightIterator position_, Handle toInsert_
 		) noexcept -> LightIterator {
 			return this->insertNodeAfter(
-				engine_, position_, *static_cast<Node*>(PoolAdaptorForNode_::fromHandle(engine_.pool, toInsert_))
+				engine_, position_, *static_cast<Node*>(PoolAdaptorForNode_::fromHandle(engine_.pool(), toInsert_))
 			);
 		}
 
@@ -911,11 +918,11 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto eraseAfter(Engine& engine_, LightIterator position_) noexcept -> LightIterator {
-			return this->eraseAfter_(engine_.pool, position_);
+			return this->eraseAfter_(engine_.pool(), position_);
 		}
 
 		public: constexpr auto eraseAfter(Engine& engine_, Iterator position_) noexcept -> Iterator {
-			LightIterator result_ = this->eraseAfter_(engine_.pool, static_cast<LightIterator>(position_));
+			LightIterator result_ = this->eraseAfter_(engine_.pool(), static_cast<LightIterator>(position_));
 			return fromLight(engine_, result_);
 		}
 	};

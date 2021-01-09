@@ -873,6 +873,13 @@ namespace dcool::resource {
 	}
 
 	template <
+		typename ValueT_, typename PoolT_, typename HandleT_, typename... ArgumentTs_
+	> constexpr void destroyHandleByPoolFor(PoolT_& pool_, HandleT_ handle_, ArgumentTs_&&... arguments_) {
+		static_cast<ValueT_*>(::dcool::resource::adaptedFromHandleFor<ValueT_>(pool_, handle_))->~ValueT_();
+		::dcool::resource::adaptedDeallocateFor<ValueT_>(pool_, handle_);
+	}
+
+	template <
 		typename T_, ::dcool::core::StorageRequirement storageRequirementC_
 	> concept PoolWithBijectiveHandleConverter =
 		::dcool::resource::Pool<T_, storageRequirementC_> &&
