@@ -42,6 +42,9 @@ namespace dcool::core {
 	) {
 		::dcool::core::detail_::intelliswapHelper_(first_, second_);
 	}
+
+	using InPlaceTag = ::std::in_place_t;
+	constexpr ::dcool::core::InPlaceTag inPlace = ::std::in_place;
 }
 
 #endif
