@@ -66,9 +66,9 @@ The `Type` is actually used in `bar`. The workaround is to define the above clas
 ### Bug_3: Copy operations not defaultable
 
 - Compiler: GCC
-- Info last updated: 2021-01-09
+- Info last updated: 2021-01-10
 - Status: Unresolved (latest version 10.2.0)
-- Report link: not yet found
+- Report link: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98614
 
 Minial reprocase:
 
