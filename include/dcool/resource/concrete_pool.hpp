@@ -33,9 +33,9 @@ namespace dcool::resource {
 		);
 
 		private: ::std::array<UnitStorage_, unitCount> m_storage_;
-		private: Index m_first_;
+		private: Index m_first_ = 0;
 
-		public: constexpr ConcretePinnedPool() noexcept: m_first_(0) {
+		public: constexpr ConcretePinnedPool() noexcept {
 			for (Index i = 0; i < unitCount; ++i) {
 				this->link_(i, i + 1);
 			}
