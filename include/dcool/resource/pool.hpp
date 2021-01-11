@@ -861,7 +861,7 @@ namespace dcool::resource {
 
 	template <
 		typename ValueT_, typename PoolT_, typename... ArgumentTs_
-	> constexpr auto createPointerByPoolFor(PoolT_& pool_, ArgumentTs_&&... arguments_) {
+	> [[nodiscard("Might leak memory.")]] constexpr auto createPointerByPoolFor(PoolT_& pool_, ArgumentTs_&&... arguments_) {
 		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedAllocatePointerFor<ValueT_>(pool_));
 		try {
 			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(arguments_)...);
