@@ -861,10 +861,10 @@ namespace dcool::resource {
 
 	template <
 		typename ValueT_, typename PoolT_, typename... ArgumentTs_
-	> [[nodiscard("Might leak memory.")]] constexpr auto createPointerByPoolFor(PoolT_& pool_, ArgumentTs_&&... arguments_) {
+	> [[nodiscard("Might leak memory.")]] constexpr auto createPointerByPoolFor(PoolT_& pool_, ArgumentTs_&&... parameters_) {
 		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedAllocatePointerFor<ValueT_>(pool_));
 		try {
-			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(arguments_)...);
+			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		} catch (...) {
 			::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
 			throw;
@@ -873,10 +873,27 @@ namespace dcool::resource {
 	}
 
 	template <
-		typename ValueT_, typename PoolT_, typename HandleT_, typename... ArgumentTs_
-	> constexpr void destroyHandleByPoolFor(PoolT_& pool_, HandleT_ handle_, ArgumentTs_&&... arguments_) {
+		typename ValueT_, typename PoolT_, typename... ArgumentTs_
+	> [[nodiscard("Might leak memory.")]] constexpr auto createHandleByPoolFor(PoolT_& pool_, ArgumentTs_&&... parameters_) {
+		ValueT_* pointer_ = ::dcool::resource::createPointerByPoolFor<ValueT_>(
+			pool_, ::dcool::core::forward<ArgumentTs_>(parameters_)...
+		);
+		return ::dcool::resource::adaptedToHandleFor<ValueT_>(pool_, pointer_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_
+	> constexpr void destroyPointerByPoolFor(PoolT_& pool_, ValueT_* pointer_) noexcept {
+		pointer_->~ValueT_();
+		::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
+	}
+
+	template <
+		typename ValueT_, typename PoolT_, typename HandleT_
+	> constexpr void destroyHandleByPoolFor(PoolT_& pool_, HandleT_ handle_) noexcept {
 		static_cast<ValueT_*>(::dcool::resource::adaptedFromHandleFor<ValueT_>(pool_, handle_))->~ValueT_();
-		::dcool::resource::adaptedDeallocateFor<ValueT_>(pool_, handle_);
+		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedFromHandleFor<ValueT_>(pool_, handle_));
+		::dcool::resource::destroyPointerByPoolFor<ValueT_>(pool_, pointer_);
 	}
 
 	template <
