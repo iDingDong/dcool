@@ -524,8 +524,7 @@ namespace dcool::container {
 			public: auto operator =(Self_&&) -> Self_& = delete;
 
 			public: constexpr void initialize(Engine& engine_) {
-				this->m_sentry_ = PoolAdaptor_::allocate(engine_.pool());
-				new (this->sentryAddress_(engine_)) NodeHeader();
+				this->m_sentry_ = ::dcool::resource::createHandleByPoolFor<NodeHeader>(engine_.pool());
 			}
 
 			public: constexpr void relocateTo(Self_& other_) {
@@ -533,7 +532,7 @@ namespace dcool::container {
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
-				PoolAdaptor_::deallocate(engine_.pool(), this->m_sentry_);
+				::dcool::resource::destroyHandleByPoolFor<NodeHeader>(engine_.pool(), this->m_sentry_);
 			}
 
 			public: constexpr auto sentryHandle(Engine& engine_) const noexcept -> ConstHandle {
