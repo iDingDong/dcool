@@ -14,6 +14,11 @@ namespace dcool::core {
 	using Difference = decltype(::dcool::core::declval<char*>() - ::dcool::core::declval<char*>());
 	using Alignment = decltype(alignof(char));
 	using Length = ::dcool::core::Size;
+	using SignedMaxInteger = ::std::intmax_t;
+	using	UnsignedMaxInteger = ::std::uintmax_t;
+	using NullPointer = decltype(nullptr);
+
+	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
 
 	template <typename T_> constexpr auto constantize(T_& input_) -> T_ const& {
 		return input_;
@@ -24,8 +29,21 @@ namespace dcool::core {
 	template <typename... Ts_> struct Empty {
 	};
 
-	using SignedMaxInteger = ::std::intmax_t;
-	using	UnsignedMaxInteger = ::std::uintmax_t;
+	namespace detail_ {
+		template <typename... Ts_> struct StandardLayoutBreakerBase_ {
+			private: [[no_unique_address]] ::dcool::core::Empty<Ts_...> m_helper_;
+		};
+	}
+
+	template <typename... Ts_> struct StandardLayoutBreaker: public ::dcool::core::detail_::StandardLayoutBreakerBase_<Ts_...> {
+		private: [[no_unique_address]] ::dcool::core::Empty<Ts_...> m_helper_;
+	};
+
+	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
+
+	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
+		return ::std::addressof(toPoint_);
+	}
 };
 
 #endif

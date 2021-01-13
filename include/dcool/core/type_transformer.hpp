@@ -1,6 +1,8 @@
 #ifndef DCOOL_CORE_TYPE_TRANSFORMER_HPP_INCLUDED_
 #	define DCOOL_CORE_TYPE_TRANSFORMER_HPP_INCLUDED_ 1
 
+#	include <dcool/core/basic.hpp>
+
 #	include <type_traits>
 
 namespace dcool::core {
@@ -78,8 +80,16 @@ namespace dcool::core {
 	}
 
 	template <typename T_> using PointedConstantizedType = ::dcool::core::IdenticallyQualifiedType<
-		::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>, T_
+		typename ::dcool::core::detail_::ConstantizePointed_<::dcool::core::QualifierRemovedType<T_>>::Result_, T_
 	>;
+
+	template <::dcool::core::Boolean predicateC_, typename TrueT_, typename FalseT_> using ConditionalType = ::std::conditional_t<
+		predicateC_, TrueT_, FalseT_
+	>;
+
+	template <typename FirstT_, typename SecondT_> using SmallerType = ::dcool::core::ConditionalType<
+		sizeof(FirstT_) <= sizeof(SecondT_), FirstT_, SecondT_
+	>::type;
 }
 
 #endif

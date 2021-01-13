@@ -3,6 +3,7 @@
 
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/storage.hpp>
 
 #	include <limits>
 
@@ -23,6 +24,7 @@ namespace dcool::core {
 		};
 
 		template <auto maxC_, typename IntegerT_> struct TryUnsignedAsIntegerHelper_<maxC_, IntegerT_, false> {
+			using Result_ = void;
 		};
 
 		template <auto maxC_, typename IntegerT_, typename... RestIntegerTs_> struct TryUnsignedInteger_ {
@@ -81,6 +83,68 @@ namespace dcool::core {
 		auto maxC_, auto minC_ = 0
 	> requires Integer<decltype(maxC_)> && Integer<decltype(minC_)> using IntegerType = ::dcool::core::detail_::IntegerType_<
 		maxC_, minC_
+	>::Result_;
+
+	namespace detail_ {
+		template <
+			::dcool::core::Size maxSizeC_,
+			::dcool::core::Alignment maxAlignmentC_,
+			typename IntegerT_,
+			::dcool::core::Boolean fitC_,
+			typename... RestIntegerTs_
+		> struct StorableIntegerHelper_ {
+			using Result_ = IntegerT_;
+		};
+
+		template <
+			::dcool::core::Size maxSizeC_,
+			::dcool::core::Alignment maxAlignmentC_,
+			typename IntegerT_,
+			typename NextIntegerT_,
+			typename... RestIntegerTs_
+		> struct StorableIntegerHelper_<maxSizeC_, maxAlignmentC_, IntegerT_, false, NextIntegerT_, RestIntegerTs_...> {
+			using Result_ = ::dcool::core::detail_::StorableIntegerHelper_<
+				maxSizeC_,
+				maxAlignmentC_,
+				NextIntegerT_,
+				sizeof(NextIntegerT_) <= maxSizeC_ && alignof(NextIntegerT_) <= maxAlignmentC_,
+				RestIntegerTs_...
+			>::Result_;
+		};
+
+		template <
+			::dcool::core::Size maxSizeC_, ::dcool::core::Alignment maxAlignmentC_, typename IntegerT_
+		> struct StorableIntegerHelper_<maxSizeC_, maxAlignmentC_, IntegerT_, false> {
+			using Result_ = void;
+		};
+	}
+
+	template <
+		::dcool::core::Size maxSizeC_, ::dcool::core::Alignment maxAlignmentC_ = ::dcool::core::defaultAlignmentFor<maxSizeC_>
+	> using StorableUnsignedIntegerType = ::dcool::core::detail_::StorableIntegerHelper_<
+		maxSizeC_,
+		maxAlignmentC_,
+		::dcool::core::UnsignedMaxInteger,
+		sizeof(::dcool::core::UnsignedMaxInteger) <= maxSizeC_ && alignof(::dcool::core::UnsignedMaxInteger) <= maxAlignmentC_,
+		unsigned long long,
+		unsigned long,
+		unsigned,
+		unsigned short,
+		unsigned char
+	>::Result_;
+
+	template <
+		::dcool::core::Size maxSizeC_, ::dcool::core::Alignment maxAlignmentC_ = ::dcool::core::defaultAlignmentFor<maxSizeC_>
+	> using StorableSignedIntegerType = ::dcool::core::detail_::StorableIntegerHelper_<
+		maxSizeC_,
+		maxAlignmentC_,
+		::dcool::core::SignedMaxInteger,
+		sizeof(::dcool::core::SignedMaxInteger) <= maxSizeC_ && alignof(::dcool::core::SignedMaxInteger) <= maxAlignmentC_,
+		long long,
+		long,
+		int,
+		short,
+		signed char
 	>::Result_;
 }
 
