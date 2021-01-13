@@ -371,7 +371,7 @@ namespace dcool::container {
 			}
 
 			public: constexpr auto data() const noexcept -> Value const* {
-				return reinterpret_cast<Value*>(::dcool::core::addressOf(this->m_storage_));
+				return reinterpret_cast<Value const*>(::dcool::core::addressOf(this->m_storage_));
 			}
 
 			public: constexpr auto data(Engine& engine_) const noexcept -> Value const* {
@@ -418,6 +418,12 @@ namespace dcool::container {
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
+		private: constexpr void initialize_() noexcept {
+			static_assert(capacityFixed);
+			this->m_storage_.initialize();
+			this->m_length_ = 0;
+		}
+
 		public: constexpr void initialize(Engine& engine_) noexcept {
 			this->m_storage_.initialize(engine_);
 			this->m_length_ = 0;
@@ -429,6 +435,13 @@ namespace dcool::container {
 			this->m_length_ = 0;
 		}
 
+		private: constexpr void uninitialize_() noexcept {
+			static_assert(capacityFixed);
+			auto begin_ = this->data_();
+			::dcool::core::batchDestruct(begin_, begin_ + this->m_length_);
+			this->m_storage_.uninitialize();
+		}
+
 		public: constexpr void uninitialize(Engine& engine_) noexcept {
 			::dcool::core::batchDestruct(this->begin(engine_), this->end(engine_));
 			this->m_storage_.uninitialize(engine_);
@@ -438,16 +451,17 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void relocateTo(Self_& other_) {
 			if constexpr (capacityFixed) {
-				other_.initialize();
+				other_.initialize_();
 				try {
 					::dcool::core::batchRelocate<strategyC__>(
 						this->m_storage_.data(), this->m_storage_.data() + this->m_length_, other_.m_storage_.data()
 					);
 				} catch (...) {
-					other_.uninitialize();
+					other_.uninitialize_();
 					throw;
 				}
-				this->uninitialize();
+				other_.m_length_ = this->m_length_;
+				this->uninitialize_();
 			} else {
 				this->m_storage_.relocateTo(other_.m_storage_);
 				other_.m_length_ = this->m_length_;
@@ -526,6 +540,15 @@ namespace dcool::container {
 
 		public: constexpr auto full(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
 			return this->length(engine_) >= this->capacity(engine_);
+		}
+
+		private: constexpr auto data_() const noexcept -> Value const* {
+			static_assert(capacityFixed);
+			return this->m_storage_.data();
+		}
+
+		private: constexpr auto data_() noexcept -> Value* {
+			return this->m_storage_.data();
 		}
 
 		public: constexpr auto data(Engine& engine_) const noexcept -> Value const* {
@@ -633,7 +656,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			if (this->full(engine_)) {
-				if (!capacityFixed) {
+				if constexpr (!capacityFixed) {
 					Length extraCapacity_ = ((this->capacity(engine_) > 0) ? this->capacity(engine_) : 1);
 					if (this->m_storage_.expandBack(engine_, extraCapacity_)) {
 						return this->braveEmplace<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
@@ -782,13 +805,13 @@ namespace dcool::container {
 			this->chassis().initialize(this->engine());
 		}
 
-		public: constexpr List(Self_ const& other_) noexcept: m_engine_(other_.engine()) {
+		public: constexpr List(Self_ const& other_): m_engine_(other_.engine()) {
 			other_.chassis().cloneTo(other_.engine(), this->engine(), this->chassis());
 		}
 
-		public: constexpr List(Self_&& other_) noexcept: m_engine_(other_.engine()) {
+		public: constexpr List(Self_&& other_): m_engine_(other_.engine()) {
 			other_.chassis().relocateTo(this->chassis());
-			other_.initialize(other_.engine());
+			other_.chassis().initialize(other_.engine());
 		}
 
 		public: constexpr ~List() noexcept {
@@ -810,6 +833,14 @@ namespace dcool::container {
 		public: constexpr void swapWith(Self_& other_) {
 			this->chassis().swapWith(other_.chassis());
 			::dcool::core::intelliSwap(this->engine(), other_.engine());
+		}
+
+		public: constexpr auto length() const noexcept -> Length {
+			return this->chassis().length(this->engine());
+		}
+
+		public: constexpr auto capacity() const noexcept -> Length {
+			return this->chassis().capacity(this->engine());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {
