@@ -12,6 +12,7 @@
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/member_detector.hpp>
 #	include <dcool/core/min.hpp>
+#	include <dcool/core/mutex.hpp>
 #	include <dcool/core/node.hpp>
 #	include <dcool/core/optional.hpp>
 #	include <dcool/core/range.hpp>

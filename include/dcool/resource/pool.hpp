@@ -675,6 +675,7 @@ namespace dcool::resource {
 		public: using ArrayHandleConverter = ::dcool::resource::detail_::ArrayPoolHandleConverterType_<Pool, storageRequirementC_>;
 
 		public: using Super_::allocate;
+		public: using Super_::allocatePointer;
 
 		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(Pool& pool_, Length length_) -> ArrayHandle {
 			return pool_.template allocate<storageRequirement>(length_);
@@ -685,6 +686,7 @@ namespace dcool::resource {
 		}
 
 		public: using Super_::deallocate;
+		public: using Super_::deallocatePointer;
 
 		public: static constexpr void deallocate(Pool& pool_, ArrayHandle handle_, Length length_) noexcept {
 			pool_.template deallocate<storageRequirement>(handle_, length_);
