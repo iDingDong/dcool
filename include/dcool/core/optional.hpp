@@ -87,7 +87,7 @@ namespace dcool::core {
 			public: using Config = ConfigT_;
 
 			private: using Underlying_ = ::std::optional<Value>;
-			public: static constexpr ::dcool::core::Boolean independentValidity = false;
+			public: static constexpr ::dcool::core::Boolean independentValidity = true;
 
 			private: Underlying_ m_underlying_;
 
@@ -169,7 +169,7 @@ namespace dcool::core {
 			public: using Config = ConfigT_;
 
 			private: using ConfigAdaptor_ = ::dcool::core::OptionalConfigAdaptor<Config, Value>;
-			public: static constexpr ::dcool::core::Boolean independentValidity = true;
+			public: static constexpr ::dcool::core::Boolean independentValidity = false;
 
 			private: Value m_value_;
 
@@ -235,7 +235,7 @@ namespace dcool::core {
 				return this->access();
 			}
 
-			public: constexpr void reset() noexcept {
+			public: constexpr void reset() noexcept(noexcept(::dcool::core::declval<Value&>() = ConfigAdaptor_::invalidValue())) {
 				this->m_value_ = ConfigAdaptor_::invalidValue();
 			}
 		};
