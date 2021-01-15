@@ -15,6 +15,8 @@ namespace dcool::core {
 
 	constexpr NoOp noOp;
 
+	template <typename T_> using Function = ::std::function<T_>;
+
 	using ::std::invoke;
 
 	template <typename T_, typename... ArgumentTs_> concept Invocable = ::std::invocable<T_, ArgumentTs_...>;
