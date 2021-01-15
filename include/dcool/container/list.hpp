@@ -526,6 +526,14 @@ namespace dcool::container {
 			}
 		}
 
+		public: constexpr auto vacant(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return this->length(engine_) == 0;
+		}
+
+		public: constexpr auto full(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return this->length(engine_) == this->capacity(engine_);
+		}
+
 		public: constexpr auto length(Engine& engine_) const noexcept -> Length {
 			return this->m_length_;
 		}
@@ -536,10 +544,6 @@ namespace dcool::container {
 
 		public: constexpr auto leftOver(Engine& engine_) const noexcept -> Length {
 			return this->capacity(engine_) - this->length(engine_);
-		}
-
-		public: constexpr auto full(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
-			return this->length(engine_) >= this->capacity(engine_);
 		}
 
 		private: constexpr auto data_() const noexcept -> Value const* {
@@ -833,6 +837,14 @@ namespace dcool::container {
 		public: constexpr void swapWith(Self_& other_) {
 			this->chassis().swapWith(other_.chassis());
 			::dcool::core::intelliSwap(this->engine(), other_.engine());
+		}
+
+		public: constexpr auto vacant() const noexcept -> ::dcool::core::Boolean {
+			return this->chassis().vacant(this->engine());
+		}
+
+		public: constexpr auto full() const noexcept -> ::dcool::core::Boolean {
+			return this->chassis().full(this->engine());
 		}
 
 		public: constexpr auto length() const noexcept -> Length {
