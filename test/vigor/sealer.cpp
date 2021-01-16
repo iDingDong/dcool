@@ -2,33 +2,35 @@
 #include <dcool/test.hpp>
 #include <dcool/vigor.hpp>
 
-struct Axception {
-};
+DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
+	struct Axception {
+	};
 
-struct A {
-	static int countBeforeThrow;
-	A() = default;
+	struct A {
+		A() = default;
 
-	A(A const& other) {
-		if (countBeforeThrow > 0) {
-			--countBeforeThrow;
-		} else {
-			throw Axception();
+		A(A const& other) {
+			if (countBeforeThrow() > 0) {
+				--(countBeforeThrow());
+			} else {
+				throw Axception();
+			}
+		};
+
+		auto operator =(A const& other) -> A& {
+			if (countBeforeThrow() > 0) {
+				--(countBeforeThrow());
+			} else {
+				throw Axception();
+			}
+		}
+
+		static int& countBeforeThrow() {
+			static int count = 8;
+			return count;
 		}
 	};
 
-	auto operator =(A const& other) -> A& {
-		if (countBeforeThrow > 0) {
-			--countBeforeThrow;
-		} else {
-			throw Axception();
-		}
-	}
-};
-
-int A::countBeforeThrow = 8;
-
-DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	using SealedValue = dcool::container::StaticList<A, 3>;
 	SealedValue la;
 	la.emplaceBack();
