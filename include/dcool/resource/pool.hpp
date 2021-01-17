@@ -19,12 +19,12 @@ DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 	dcool::resource::detail_, HasTypeUnifiedArrayConstHandle_, ExtractedUnifiedArrayConstHandleType_, UnifiedArrayConstHandle
 )
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeHandle_, ExtractedHandleType_, Handle)
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeConstHandle_, ExtractedConstHandleType_, ConstHandle)
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeArrayHandle_, ExtractedArrayHandleType_, ArrayHandle)
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
-	dcool::resource::detail_, HasTypeArrayConstHandle_, ExtractedArrayConstHandleType_, ArrayConstHandle
-)
+// DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeHandle_, ExtractedHandleType_, Handle)
+// DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeConstHandle_, ExtractedConstHandleType_, ConstHandle)
+// DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource::detail_, HasTypeArrayHandle_, ExtractedArrayHandleType_, ArrayHandle)
+// DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
+// 	dcool::resource::detail_, HasTypeArrayConstHandle_, ExtractedArrayConstHandleType_, ArrayConstHandle
+// )
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 	dcool::resource::detail_, HasTypeHandleConverter_, ExtractedHandleConverterType_, HandleConverter
 )
@@ -225,45 +225,128 @@ namespace dcool::resource {
 	> using UnifiedArrayConstHandleType = ::dcool::resource::detail_::ExtractedUnifiedArrayConstHandleType_<T_, void>;
 
 	namespace detail_ {
-		template <
-			typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_
-		> using PoolHandleType_ = ::dcool::resource::detail_::ExtractedHandleType_<
-			PoolT_, ::dcool::resource::detail_::ExtractedUnifiedHandleType_<
-				PoolT_, decltype(::dcool::core::declval<PoolT_&>().template allocate<storageRequirementC_>())
-			>
+		template <typename T_, ::dcool::core::StorageRequirement storageRequirementC_> concept HasPoolHandleType_ = requires {
+			typename T_::Handle<storageRequirementC_>;
+		};
+
+		template <typename T_, typename OtherwiseT_> using UnifiedHandleOrType_ = ::dcool::core::ConditionalType<
+			::dcool::core::isSame<::dcool::resource::UnifiedHandleType<T_>, void>,
+			::dcool::resource::UnifiedHandleType<T_>,
+			OtherwiseT_
 		>;
+
+		template <typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_> struct PoolHandle_ {
+			using Result_ = ::dcool::resource::detail_::UnifiedHandleOrType_<
+				PoolT_, decltype(::dcool::core::declval<PoolT_&>().template allocate<storageRequirementC_>())
+			>;
+		};
+
+		template <
+			::dcool::core::StorageRequirement storageRequirementC_,
+			::dcool::resource::detail_::HasPoolHandleType_<storageRequirementC_> PoolT_
+		> struct PoolHandle_<PoolT_, storageRequirementC_> {
+			using Result_ = typename PoolT_::Handle<storageRequirementC_>;
+		};
 
 		template <
 			typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_
-		> using PoolConstHandleType_ = ::dcool::resource::detail_::ExtractedConstHandleType_<
-			PoolT_,
-			::dcool::resource::detail_::ExtractedUnifiedConstHandleType_<
+		> using PoolHandleType_ = ::dcool::resource::detail_::PoolHandle_<PoolT_, storageRequirementC_>::Result_;
+
+		template <typename T_, ::dcool::core::StorageRequirement storageRequirementC_> concept HasPoolConstHandleType_ = requires {
+			typename T_::ConstHandle<storageRequirementC_>;
+		};
+
+		template <typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_> struct PoolConstHandle_ {
+			using Result_ = ::dcool::resource::detail_::ExtractedUnifiedConstHandleType_<
 				PoolT_,
 				::dcool::core::PointedConstantizedType<::dcool::resource::detail_::PoolHandleType_<PoolT_, storageRequirementC_>>
-			>
-		>;
+			>;
+		};
+
+		template <
+			::dcool::core::StorageRequirement storageRequirementC_,
+			::dcool::resource::detail_::HasPoolConstHandleType_<storageRequirementC_> PoolT_
+		> struct PoolConstHandle_<PoolT_, storageRequirementC_> {
+			using Result_ = typename PoolT_::ConstHandle<storageRequirementC_>;
+		};
 
 		template <
 			typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_
-		> using ArrayPoolHandleType_ = ::dcool::resource::detail_::ExtractedArrayHandleType_<
-			PoolT_, ::dcool::resource::detail_::ExtractedUnifiedArrayHandleType_<
-				PoolT_, decltype(
-					::dcool::core::declval<PoolT_&>().template allocate<storageRequirementC_>(
-						::dcool::core::declval<::dcool::core::SizeType<PoolT_>>()
-					)
+		> using PoolConstHandleType_ = PoolConstHandle_<PoolT_, storageRequirementC_>::Result_;
+
+		template <typename T_, ::dcool::core::StorageRequirement storageRequirementC_> concept HasArrayPoolHandleType_ = requires {
+			typename T_::ArrayHandle<storageRequirementC_>;
+		};
+
+		template <typename T_, typename OtherwiseT_> using UnifiedArrayHandleOrType_ = ::dcool::core::ConditionalType<
+			::dcool::core::isSame<::dcool::resource::UnifiedArrayHandleType<T_>, void>,
+			::dcool::resource::UnifiedArrayHandleType<T_>,
+			OtherwiseT_
+		>;
+
+		template <
+			typename T_, ::dcool::core::StorageRequirement storageRequirementC_
+		> concept CanAllocateArray_ = requires (T_ pool_, ::dcool::core::LengthType<T_> length_) {
+			{ pool_.template allocate<storageRequirementC_>(length_) } -> ::dcool::core::Object;
+		};
+
+		template <typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_> struct DeductedArrayPoolHandle_ {
+			using Result_ = void;
+		};
+
+		template <
+			::dcool::core::StorageRequirement storageRequirementC_,
+			::dcool::resource::detail_::CanAllocateArray_<storageRequirementC_> PoolT_
+		> struct DeductedArrayPoolHandle_<PoolT_, storageRequirementC_> {
+			using Result_ = decltype(
+				::dcool::core::declval<PoolT_&>().template allocate<storageRequirementC_>(
+					::dcool::core::declval<::dcool::core::LengthType<PoolT_>>()
 				)
-			>
-		>;
+			);
+		};
+
+		template <typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_> struct ArrayPoolHandle_ {
+			using Result_ = typename ::dcool::resource::detail_::UnifiedArrayHandleOrType_<
+				PoolT_, typename ::dcool::resource::detail_::DeductedArrayPoolHandle_<PoolT_, storageRequirementC_>::Result_
+			>;
+		};
+
+		template <
+			::dcool::core::StorageRequirement storageRequirementC_,
+			::dcool::resource::detail_::HasArrayPoolHandleType_<storageRequirementC_> PoolT_
+		> struct ArrayPoolHandle_<PoolT_, storageRequirementC_> {
+			using Result_ = typename PoolT_::ArrayHandle<storageRequirementC_>;
+		};
 
 		template <
 			typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_
-		> using ArrayPoolConstHandleType_ = ::dcool::resource::detail_::ExtractedArrayConstHandleType_<
-			PoolT_,
-			::dcool::resource::detail_::ExtractedUnifiedArrayConstHandleType_<
+		> using ArrayPoolHandleType_ = ::dcool::resource::detail_::ArrayPoolHandle_<PoolT_, storageRequirementC_>::Result_;
+
+		template <
+			typename T_, ::dcool::core::StorageRequirement storageRequirementC_
+		> concept HasArrayPoolConstHandleType_ = requires {
+			typename T_::ArrayConstHandle<storageRequirementC_>;
+		};
+
+		template <typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_> struct ArrayPoolConstHandle_ {
+			using Result_ = ::dcool::resource::detail_::ExtractedUnifiedArrayConstHandleType_<
 				PoolT_,
 				::dcool::core::PointedConstantizedType<::dcool::resource::detail_::ArrayPoolHandleType_<PoolT_, storageRequirementC_>>
-			>
-		>;
+			>;
+		};
+
+		template <
+			::dcool::core::StorageRequirement storageRequirementC_,
+			::dcool::resource::detail_::HasArrayPoolConstHandleType_<storageRequirementC_> PoolT_
+		> struct ArrayPoolConstHandle_<PoolT_, storageRequirementC_> {
+			using Result_ = typename PoolT_::ArrayConstHandle<storageRequirementC_>;
+		};
+
+		template <
+			typename PoolT_, ::dcool::core::StorageRequirement storageRequirementC_
+		> using ArrayPoolConstHandleType_ = ::dcool::resource::detail_::ArrayPoolConstHandle_<
+			PoolT_, storageRequirementC_
+		>::Result_;
 
 		template <
 			typename T_, ::dcool::core::StorageRequirement storageRequirementC_
@@ -609,7 +692,7 @@ namespace dcool::resource {
 			T_ pool_,
 			::dcool::resource::detail_::ArrayPoolHandleType_<T_, storageRequirementC_> handle_,
 			::dcool::core::LengthType<T_> length_,
-			::dcool::core::SizeType<T_> extra_
+			::dcool::core::LengthType<T_> extra_
 		) {
 			{
 				pool_.template expandBack<storageRequirementC_>(handle_, length_, extra_)
@@ -622,7 +705,7 @@ namespace dcool::resource {
 			PoolT_& pool_,
 			::dcool::resource::detail_::ArrayPoolHandleType_<PoolT_, storageRequirementC_> handle_,
 			::dcool::core::LengthType<PoolT_> length_,
-			::dcool::core::SizeType<PoolT_> extra_
+			::dcool::core::LengthType<PoolT_> extra_
 		) -> ::dcool::core::Boolean {
 			return false;
 		}
@@ -634,7 +717,7 @@ namespace dcool::resource {
 			PoolT_& pool_,
 			::dcool::resource::detail_::ArrayPoolHandleType_<PoolT_, storageRequirementC_> handle_,
 			::dcool::core::LengthType<PoolT_> length_,
-			::dcool::core::SizeType<PoolT_> extra_
+			::dcool::core::LengthType<PoolT_> extra_
 		) noexcept -> ::dcool::core::Boolean {
 			return pool_.template expandBack<storageRequirementC_>(handle_, length_, extra_);
 		}
@@ -947,8 +1030,10 @@ namespace dcool::resource {
 		public: using UnifiedConstHandle = void const*;
 		public: using UnifiedArrayHandle = UnifiedHandle;
 		public: using UnifiedArrayConstHandle = UnifiedConstHandle;
-		public: using Handle = UnifiedHandle;
-		public: using ArrayHandle = Handle;
+		public: template <::dcool::core::StorageRequirement> using Handle = UnifiedHandle;
+		public: template <::dcool::core::StorageRequirement> using ConstHandle = UnifiedConstHandle;
+		public: template <::dcool::core::StorageRequirement> using ArrayHandle = UnifiedArrayHandle;
+		public: template <::dcool::core::StorageRequirement> using ArrayConstHandle = UnifiedArrayConstHandle;
 		public: using Size = ClassicPoolAdaptor_::Size;
 		public: using Length = ClassicPoolAdaptor_::Size;
 		public: using Difference = ::dcool::core::Difference;
@@ -957,7 +1042,9 @@ namespace dcool::resource {
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> [[nodiscard("Might leak memory.")]] constexpr auto allocate(Length length_ = 1) noexcept -> Handle {
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate(
+			Length length_ = 1
+		) noexcept -> Handle<storageRequirementC__> {
 			Size totalSize = ::dcool::core::size(storageRequirementC__) * length_;
 			if constexpr (::dcool::core::alignment(storageRequirementC__) != ClassicPoolAdaptor_::defaultAlignment) {
 				return ClassicPoolAdaptor_::allocate(this->classicPool, totalSize, ::dcool::core::alignment(storageRequirementC__));
@@ -967,7 +1054,7 @@ namespace dcool::resource {
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> void deallocate(Handle handle_, Length length_ = 1) noexcept {
+		> void deallocate(Handle<storageRequirementC__> handle_, Length length_ = 1) noexcept {
 			Size totalSize = ::dcool::core::size(storageRequirementC__) * length_;
 			if constexpr (::dcool::core::alignment(storageRequirementC__) != ClassicPoolAdaptor_::defaultAlignment) {
 				return ClassicPoolAdaptor_::deallocate(

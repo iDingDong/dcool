@@ -21,8 +21,8 @@ namespace dcool::resource {
 		public: using Index = Length;
 		public: using UnifiedHandle = Index;
 		public: using UnifiedConstHandle = Index;
-		public: using Handle = UnifiedHandle;
-		public: using ConstHandle = UnifiedConstHandle;
+		public: template <::dcool::core::StorageRequirement> using Handle = UnifiedHandle;
+		public: template <::dcool::core::StorageRequirement> using ConstHandle = UnifiedConstHandle;
 		private: using UnitStorage_ = ::dcool::core::AlignedStorage<unitStorageRequirementC_>;
 		public: static constexpr ::dcool::core::Alignment maxAlignment = ::dcool::core::alignment(unitStorageRequirement);
 		public: static constexpr ::dcool::core::Alignment defaultAlignment = ::dcool::core::alignment(unitStorageRequirement);
@@ -60,7 +60,7 @@ namespace dcool::resource {
 
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle {
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle<storageRequirementC__> {
 			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
 				throw ::dcool::resource::BadAllocation();
 			}
@@ -74,7 +74,7 @@ namespace dcool::resource {
 
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> constexpr void deallocate(Handle handle_) noexcept {
+		> constexpr void deallocate(Handle<storageRequirementC__> handle_) noexcept {
 			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
 				::dcool::core::terminate();
 			}
@@ -82,28 +82,30 @@ namespace dcool::resource {
 			this->m_first_ = handle_;
 		}
 
-		public: struct HandleConverter {
+		public: template <::dcool::core::StorageRequirement storageRequirementC__> struct HandleConverter {
 			Self_* pool_;
 
-			constexpr auto operator ()(Handle index_) const noexcept -> void* {
+			constexpr auto operator ()(Handle<storageRequirementC__> index_) const noexcept -> void* {
 				return ::dcool::core::addressOf(pool_->m_storage_[index_]);
 			}
 
-			constexpr auto operator ()(void const* pointer_) const noexcept -> Handle {
-				return static_cast<Handle>(
+			constexpr auto operator ()(void const* pointer_) const noexcept -> Handle<storageRequirementC__> {
+				return static_cast<Handle<storageRequirementC__>>(
 					static_cast<UnitStorage_ const*>(pointer_) - (::dcool::core::addressOf(pool_->m_storage_[0]))
 				);
 			}
 		};
 
-		public: using ConstHandleConverter = HandleConverter;
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC__
+		> using ConstHandleConverter = HandleConverter<storageRequirementC__>;
 
 		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto handleConverter() noexcept {
-			return HandleConverter(this);
+			return HandleConverter<storageRequirementC__>(this);
 		}
 
 		public: template <::dcool::core::StorageRequirement storageRequirementC__> constexpr auto constHandleConverter() noexcept {
-			return this->handleConverter<storageRequirementC__>();
+			return ConstHandleConverter<storageRequirementC__>(this->handleConverter<storageRequirementC__>());
 		}
 
 		public: friend constexpr auto operator ==(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::Boolean {
@@ -126,10 +128,18 @@ namespace dcool::resource {
 		public: using Index = Nexus::Index;
 		public: using UnifiedHandle = Nexus::UnifiedHandle;
 		public: using UnifiedConstHandle = Nexus::UnifiedConstHandle;
-		public: using Handle = Nexus::Handle;
-		public: using ConstHandle = Nexus::ConstHandle;
-		public: using HandleConverter = Nexus::HandleConverter;
-		public: using ConstHandleConverter = Nexus::ConstHandleConverter;
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC_
+		> using Handle = typename Nexus::Handle<storageRequirementC_>;
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC_
+		> using ConstHandle = typename Nexus::ConstHandle<storageRequirementC_>;
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC_
+		> using HandleConverter = typename Nexus::HandleConverter<storageRequirementC_>;
+		public: template <
+			::dcool::core::StorageRequirement storageRequirementC_
+		> using ConstHandleConverter = typename Nexus::ConstHandleConverter<storageRequirementC_>;
 		public: static constexpr ::dcool::core::Alignment maxAlignment = Nexus::maxAlignment;
 		public: static constexpr ::dcool::core::Alignment defaultAlignment = Nexus::defaultAlignment;
 
@@ -147,13 +157,13 @@ namespace dcool::resource {
 
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle {
+		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle<storageRequirementC__> {
 			return this->m_pinned_->template allocate<storageRequirementC__>();
 		}
 
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
-		> constexpr void deallocate(Handle handle_) noexcept {
+		> constexpr void deallocate(Handle<storageRequirementC__> handle_) noexcept {
 			return this->m_pinned_->template deallocate<storageRequirementC__>(handle_);
 		}
 
