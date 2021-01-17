@@ -22,11 +22,11 @@ namespace dcool::core {
 	// See document/dependency_bugs#Bug_1 for mor details.
 	using StorageRequirement = unsigned __int128;
 
-	constexpr auto size(StorageRequirement requirement_) -> ::dcool::core::Size {
+	constexpr auto size(::dcool::core::StorageRequirement requirement_) -> ::dcool::core::Size {
 		return static_cast<::dcool::core::Size>(requirement_);
 	}
 
-	constexpr auto alignment(StorageRequirement requirement_) -> ::dcool::core::Alignment {
+	constexpr auto alignment(::dcool::core::StorageRequirement requirement_) -> ::dcool::core::Alignment {
 		return static_cast<::dcool::core::Alignment>(requirement_ >> 64);
 	}
 
@@ -46,11 +46,11 @@ namespace dcool::core {
 		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
-	constexpr auto size(StorageRequirement requirement_) -> ::dcool::core::Size {
+	constexpr auto size(::dcool::core::StorageRequirement requirement_) -> ::dcool::core::Size {
 		return requirement_.size;
 	}
 
-	constexpr auto alignment(StorageRequirement requirement_) -> ::dcool::core::Alignment {
+	constexpr auto alignment(::dcool::core::StorageRequirement requirement_) -> ::dcool::core::Alignment {
 		return requirement_.alignment;
 	}
 
