@@ -4,11 +4,13 @@
 #	include <utility>
 #	include <exception>
 #	include <cstdint>
+#	include <cstddef>
 
 namespace dcool::core {
 	using ::std::declval;
 	using ::std::terminate;
 
+	using Byte = ::std::byte;
 	using Boolean = bool;
 	using Size = decltype(sizeof(char));
 	using Difference = decltype(::dcool::core::declval<char*>() - ::dcool::core::declval<char*>());

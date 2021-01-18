@@ -2,12 +2,6 @@
 #include <dcool/resource.hpp>
 #include <dcool/test.hpp>
 
-namespace {
-	struct Config {
-		using Pool = dcool::resource::ConcreteReferencePool<8, dcool::core::storageRequirement<8, 4>>;
-	};
-}
-
 DCOOL_TEST_CASE(dcoolContainer, linkedBasics) {
 	dcool::container::ForwardLinked<int> linked1;
 	linked1.emplaceFront(1);
