@@ -24,6 +24,8 @@ namespace dcool::test {
 			::dcool::test::Count successCount;
 			::dcool::test::Count gentleFailureCount;
 			::dcool::test::Count fatalFailureCount;
+			::dcool::test::TimePoint startTime;
+			::dcool::test::TimePoint finishTime;
 			::std::map<::dcool::test::Name, ::dcool::test::Case::Result> details;
 		};
 
