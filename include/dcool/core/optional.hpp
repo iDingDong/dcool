@@ -101,7 +101,7 @@ namespace dcool::core {
 			public: template <
 				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
 			> constexpr explicit(
-				::dcool::core::ConvertibleTo<ValueT__&&, Value>
+				!::dcool::core::ConvertibleTo<ValueT__&&, Value>
 			) Optional_(ValueT__&& value_) noexcept(
 				noexcept(Underlying_(::dcool::core::forward<ValueT__>(value_)))
 			): m_underlying_(::dcool::core::forward<ValueT__>(value_)) {
@@ -186,7 +186,9 @@ namespace dcool::core {
 
 			public: template <
 				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
-			> constexpr Optional_(ValueT__&& value_) noexcept(
+			> constexpr explicit(
+				!::dcool::core::ConvertibleTo<ValueT__&&, Value>
+			) Optional_(ValueT__&& value_) noexcept(
 				noexcept(Value(::dcool::core::forward<ValueT__>(value_)))
 			): m_value_(::dcool::core::forward<ValueT__>(value_)) {
 			}
