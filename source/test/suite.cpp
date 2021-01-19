@@ -22,6 +22,7 @@ namespace dcool::test {
 
 	auto Suite::executeAll() -> Suite::Result {
 		Suite::Result result = {};
+		result.startTime = Clock::now();
 		for (auto& currentCase: this->m_cases_) {
 			Case::Result caseResult = currentCase.second.execute();
 			if (caseResult.record.failures.vacant()) {
@@ -33,6 +34,7 @@ namespace dcool::test {
 			}
 			result.details.insert(std::pair{ currentCase.first, caseResult });
 		}
+		result.finishTime = Clock::now();
 		return result;
 	}
 

@@ -1,6 +1,13 @@
 #include <dcool/test.hpp>
 
+#include <chrono>
 #include <iostream>
+#include <string>
+
+// Remove this workaround when 'operator <<(std::ostream, std::chrono::duration)' is implemented by libstdc++.
+auto executionDurationString(dcool::test::Duration const& duration) -> std::string {
+	return std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()) + "us";
+}
 
 int main() {
 	auto result = dcool::test::Center::instance().executeAll();
@@ -19,11 +26,12 @@ int main() {
 					" of " << caseResult.second.record.checkCount <<
 					" performed checke(s) failed with " <<
 					(caseResult.second.endedByFatal ? "last failure fatal" : "all failures gentle") <<
-					".\n"
+					""
 				;
 			} else {
-				std::cout  << "All " << caseResult.second.record.checkCount << " performed checks passed.\n";
+				std::cout  << "All " << caseResult.second.record.checkCount << " performed checks passed";
 			}
+			std::cout << " in " << executionDurationString(caseResult.second.finishTime - caseResult.second.startTime) << ".\n";
 		}
 		std::cout << "\t[Suite " << suiteResult.first << "] ";
 		dcool::test::Count failureCount = suiteResult.second.gentleFailureCount + suiteResult.second.fatalFailureCount;
@@ -35,11 +43,12 @@ int main() {
 				suiteResult.second.fatalFailureCount <<
 				" fatal) of " <<
 				caseCount <<
-				" cases executed failed.\n"
+				" cases executed failed"
 			;
 		} else {
-			std::cout << "All " << caseCount << " cases passed.\n";
+			std::cout << "All " << caseCount << " cases passed";
 		}
+		std::cout << " in " << executionDurationString(suiteResult.second.finishTime - suiteResult.second.startTime) << ".\n";
 	}
 	dcool::test::Count suiteCount = result.suiteStatistics.successCount + result.suiteStatistics.failureCount;
 	if (result.suiteStatistics.failureCount > 0) {
@@ -47,11 +56,11 @@ int main() {
 			result.suiteStatistics.failureCount <<
 			" of " <<
 			suiteCount <<
-			" suites executed failed." <<
-			std::endl
+			" suites executed failed"
 		;
 	} else {
-		std::cout << "All " << suiteCount << " suites passed.\n";
+		std::cout << "All " << suiteCount << " suites passed";
 	}
+	std::cout << " in " << executionDurationString(result.finishTime - result.startTime) << std::endl;
 	return 0;
 }

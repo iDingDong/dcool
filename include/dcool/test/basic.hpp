@@ -3,6 +3,7 @@
 
 #	include <dcool/core.hpp>
 
+#	include <string>
 #	include <string_view>
 #	include <chrono>
 
@@ -11,7 +12,7 @@ namespace dcool::test {
 	using Name = ::std::string_view;
 	using FileName = ::dcool::test::Name;
 	using LineNumber = ::dcool::core::UnsignedMaxInteger;
-	using Clock = ::std::chrono::high_resolution_clock;
+	using Clock = ::std::chrono::steady_clock;
 	using TimePoint = Clock::time_point;
 	using Duration = Clock::duration;
 }

@@ -21,7 +21,7 @@ namespace dcool::test {
 		} catch (FatalCaseFailure const&) {
 			result.endedByFatal = true;
 		}
-		result.endTime = Clock::now();
+		result.finishTime = Clock::now();
 		return result;
 	}
 

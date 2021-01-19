@@ -31,7 +31,7 @@ namespace dcool::test {
 
 		public: struct Result {
 			::dcool::test::TimePoint startTime;
-			::dcool::test::TimePoint endTime;
+			::dcool::test::TimePoint finishTime;
 			::dcool::core::Boolean endedByFatal;
 			Record record;
 		};
