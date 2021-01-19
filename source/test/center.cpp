@@ -22,6 +22,7 @@ namespace dcool::test {
 
 	auto Center::executeAll() -> Center::Result {
 		Center::Result result = {};
+		result.startTime = Clock::now();
 		for (auto& current: this->m_suites_) {
 			Suite::Result suiteResult = current.second.executeAll();
 			if (suiteResult.fatalFailureCount != 0 || suiteResult.gentleFailureCount != 0) {
@@ -34,6 +35,7 @@ namespace dcool::test {
 			result.caseStatistics.fatalFailureCount += suiteResult.fatalFailureCount;
 			result.details.insert(::std::make_pair(current.first, suiteResult));
 		}
+		result.finishTime = Clock::now();
 		return result;
 	}
 

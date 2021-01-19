@@ -595,6 +595,22 @@ namespace dcool::container {
 			return ::dcool::core::makeReverseIterator(this->begin(engine_));
 		}
 
+		public: constexpr auto position(Engine& engine_, Index index_) const noexcept -> ConstIterator {
+			return this->begin(engine_) + index_;
+		}
+
+		public: constexpr auto position(Engine& engine_, Index index_) noexcept -> Iterator {
+			return this->begin(engine_) + index_;
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
+			return *(this->position(engine_, index_));
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
+			return *(this->position(engine_, index_));
+		}
+
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void forceExpandBack(Engine& engine_, Length extra_) {
@@ -793,6 +809,7 @@ namespace dcool::container {
 		public: using Chassis = ::dcool::container::ListChassis<Value, Config>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Length = ConfigAdaptor_::Length;
+		public: using Index = ConfigAdaptor_::Index;
 		public: using Iterator = ConfigAdaptor_::Iterator;
 		public: using ConstIterator = ConfigAdaptor_::ConstIterator;
 		public: using ReverseIterator = ConfigAdaptor_::ReverseIterator;
@@ -806,20 +823,20 @@ namespace dcool::container {
 		private: [[no_unique_address]] mutable Engine m_engine_;
 
 		public: constexpr List() noexcept {
-			this->chassis().initialize(this->engine());
+			this->chassis().initialize(this->engine_());
 		}
 
-		public: constexpr List(Self_ const& other_): m_engine_(other_.engine()) {
-			other_.chassis().cloneTo(other_.engine(), this->engine(), this->chassis());
+		public: constexpr List(Self_ const& other_): m_engine_(other_.engine_()) {
+			other_.chassis().cloneTo(other_.engine_(), this->engine_(), this->chassis());
 		}
 
-		public: constexpr List(Self_&& other_): m_engine_(other_.engine()) {
+		public: constexpr List(Self_&& other_): m_engine_(other_.engine_()) {
 			other_.chassis().relocateTo(this->chassis());
-			other_.chassis().initialize(other_.engine());
+			other_.chassis().initialize(other_.engine_());
 		}
 
 		public: constexpr ~List() noexcept {
-			this->chassis().uninitialize(this->engine());
+			this->chassis().uninitialize(this->engine_());
 		}
 
 		public: constexpr auto operator =(Self_ const& other_) -> Self_& {
@@ -836,23 +853,23 @@ namespace dcool::container {
 
 		public: constexpr void swapWith(Self_& other_) {
 			this->chassis().swapWith(other_.chassis());
-			::dcool::core::intelliSwap(this->engine(), other_.engine());
+			::dcool::core::intelliSwap(this->engine_(), other_.engine_());
 		}
 
 		public: constexpr auto vacant() const noexcept -> ::dcool::core::Boolean {
-			return this->chassis().vacant(this->engine());
+			return this->chassis().vacant(this->engine_());
 		}
 
 		public: constexpr auto full() const noexcept -> ::dcool::core::Boolean {
-			return this->chassis().full(this->engine());
+			return this->chassis().full(this->engine_());
 		}
 
 		public: constexpr auto length() const noexcept -> Length {
-			return this->chassis().length(this->engine());
+			return this->chassis().length(this->engine_());
 		}
 
 		public: constexpr auto capacity() const noexcept -> Length {
-			return this->chassis().capacity(this->engine());
+			return this->chassis().capacity(this->engine_());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {
@@ -863,31 +880,59 @@ namespace dcool::container {
 			return this->m_chassis_;
 		}
 
-		public: constexpr auto engine() const noexcept -> Engine& {
+		public: constexpr auto engine() const noexcept -> Engine const& {
+			return this->m_engine_;
+		}
+
+		public: constexpr auto engine_() const noexcept -> Engine& {
 			return this->m_engine_;
 		}
 
 		public: constexpr auto begin() const noexcept -> ConstIterator {
-			return this->chassis().begin(this->engine());
+			return this->chassis().begin(this->engine_());
 		}
 
 		public: constexpr auto begin() noexcept -> Iterator {
-			return this->chassis().begin(this->engine());
+			return this->chassis().begin(this->engine_());
 		}
 
 		public: constexpr auto end() const noexcept -> ConstIterator {
-			return this->chassis().end(this->engine());
+			return this->chassis().end(this->engine_());
 		}
 
 		public: constexpr auto end() noexcept -> Iterator {
-			return this->chassis().end(this->engine());
+			return this->chassis().end(this->engine_());
+		}
+
+		public: constexpr auto position(Index index_) const noexcept -> ConstIterator {
+			return this->chassis().position(this->engine_(), index_);
+		}
+
+		public: constexpr auto position(Index index_) noexcept -> Iterator {
+			return this->chassis().position(this->engine_(), index_);
+		}
+
+		public: constexpr auto access(Index index_) const noexcept -> Value const& {
+			return this->chassis().access(this->engine_(), index_);
+		}
+
+		public: constexpr auto access(Index index_) noexcept -> Value& {
+			return this->chassis().access(this->engine_(), index_);
+		}
+
+		public: constexpr auto operator [](Index index_) const noexcept -> Value const& {
+			return this->access(index_);
+		}
+
+		public: constexpr auto operator [](Index index_) noexcept -> Value& {
+			return this->access(index_);
 		}
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			return this->chassis().template emplace<strategyC__>(
-				this->engine(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+				this->engine_(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
 			);
 		}
 
@@ -901,7 +946,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplaceBack(ArgumentTs__&&... parameters_) -> Iterator {
 			return this->chassis().template emplaceBack<strategyC__>(
-				this->engine(), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+				this->engine_(), ::dcool::core::forward<ArgumentTs__>(parameters_)...
 			);
 		}
 
@@ -910,13 +955,13 @@ namespace dcool::container {
 		}
 
 		public: constexpr void popBack() noexcept {
-			return this->chassis().popBack(this->engine());
+			return this->chassis().popBack(this->engine_());
 		}
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto erase(Iterator position_) -> Iterator {
-			return this->chassis().template erase<strategyC__>(this->engine(), position_);
+			return this->chassis().template erase<strategyC__>(this->engine_(), position_);
 		}
 	};
 
