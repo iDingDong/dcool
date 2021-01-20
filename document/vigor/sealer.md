@@ -1,5 +1,7 @@
 # Class template Sealer
 
+Include `<dcool/vigor.hpp>` to use.
+
 A strong exception safety helper.
 
 ```cpp
@@ -12,7 +14,7 @@ Unless otherwise specified, all operations have strong exception guarantee even 
 
 Unless otherwise specified, if type `Config::Mutex` is available, all operations will attempt to be sychronzied with an object `mutex` of `Config::Mutex` if the mutex satisfies ISO C++ named concept *Mutex*. If it also satisfies ISO C++ named concept *SharedMutex*, readonly operations will attempt to lock the mutex in shared mode.
 
-## Member typee
+## Member types
 
 | Name | Definition |
 | - | - |
@@ -20,7 +22,7 @@ Unless otherwise specified, if type `Config::Mutex` is available, all operations
 | `Config` | `ConfigT` |
 | `Mutex` | `Config::Mutex` if available; otherwise an unspecified no-op mutex type. |
 
-## Constructor
+## Constructors
 
 ```cpp
 constexpr Sealer() noexcept(/* unspecified expression */); // 1
@@ -36,7 +38,7 @@ template <typename... Arguments> constexpr Sealer(
 - Overload 2: Construct with holded value copied from `other`.
 - Overload 3: Construct with holded value initialized with the given `parameters`.
 
-## Destructor
+## Destructors
 
 ```cpp
 constexpr ~Sealer() noexcept;
@@ -44,7 +46,7 @@ constexpr ~Sealer() noexcept;
 
 Destruct holded value.
 
-## Assignment
+## Assignments
 
 ```cpp
 constexpr auto operator =(Sealer const& other) noexcept(/* unspecified expression */) -> Sealer&;
@@ -52,7 +54,7 @@ constexpr auto operator =(Sealer const& other) noexcept(/* unspecified expressio
 
 Copy the value holded by `other` to value holded by self.
 
-## Other member
+## Other members
 
 ### `copiedValue`
 
