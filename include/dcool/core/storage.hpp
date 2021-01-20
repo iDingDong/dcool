@@ -20,7 +20,7 @@ namespace dcool::core {
 #	if defined(__GNUC__)
 	// Workaround for a compiler bug.
 	// See document/dependency_bugs#Bug_1 for mor details.
-	using StorageRequirement = unsigned __int128;
+	__extension__ using StorageRequirement = unsigned __int128;
 
 	constexpr auto size(::dcool::core::StorageRequirement requirement_) -> ::dcool::core::Size {
 		return static_cast<::dcool::core::Size>(requirement_);

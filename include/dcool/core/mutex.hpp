@@ -8,7 +8,7 @@
 #	include <mutex>
 #	include <shared_mutex>
 
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeMutex, ExtractedMutexType, Mutex);
+DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeMutex, ExtractedMutexType, Mutex)
 
 namespace dcool::core {
 	template <typename T_> concept StandardBasicLockable = requires (T_ mutex_) {
