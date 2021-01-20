@@ -30,13 +30,13 @@
 		\
 		template <typename T_, typename ValueT_> consteval auto extractorName_(ValueT_ defaultValue_) -> ValueT_ { \
 			return defaultValue_; \
-		}; \
+		} \
 		\
 		template < \
 			::namespaceName::ConceptName_ T_, typename ValueT_ \
 		> consteval auto extractorName_(ValueT_ defaultValue_) -> ValueT_ { \
 			return T_::memberName_; \
-		}; \
+		} \
 	}
 
 #	define DCOOL_CORE_DEFINE_STATIC_MEMBER_DETECTOR(namespaceName, ConceptName_, extractorName_, memberName_) \

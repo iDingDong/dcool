@@ -46,6 +46,6 @@ namespace dcool::core {
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
 		return ::std::addressof(toPoint_);
 	}
-};
+}
 
 #endif

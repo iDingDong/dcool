@@ -6,16 +6,13 @@
 
 #	include <algorithm>
 #	include <limits>
-#	include <span>
 #	include <stdexcept>
 
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 	dcool::container::detail_, HasValueStorageCapacity_, extractedStorageCapacityValue_, storageCapacity
-);
+)
 
 namespace dcool::container {
-	constexpr ::dcool::core::Length dynamicExtent = ::std::dynamic_extent;
-
 	using OutOfRange = ::std::out_of_range;
 
 	template <typename T_> concept StaticListConfig = true;
@@ -177,8 +174,8 @@ namespace dcool::container {
 
 		template <
 			typename ConfigT_, typename ValueT_
-		> struct ListConfigAdaptorBase_<::dcool::container::dynamicExtent, ConfigT_, ValueT_> {
-			private: using Self_ = ListConfigAdaptorBase_<::dcool::container::dynamicExtent, ConfigT_, ValueT_>;
+		> struct ListConfigAdaptorBase_<::dcool::core::dynamicExtent, ConfigT_, ValueT_> {
+			private: using Self_ = ListConfigAdaptorBase_<::dcool::core::dynamicExtent, ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
 			public: using Value = ValueT_;
 
@@ -207,13 +204,13 @@ namespace dcool::container {
 		template <
 			typename ConfigT_, typename ValueT_
 		> struct ListConfigAdaptor_: public ::dcool::container::detail_::ListConfigAdaptorBase_<
-			::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::container::dynamicExtent),
+			::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::core::dynamicExtent),
 			ConfigT_,
 			ValueT_
 		> {
 			private: using Self_ = ListConfigAdaptor_<ConfigT_, ValueT_>;
 			private: using Super_ = ::dcool::container::detail_::ListConfigAdaptorBase_<
-				::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::container::dynamicExtent),
+				::dcool::container::detail_::extractedStorageCapacityValue_<ConfigT_>(::dcool::core::dynamicExtent),
 				ConfigT_,
 				ValueT_
 			>;
