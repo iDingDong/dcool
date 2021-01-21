@@ -29,7 +29,7 @@ namespace dcool::core {
 		(atAnyCostC_ ? 0b01 : 0) | (strongOrTerminateC_ ? 0b10 : 0)
 	;
 #	else
-	using ExceptionSafetyStrategy {
+	struct ExceptionSafetyStrategy {
 		private: using Self_ = ExceptionSafetyStrategy;
 
 		public: ::dcool::core::Boolean atAnyCost: 1;
