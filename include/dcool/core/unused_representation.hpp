@@ -112,6 +112,6 @@ namespace dcool::core {
 	> constexpr auto intelliVerifyUnusedRepresentation(ObjectT_ object_) -> ::dcool::core::Boolean {
 		return ::dcool::core::detail_::verifyUnusedRepresentation_(object_);
 	}
-};
+}
 
 #endif

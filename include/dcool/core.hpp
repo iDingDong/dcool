@@ -16,6 +16,7 @@
 #	include <dcool/core/node.hpp>
 #	include <dcool/core/optional.hpp>
 #	include <dcool/core/range.hpp>
+#	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>
 #	include <dcool/core/tuple.hpp>
 #	include <dcool/core/type_difference_detector.hpp>

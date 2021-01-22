@@ -6,5 +6,22 @@ set(DCOOL_ROOT_DIRECTORY "${PROJECT_SOURCE_DIR}")
 set(DCOOL_INCLUDE_DIRECTORY "${DCOOL_ROOT_DIRECTORY}/include")
 set(DCOOL_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/binary")
 
+include("CheckCXXCompilerFlag")
+
+function(target_compile_option_if_supported TARGET SCOPE FLAG)
+	check_cxx_compiler_flag("${FLAG}" SUPPORTED)
+	if("${SUPPORTED}")
+		target_compile_options("${TARGET}" "${SCOPE}" "${FLAG}")
+	endif()
+endfunction()
+
+function(target_enable_common_warnings TARGET SCOPE)
+	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "-Wall")
+endfunction()
+
+function(target_enable_pedantic TARGET SCOPE)
+	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "-pedantic")
+endfunction()
+
 add_subdirectory("./source")
 add_subdirectory("./test")

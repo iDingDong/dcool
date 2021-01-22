@@ -7,5 +7,9 @@ add_library(
 )
 
 target_compile_features(dcool_test PUBLIC cxx_std_20)
+target_enable_common_warnings(dcool_test PUBLIC)
+target_enable_pedantic(dcool_test PRIVATE)
 
 target_include_directories(dcool_test PUBLIC "${DCOOL_INCLUDE_DIRECTORY}")
+
+set_target_properties(dcool_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${DCOOL_OUTPUT_DIRECTORY}")
