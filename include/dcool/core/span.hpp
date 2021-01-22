@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_SPAN_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
+#	include <dcool/core/dereference.hpp>
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/range.hpp>
 
@@ -22,6 +23,7 @@ namespace dcool::core {
 		);
 
 		public: using Length = ::dcool::core::IntegerType<extent_>;
+		public: using Index = Length;
 		public: using Difference = ::dcool::core::IntegerType<extent_, -static_cast<::dcool::core::SignedMaxInteger>(extent_)>;
 		public: using Iterator = Value*;
 		public: using ConstIterator = Value const*;
@@ -65,6 +67,18 @@ namespace dcool::core {
 		public: constexpr auto end() const noexcept -> Iterator {
 			return this->begin() + this->length();
 		}
+
+		public: constexpr auto position(Index index_) const noexcept -> Iterator {
+			return this->begin() + index_;
+		}
+
+		public: constexpr auto access(Index index_) const noexcept -> Value& {
+			return ::dcool::core::dereference(this->position(index_));
+		}
+
+		public: constexpr auto operator[](Index index_) const noexcept -> Value& {
+			return this->access(index_);
+		}
 	};
 
 	template <typename ValueT_> struct Span<ValueT_, ::dcool::core::dynamicExtent> {
@@ -73,6 +87,7 @@ namespace dcool::core {
 		public: static constexpr ::dcool::core::Length extent = ::dcool::core::dynamicExtent;
 
 		public: using Length = ::dcool::core::Length;
+		public: using Index = Length;
 		public: using Difference = ::dcool::core::Difference;
 		public: using Iterator = Value*;
 		public: using ConstIterator = Value const*;
@@ -118,6 +133,18 @@ namespace dcool::core {
 
 		public: constexpr auto end() const noexcept -> Iterator {
 			return this->begin() + this->length();
+		}
+
+		public: constexpr auto position(Index index_) const noexcept -> Iterator {
+			return this->begin() + index_;
+		}
+
+		public: constexpr auto access(Index index_) const noexcept -> Value& {
+			return ::dcool::core::dereference(this->position(index_));
+		}
+
+		public: constexpr auto operator[](Index index_) const noexcept -> Value& {
+			return this->access(index_);
 		}
 	};
 }
