@@ -4,7 +4,9 @@
 DCOOL_TEST_CASE(dcoolContainer, listBasics) {
 	dcool::container::List<int> list1;
 	list1.emplaceBack(1);
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(1));
 	list1.emplaceBack(2);
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(1, 2));
 	list1.emplaceBack(3);
 	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(1, 2, 3));
 	dcool::container::List<int> list2 = list1;
