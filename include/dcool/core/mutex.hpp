@@ -48,7 +48,7 @@ namespace dcool::core {
 
 			public: [[no_unique_address]] Underlying underlying;
 
-			public: constexpr void lock() noexcept(::dcool::core::declval<Underlying&>().lock()) {
+			public: constexpr void lock() noexcept(noexcept(::dcool::core::declval<Underlying&>().lock())) {
 				this->underlying.lock();
 			}
 
@@ -56,7 +56,7 @@ namespace dcool::core {
 				return this->underlying.try_lock();
 			}
 
-			public: constexpr void unlock() noexcept(::dcool::core::declval<Underlying&>().unlock()) {
+			public: constexpr void unlock() noexcept(noexcept(::dcool::core::declval<Underlying&>().unlock())) {
 				this->underlying.unlock();
 			}
 
