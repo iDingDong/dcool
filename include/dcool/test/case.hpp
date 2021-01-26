@@ -41,7 +41,7 @@ namespace dcool::test {
 		private: Executor m_executor_;
 
 		public: explicit Case(Executor executor_) noexcept;
-		public: auto execute() -> Result;
+		public: auto execute() const -> Result;
 	};
 
 	namespace detail_ {

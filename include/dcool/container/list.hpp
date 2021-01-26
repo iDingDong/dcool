@@ -832,6 +832,25 @@ namespace dcool::container {
 			other_.chassis().initialize(other_.engine_());
 		}
 
+		public: constexpr List(Length capacity_) noexcept {
+			this->chassis().initialize(this->engine_(), capacity_);
+		}
+
+		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
+			::dcool::core::RangeInputTag, IteratorT_ otherBegin_, IteratorT_ otherEnd_
+		): Self_(static_cast<Length>(::dcool::core::rangeLength(otherBegin_, otherEnd_))) {
+			// May optimize this to prevent some unecessary checks
+			try {
+				while (otherBegin_ != otherEnd_) {
+					this->emplaceBack(::dcool::core::dereference(otherBegin_));
+					++otherBegin_;
+				}
+			} catch (...) {
+				this->chassis().uninitialize(this->engine_());
+				throw;
+			}
+		}
+
 		public: constexpr ~List() noexcept {
 			this->chassis().uninitialize(this->engine_());
 		}
@@ -923,6 +942,12 @@ namespace dcool::container {
 
 		public: constexpr auto operator [](Index index_) noexcept -> Value& {
 			return this->access(index_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void forceExpandBack(Length extra_) {
+			this->chassis().template forceExpandBack<strategyC__>(this->engine_(), extra_);
 		}
 
 		public: template <

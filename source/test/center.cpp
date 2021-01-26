@@ -2,49 +2,76 @@
 
 #include <dcool/test/suite.hpp>
 
+#include <dcool/core.hpp>
+
 #include <utility>
 
 namespace dcool::test {
-	void Center::addSuite(Name suiteName_) {
-		if (this->access(suiteName_) != ::dcool::core::nullPointer) {
+	void Center::setUpBeforeFullExecution_() const {
+		if (this->beforeFullExecution == ::dcool::core::nullPointer) {
 			return;
 		}
-		this->m_suites_.insert(::std::make_pair(suiteName_, Suite()));
+		this->beforeFullExecution();
 	}
 
-	auto Center::access(Name suiteName_) -> Suite* {
-		auto current = this->m_suites_.find(suiteName_);
+	void Center::tearDownAfterFullExecution_() const {
+		if (this->afterFullExecution == ::dcool::core::nullPointer) {
+			return;
+		}
+		this->afterFullExecution();
+	}
+
+	void Center::setUpBeforeSuite_(Name suiteName) const {
+		if (this->beforeSuite == ::dcool::core::nullPointer) {
+			return;
+		}
+		this->beforeSuite(suiteName);
+	}
+
+	void Center::tearDownAfterSuite_(Name suiteName) const {
+		if (this->afterSuite == ::dcool::core::nullPointer) {
+			return;
+		}
+		this->afterSuite(suiteName);
+	}
+
+	void Center::addSuite(Name suiteName) {
+		this->m_suites_.insert(::std::make_pair(suiteName, Suite()));
+	}
+
+	auto Center::getPointer(Name suiteName) const -> Suite const* {
+		auto current = this->m_suites_.find(suiteName);
 		if (current == this->m_suites_.end()) {
 			return ::dcool::core::nullPointer;
 		}
 		return ::dcool::core::addressOf(current->second);
 	}
 
-	auto Center::executeAll() -> Center::Result {
-		Center::Result result = {};
-		result.startTime = Clock::now();
-		for (auto& current: this->m_suites_) {
-			Suite::Result suiteResult = current.second.executeAll();
-			if (suiteResult.fatalFailureCount != 0 || suiteResult.gentleFailureCount != 0) {
-				++(result.suiteStatistics.failureCount);
-			} else {
-				++(result.suiteStatistics.successCount);
-			}
-			result.caseStatistics.successCount += suiteResult.successCount;
-			result.caseStatistics.gentleFailureCount += suiteResult.gentleFailureCount;
-			result.caseStatistics.fatalFailureCount += suiteResult.fatalFailureCount;
-			result.details.insert(::std::make_pair(current.first, suiteResult));
+	auto Center::getPointer(Name suiteName) -> Suite* {
+		auto current = this->m_suites_.find(suiteName);
+		if (current == this->m_suites_.end()) {
+			return ::dcool::core::nullPointer;
 		}
-		result.finishTime = Clock::now();
-		return result;
+		return ::dcool::core::addressOf(current->second);
 	}
 
-	auto Center::executeOne(Name suiteName) -> Suite::Result {
-		Suite* current = this->access(suiteName);
+	auto Center::forceAccess(Name suiteName) -> Suite& {
+		return this->m_suites_[suiteName];
+	}
+
+	auto Center::executeAll() const -> Center::Result {
+		return this->executeAll(::dcool::core::serialExecution);
+	}
+
+	auto Center::executeOne(Name suiteName) const -> Suite::Result {
+		Suite const* current = this->getPointer(suiteName);
 		if (current == ::dcool::core::nullPointer) {
 			throw SuiteNotFound("Suite does not exist.");
 		}
-		return current->executeAll();
+		this->setUpBeforeSuite_(suiteName);
+		Suite::Result result = current->executeAll();
+		this->tearDownAfterSuite_(suiteName);
+		return result;
 	}
 
 	auto Center::instance() -> Self_& {
@@ -54,8 +81,7 @@ namespace dcool::test {
 
 	namespace detail_ {
 		int registerCase_(Name suiteName, Name caseName, Case::Executor executor) {
-			Center::instance().addSuite(suiteName);
-			Center::instance().access(suiteName)->addCase(caseName, executor);
+			Center::instance().forceAccess(suiteName).addCase(caseName, executor);
 			return 0;
 		}
 	}

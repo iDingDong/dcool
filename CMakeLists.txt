@@ -23,5 +23,12 @@ function(target_enable_pedantic TARGET SCOPE)
 	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "-pedantic")
 endfunction()
 
+function(target_link_library_if_exist TARGET SCOPE LIBRARY_NAME)
+	find_library(LIBRARY_PATH "${LIBRARY_NAME}")
+	if(LIBRARY_PATH)
+		target_link_libraries("${TARGET}" "${SCOPE}" "${LIBRARY_PATH}")
+	endif()
+endfunction()
+
 add_subdirectory("./source")
 add_subdirectory("./test")

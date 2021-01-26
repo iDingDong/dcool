@@ -5,12 +5,12 @@
 #include <string>
 
 // Remove this workaround when 'operator <<(std::ostream, std::chrono::duration)' is implemented by libstdc++.
-auto executionDurationString(dcool::test::Duration const& duration) -> std::string {
+static auto executionDurationString(dcool::test::Duration const& duration) -> std::string {
 	return std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()) + "us";
 }
 
 int main() {
-	auto result = dcool::test::Center::instance().executeAll();
+	auto result = dcool::test::Center::instance().executeAll(dcool::core::parallelExecution, dcool::core::parallelExecution);
 	std::cout << "Test report:\n";
 	for (auto& suiteResult: result.details) {
 		std::cout << "\t[Suite " << suiteResult.first << "] detail:\n";
