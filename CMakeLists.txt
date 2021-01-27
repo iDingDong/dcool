@@ -30,6 +30,7 @@ function(target_link_library_if_exist TARGET SCOPE LIBRARY_NAME)
 	if(LIBRARY_PATH)
 		target_link_libraries("${TARGET}" "${SCOPE}" "${LIBRARY_PATH}")
 	endif()
+	unset(LIBRARY_PATH CACHE)
 endfunction()
 
 add_subdirectory("./source")
