@@ -23,14 +23,14 @@ namespace dcool::resource {
 		public: using UnifiedConstHandle = Index;
 		public: template <::dcool::core::StorageRequirement> using Handle = UnifiedHandle;
 		public: template <::dcool::core::StorageRequirement> using ConstHandle = UnifiedConstHandle;
-		private: using UnitStorage_ = ::dcool::core::AlignedStorage<unitStorageRequirementC_>;
+
+		private: union UnitStorage_ {
+			Index next_;
+			::dcool::core::AlignedStorage<unitStorageRequirementC_> storage_;
+		};
+
 		public: static constexpr ::dcool::core::Alignment maxAlignment = ::dcool::core::alignment(unitStorageRequirement);
 		public: static constexpr ::dcool::core::Alignment defaultAlignment = ::dcool::core::alignment(unitStorageRequirement);
-
-		static_assert(
-			::dcool::core::isStorable<Length, unitStorageRequirementC_>,
-			"'dcool::resource::ConcretePinnedPool' need chunk suffitient to hold an index."
-		);
 
 		private: ::std::array<UnitStorage_, unitCount> m_storage_;
 		private: Index m_first_ = 0;
@@ -47,11 +47,11 @@ namespace dcool::resource {
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
 		private: constexpr auto nextAvailableOf_(Index index_) const noexcept -> Index {
-			return reinterpret_cast<Index const&>(this->m_storage_[index_]);
+			return this->m_storage_[index_].next_;
 		}
 
 		private: constexpr void link_(Index leading_, Index following_) noexcept {
-			reinterpret_cast<Index&>(this->m_storage_[leading_]) = following_;
+			this->m_storage_[leading_].next_ = following_;
 		}
 
 		public: constexpr auto exhausted() const noexcept {
