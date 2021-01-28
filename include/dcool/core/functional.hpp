@@ -28,6 +28,14 @@ namespace dcool::core {
 	};
 
 	template <typename T_, typename FunctorT_> concept UnaryArgumentFor = ::dcool::core::Invocable<FunctorT_, T_>;
+
+	template <auto resultC_> class ResultFixedFunctor {
+		public: template <typename... ArgumentTs__> constexpr auto operator ()(ArgumentTs__&&...) {
+			return resultC_;
+		}
+	};
+
+	template <auto resultC_> constexpr ::dcool::core::ResultFixedFunctor<resultC_> resultFixedFunctor;
 }
 
 #endif
