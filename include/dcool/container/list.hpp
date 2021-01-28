@@ -739,6 +739,18 @@ namespace dcool::container {
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
+		> constexpr auto braveEmplaceBack(Engine& engine_, ArgumentTs__&&... parameters_) -> Iterator {
+			return this->braveEmplace<strategyC__>(engine_, this->end(engine_), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto braveEmplaceBack(
+			Engine& engine_, ArgumentTs__&&... parameters_
+		) -> Iterator {
+			return this->braveEmplaceBack<exceptionSafetyStrategy>(engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplaceBack(Engine& engine_, ArgumentTs__&&... parameters_) -> Iterator {
 			return this->emplace<strategyC__>(engine_, this->end(engine_), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
@@ -927,6 +939,20 @@ namespace dcool::container {
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
+		> constexpr auto braveEmplace(Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+			return this->chassis().template braveEmplace<strategyC__>(
+				this->engine_(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto braveEmplace(
+			Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator {
+			return this->braveEmplace<exceptionSafetyStrategy>(position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			return this->chassis().template emplace<strategyC__>(
 				this->engine_(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
@@ -937,6 +963,18 @@ namespace dcool::container {
 			Iterator position_, ArgumentTs__&&... parameters_
 		) -> Iterator {
 			return this->emplace<exceptionSafetyStrategy>(position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
+		> constexpr auto braveEmplaceBack(ArgumentTs__&&... parameters_) -> Iterator {
+			return this->chassis().template braveEmplaceBack<strategyC__>(
+				this->engine_(), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto braveEmplaceBack(ArgumentTs__&&... parameters_) -> Iterator {
+			return this->braveEmplaceBack<exceptionSafetyStrategy>(::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
 		public: template <
