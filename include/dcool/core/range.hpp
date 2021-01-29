@@ -214,6 +214,67 @@ namespace dcool::core {
 
 	constexpr RangeInputTag rangeInput;
 
+	template <::dcool::core::BidirectionalIterator IteratorT_> constexpr auto previousOf(IteratorT_ iterator_) -> IteratorT_ {
+		--iterator_;
+		return iterator_;
+	}
+
+	template <typename ToAccessT_> constexpr auto beginOf(ToAccessT_& toAccess_) noexcept(noexcept(::std::begin(toAccess_))) {
+		return ::std::begin(toAccess_);
+	}
+
+	template <typename ToAccessT_> constexpr auto endOf(ToAccessT_& toAccess_) noexcept(noexcept(::std::end(toAccess_))) {
+		return ::std::end(toAccess_);
+	}
+
+	namespace detail_ {
+		template <typename T_> concept DirectlyFrontAccessible_ = requires (T_ toAccess_) {
+			{ toAccess_.front() } -> ::dcool::core::Reference;
+		};
+
+		template <typename ToAccessT_> constexpr auto frontOf_(ToAccessT_& toAccess_) {
+			return ::dcool::core::dereference(::dcool::core::beginOf(toAccess_));
+		}
+
+		template <::dcool::core::detail_::DirectlyFrontAccessible_ ToAccessT_> constexpr auto frontOf_(ToAccessT_& toAccess_) {
+			return toAccess_.front();
+		}
+	}
+
+	template <typename T_> concept FrontAccessible = requires (T_& toAccess_) {
+		{ ::dcool::core::detail_::frontOf_(toAccess_) } -> ::dcool::core::Reference;
+	};
+
+	template <::dcool::core::FrontAccessible ToAccessT_> constexpr auto frontOf(ToAccessT_& toAccess_) noexcept(
+		noexcept(::dcool::core::detail_::frontOf_(toAccess_))
+	) {
+		return ::dcool::core::detail_::frontOf_(toAccess_);
+	}
+
+	namespace detail_ {
+		template <typename T_> concept DirectlyBackAccessible_ = requires (T_ toAccess_) {
+			{ toAccess_.back() } -> ::dcool::core::Reference;
+		};
+
+		template <typename ToAccessT_> constexpr auto backOf_(ToAccessT_& toAccess_) {
+			return ::dcool::core::dereference(::dcool::core::previousOf(::dcool::core::endOf(toAccess_)));
+		}
+
+		template <::dcool::core::detail_::DirectlyFrontAccessible_ ToAccessT_> constexpr auto backOf_(ToAccessT_& toAccess_) {
+			return toAccess_.back();
+		}
+	}
+
+	template <typename T_> concept BackAccessible = requires (T_& toAccess_) {
+		{ ::dcool::core::detail_::backOf_(toAccess_) } -> ::dcool::core::Reference;
+	};
+
+	template <::dcool::core::BackAccessible ToAccessT_> constexpr auto backOf(ToAccessT_& toAccess_) noexcept(
+		noexcept(::dcool::core::detail_::backOf_(toAccess_))
+	) {
+		return ::dcool::core::detail_::backOf_(toAccess_);
+	}
+
 	namespace detail_ {
 		template <
 			::dcool::core::ExceptionSafetyStrategy strategyC_,
