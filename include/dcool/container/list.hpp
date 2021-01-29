@@ -601,11 +601,27 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
-			return *(this->position(engine_, index_));
+			return ::dcool::core::dereference(this->position(engine_, index_));
 		}
 
 		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
-			return *(this->position(engine_, index_));
+			return ::dcool::core::dereference(this->position(engine_, index_));
+		}
+
+		public: constexpr auto front(Engine& engine_) const noexcept -> Value const& {
+			return this->access(engine_, 0);
+		}
+
+		public: constexpr auto front(Engine& engine_) noexcept -> Value& {
+			return this->access(engine_, 0);
+		}
+
+		public: constexpr auto back(Engine& engine_) const noexcept -> Value const& {
+			return this->access(engine_, this->length(engine_) - 1);
+		}
+
+		public: constexpr auto back(Engine& engine_) noexcept -> Value& {
+			return this->access(engine_, this->length(engine_) - 1);
 		}
 
 		public: template <
@@ -946,6 +962,22 @@ namespace dcool::container {
 
 		public: constexpr auto access(Index index_) noexcept -> Value& {
 			return this->chassis().access(this->engine_(), index_);
+		}
+
+		public: constexpr auto front() const noexcept -> Value const& {
+			return this->chassis().front(this->engine_());
+		}
+
+		public: constexpr auto front() noexcept -> Value& {
+			return this->chassis().front(this->engine_());
+		}
+
+		public: constexpr auto back() const noexcept -> Value const& {
+			return this->chassis().back(this->engine_());
+		}
+
+		public: constexpr auto back() noexcept -> Value& {
+			return this->chassis().back(this->engine_());
 		}
 
 		public: constexpr auto operator [](Index index_) const noexcept -> Value const& {
