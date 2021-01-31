@@ -1,11 +1,11 @@
-# Class template Sealer
+# Class template `dcool::vigor::Sealer`
 
 Include `<dcool/vigor.hpp>` to use.
 
 A strong exception safety helper.
 
 ```cpp
-template <typename ValueT, typename ConfigT = /* unspecified type */> struct Sealer;
+template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::vigor::Sealer;
 ```
 
 A `dcool::vigor::Sealer` object hold and owns another object of `ValueT`.
@@ -25,11 +25,11 @@ Unless otherwise specified, if type `Config::Mutex` is available, all operations
 ## Constructors
 
 ```cpp
-constexpr Sealer() noexcept(/* unspecified expression */); // 1
+constexpr dcool::vigor::Sealer::Sealer() noexcept(/* unspecified expression */); // 1
 
-constexpr Sealer(Sealer const& other) noexcept(/* unspecified expression */); // 2
+constexpr dcool::vigor::Sealer::Sealer(Sealer const& other) noexcept(/* unspecified expression */); // 2
 
-template <typename... Arguments> constexpr Sealer(
+template <typename... Arguments> constexpr dcool::vigor::Sealer::Sealer(
 	::dcool::core::InPlaceTag, Arguments&&... parameters
 ) noexcept(/* unspecified expression */); // 3
 ```
@@ -49,17 +49,17 @@ Destruct holded value.
 ## Assignments
 
 ```cpp
-constexpr auto operator =(Sealer const& other) noexcept(/* unspecified expression */) -> Sealer&;
+constexpr auto dcool::vigor::Sealer::operator =(Sealer const& other) noexcept(/* unspecified expression */) -> Sealer&;
 ```
 
 Copy the value holded by `other` to value holded by self.
 
-## Other members
+## Non-static member functions
 
 ### `copiedValue`
 
 ```cpp
-constexpr auto copiedValue() const noexcept -> Value
+constexpr auto dcool::vigor::Sealer::copiedValue() const noexcept -> Value
 ```
 
 Returns a copy of the holded value.
@@ -67,15 +67,17 @@ Returns a copy of the holded value.
 ### `emplace`
 
 ```cpp
-template <typename... Arguments> constexpr void emplace(Arguments&&... parameters) noexcept(/* unspecified expression */);
+template <typename... Arguments> constexpr void dcool::vigor::Sealer::emplace(
+	Arguments&&... parameters
+) noexcept(/* unspecified expression */);
 ```
 
-Replace the holded value with a new value constructed by `parameters`.
+Replace the holded value with a new value constructed by forwarded `parameters`.
 
 ### `runTransaction`
 
 ```cpp
-template <typename TransactionT> constexpr void runTransaction(
+template <typename TransactionT> constexpr void dcool::vigor::Sealer::runTransaction(
 	TransactionT&& transaction
 ) noexcept(/* unspecified expression */);
 ```
@@ -85,7 +87,7 @@ template <typename TransactionT> constexpr void runTransaction(
 ### `runObserver`
 
 ```cpp
-template <typename ObserverT> constexpr void runObserver(
+template <typename ObserverT> constexpr void dcool::vigor::Sealer::runObserver(
 	ObserverT&& observer
 ) noexcept(/* unspecified expression */);
 ```

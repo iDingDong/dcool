@@ -12,7 +12,7 @@ namespace dcool::test {
 	Case::Case(Case::Executor executor) noexcept: m_executor_(executor) {
 	}
 
-	auto Case::execute() -> Case::Result {
+	auto Case::execute() const -> Case::Result {
 		Result result = {};
 		result.startTime = Clock::now();
 		try {

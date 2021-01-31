@@ -20,9 +20,30 @@ DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCatagory, Ext
 namespace dcool::core {
 	using ContiguousIteratorTag = ::std::contiguous_iterator_tag;
 
-	template <typename IteratorT_> using IteratorValueType = ::dcool::core::ExtractedValueType<
-		IteratorT_, typename ::std::iterator_traits<IteratorT_>::value_type
+	namespace detail_ {
+		template <typename IteratorT_> using IteratorValueType_ = ::dcool::core::ExtractedValueType<
+			IteratorT_, typename ::std::iterator_traits<IteratorT_>::value_type
+		>;
+
+		template <typename IteratorT_> using IteratorBasicValueType_ = ::dcool::core::ReferenceRemovedType<
+			decltype(*(::dcool::core::declval<IteratorT_&>()))
+		>;
+	}
+
+	template <typename IteratorT_> using IteratorValueType = ::dcool::core::ConditionalType<
+		::dcool::core::FormOfSame<
+			::dcool::core::detail_::IteratorValueType_<IteratorT_>,
+			::dcool::core::detail_::IteratorBasicValueType_<IteratorT_>
+		>,
+		::dcool::core::IdenticallyQualifiedType<
+			::dcool::core::detail_::IteratorValueType_<IteratorT_>, ::dcool::core::detail_::IteratorBasicValueType_<IteratorT_>
+		>,
+		::dcool::core::detail_::IteratorValueType_<IteratorT_>
 	>;
+
+	template <typename IteratorT_> using IteratorPointerType = ::std::iterator_traits<IteratorT_>::pointer;
+
+	template <typename IteratorT_> using IteratorReferenceType = ::std::iterator_traits<IteratorT_>::reference;
 
 	template <typename IteratorT_> using IteratorDifferenceType = ::dcool::core::ExtractedDifferenceType<
 		IteratorT_, typename ::std::iterator_traits<IteratorT_>::difference_type
@@ -44,8 +65,8 @@ namespace dcool::core {
 
 		public: using Difference = ::dcool::core::IteratorDifferenceType<Iterator>;
 		public: using Value = ::dcool::core::IteratorValueType<Iterator>;
-		public: using Pointer = ::std::iterator_traits<Iterator>::pointer;
-		public: using Reference = ::std::iterator_traits<Iterator>::reference;
+		public: using Pointer = ::dcool::core::IteratorPointerType<Iterator>;
+		public: using Reference = ::dcool::core::IteratorReferenceType<Iterator>;
 		public: using IteratorCategory = ::dcool::core::IteratorCatagoryType<Iterator>;
 
 		public: using difference_type = Difference;
@@ -115,13 +136,13 @@ namespace dcool::core {
 			return ::dcool::core::rawPointer(this->iterator);
 		}
 
-		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
-		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator >(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator <=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator >=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator >(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator <=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator >=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 
 		public: constexpr operator Iterator() const noexcept {
 			return this->iterator;
@@ -134,7 +155,7 @@ namespace dcool::core {
 	>;
 	template <typename T_> concept ForwardIterator = ::std::forward_iterator<::dcool::core::StandardIterator<T_>>;
 	template <typename T_> concept BidirectionalIterator = ::std::bidirectional_iterator<::dcool::core::StandardIterator<T_>>;
-
+	template <typename T_> concept RandomAccessIterator = ::std::random_access_iterator<::dcool::core::StandardIterator<T_>>;
 	template <typename T_> concept ContiguousIterator = ::std::contiguous_iterator<::dcool::core::StandardIterator<T_>>;
 
 	template <typename T_> constexpr ::dcool::core::Boolean isReversedContiguousIterator = false;
@@ -153,6 +174,31 @@ namespace dcool::core {
 		backward
 	};
 
+	namespace detail_ {
+		template <::dcool::core::RandomAccessIterator IteratorT_> constexpr auto rangeLength_(
+			IteratorT_ begin_, IteratorT_ end_
+		) noexcept -> ::dcool::core::IteratorDifferenceType<IteratorT_> {
+			return end_ - begin_;
+		}
+
+		template <typename IteratorT_> constexpr auto rangeLength_(
+			IteratorT_ begin_, IteratorT_ end_
+		) noexcept -> ::dcool::core::IteratorDifferenceType<IteratorT_> {
+			::dcool::core::IteratorDifferenceType<IteratorT_> result_ = 0;;
+			while (begin_ != end_) {
+				++begin_;
+				++result_;
+			}
+			return result_;
+		}
+	}
+
+	template <::std::input_or_output_iterator IteratorT_> constexpr auto rangeLength(
+		IteratorT_ begin_, IteratorT_ end_
+	) noexcept -> ::dcool::core::IteratorDifferenceType<IteratorT_> {
+		return ::dcool::core::detail_::rangeLength_(begin_, end_);
+	}
+
 	template <
 		::dcool::core::ForwardIterator IteratorT_
 	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
@@ -161,6 +207,72 @@ namespace dcool::core {
 			::dcool::core::dereference(begin_).~Value_();
 			++begin_;
 		}
+	}
+
+	struct RangeInputTag {
+	};
+
+	constexpr RangeInputTag rangeInput;
+
+	template <::dcool::core::BidirectionalIterator IteratorT_> constexpr auto previousOf(IteratorT_ iterator_) -> IteratorT_ {
+		--iterator_;
+		return iterator_;
+	}
+
+	template <typename ToAccessT_> constexpr auto beginOf(ToAccessT_& toAccess_) noexcept(noexcept(::std::begin(toAccess_))) {
+		return ::std::begin(toAccess_);
+	}
+
+	template <typename ToAccessT_> constexpr auto endOf(ToAccessT_& toAccess_) noexcept(noexcept(::std::end(toAccess_))) {
+		return ::std::end(toAccess_);
+	}
+
+	namespace detail_ {
+		template <typename T_> concept DirectlyFrontAccessible_ = requires (T_ toAccess_) {
+			{ toAccess_.front() } -> ::dcool::core::Reference;
+		};
+
+		template <typename ToAccessT_> constexpr auto frontOf_(ToAccessT_& toAccess_) {
+			return ::dcool::core::dereference(::dcool::core::beginOf(toAccess_));
+		}
+
+		template <::dcool::core::detail_::DirectlyFrontAccessible_ ToAccessT_> constexpr auto frontOf_(ToAccessT_& toAccess_) {
+			return toAccess_.front();
+		}
+	}
+
+	template <typename T_> concept FrontAccessible = requires (T_& toAccess_) {
+		{ ::dcool::core::detail_::frontOf_(toAccess_) } -> ::dcool::core::Reference;
+	};
+
+	template <::dcool::core::FrontAccessible ToAccessT_> constexpr auto frontOf(ToAccessT_& toAccess_) noexcept(
+		noexcept(::dcool::core::detail_::frontOf_(toAccess_))
+	) {
+		return ::dcool::core::detail_::frontOf_(toAccess_);
+	}
+
+	namespace detail_ {
+		template <typename T_> concept DirectlyBackAccessible_ = requires (T_ toAccess_) {
+			{ toAccess_.back() } -> ::dcool::core::Reference;
+		};
+
+		template <typename ToAccessT_> constexpr auto backOf_(ToAccessT_& toAccess_) {
+			return ::dcool::core::dereference(::dcool::core::previousOf(::dcool::core::endOf(toAccess_)));
+		}
+
+		template <::dcool::core::detail_::DirectlyFrontAccessible_ ToAccessT_> constexpr auto backOf_(ToAccessT_& toAccess_) {
+			return toAccess_.back();
+		}
+	}
+
+	template <typename T_> concept BackAccessible = requires (T_& toAccess_) {
+		{ ::dcool::core::detail_::backOf_(toAccess_) } -> ::dcool::core::Reference;
+	};
+
+	template <::dcool::core::BackAccessible ToAccessT_> constexpr auto backOf(ToAccessT_& toAccess_) noexcept(
+		noexcept(::dcool::core::detail_::backOf_(toAccess_))
+	) {
+		return ::dcool::core::detail_::backOf_(toAccess_);
 	}
 
 	namespace detail_ {

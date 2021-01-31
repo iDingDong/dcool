@@ -10,17 +10,27 @@ include("CheckCXXCompilerFlag")
 
 function(target_compile_option_if_supported TARGET SCOPE FLAG)
 	check_cxx_compiler_flag("${FLAG}" SUPPORTED)
-	if("${SUPPORTED}")
+	if(SUPPORTED)
 		target_compile_options("${TARGET}" "${SCOPE}" "${FLAG}")
 	endif()
+	unset(SUPPORTED CACHE)
 endfunction()
 
 function(target_enable_common_warnings TARGET SCOPE)
 	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "-Wall")
+	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "/W4")
 endfunction()
 
 function(target_enable_pedantic TARGET SCOPE)
 	target_compile_option_if_supported("${TARGET}" "${SCOPE}" "-pedantic")
+endfunction()
+
+function(target_link_library_if_exist TARGET SCOPE LIBRARY_NAME)
+	find_library(LIBRARY_PATH "${LIBRARY_NAME}")
+	if(LIBRARY_PATH)
+		target_link_libraries("${TARGET}" "${SCOPE}" "${LIBRARY_PATH}")
+	endif()
+	unset(LIBRARY_PATH CACHE)
 endfunction()
 
 add_subdirectory("./source")

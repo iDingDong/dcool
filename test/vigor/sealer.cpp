@@ -2,6 +2,8 @@
 #include <dcool/test.hpp>
 #include <dcool/vigor.hpp>
 
+#include <iostream>
+
 DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	struct Axception {
 	};
@@ -25,8 +27,16 @@ DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 			}
 		}
 
+		static consteval auto initialCountBeforeThrow() -> int {
+			return 8;
+		}
+
+		static void resetCountBeforeThrow() {
+			countBeforeThrow() = initialCountBeforeThrow();
+		}
+
 		static int& countBeforeThrow() {
-			static int count = 8;
+			static int count = initialCountBeforeThrow();
 			return count;
 		}
 	};
@@ -49,4 +59,5 @@ DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	} catch (...) {
 	}
 	sealer.runObserver(observer);
+	A::resetCountBeforeThrow();
 }
