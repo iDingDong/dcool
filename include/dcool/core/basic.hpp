@@ -1,10 +1,11 @@
 #ifndef DCOOL_CORE_BASIC_HPP_INCLUDED_
 #	define DCOOL_CORE_BASIC_HPP_INCLUDED_ 1
 
-#	include <utility>
-#	include <exception>
 #	include <cstdint>
 #	include <cstddef>
+#	include <exception>
+#	include <new>
+#	include <utility>
 
 namespace dcool::core {
 	using ::std::declval;
@@ -46,6 +47,8 @@ namespace dcool::core {
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
 		return ::std::addressof(toPoint_);
 	}
+
+	using ::std::launder;
 }
 
 #endif

@@ -70,7 +70,7 @@ namespace dcool::resource {
 		using Pool_ = ::dcool::core::ReferenceRemovedType<PoolT_>;
 		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedAllocatePointerFor<ValueT_>(pool_));
 		try {
-			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(arguments_)...);
+			pointer_ = new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(arguments_)...);
 		} catch (...) {
 			::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
 			throw;
