@@ -951,21 +951,29 @@ namespace dcool::container {
 			return this->emplaceBack<exceptionSafetyStrategy>(engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
-		public: void popBack(Engine& engine_) noexcept {
+		public: constexpr void popBack(Engine& engine_) noexcept {
 			this->back(engine_).~Value();
 			this->m_storage_.setLength(engine_, this->length(engine_) - 1);;
+		}
+
+		private: static constexpr auto copyRequiredToErase_(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept {
+			return ::dcool::core::atAnyCost(strategy_) && (!::dcool::core::isNoThrowMoveConstructible<Value>);
+		}
+
+		private: static constexpr auto reallocationRequiredToErase_(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept {
+			if (capacityFixed) {
+				return false;
+			}
+			if (stuffed) {
+				return true;
+			}
+			return ::dcool::core::atAnyCost(strategy_) && (!::dcool::core::isNoThrowMoveAssignable<Value>);
 		}
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto erase(Engine& engine_, Iterator position_) -> Iterator {
-			if constexpr (
-				(!capacityFixed) &&
-				(
-					stuffed ||
-					(::dcool::core::atAnyCost(strategyC__) && !noexcept(::std::move(position_ + 1, this->end(engine_), position_)))
-				)
-			) {
+			if constexpr (reallocationRequiredToErase_(strategyC__)) {
 					if (position_ == this->end(engine_) - 1) {
 						this->popBack(engine_);
 						return position_;
@@ -975,10 +983,22 @@ namespace dcool::container {
 					newChassis_.initializeWithoutFill_(engine_, newLength_);
 					Iterator newPosition_;
 					try {
-						newPosition_ = ::std::uninitialized_copy(this->begin(engine_), position_, newChassis_.begin(engine_));
+						if (copyRequiredToErase_(strategyC__)) {
+							newPosition_ = ::std::uninitialized_copy(this->begin(engine_), position_, newChassis_.begin(engine_));
+						} else {
+							newPosition_ = ::std::uninitialized_move(this->begin(engine_), position_, newChassis_.begin(engine_));
+						}
 						try {
 							::dcool::core::batchRelocate<strategyC__>(position_ + 1, this->end(engine_), newPosition_);
 						} catch (...) {
+							if (!copyRequiredToErase_(strategyC__)) {
+								try {
+									::std::move(newChassis_.begin(engine_), newPosition_, this->begin(engine_));
+								} catch (...) {
+									::dcool::core::goWeak<strategyC__>();
+									throw;
+								}
+							}
 							::dcool::core::batchDestruct(newChassis_.begin(engine_), newPosition_);
 							throw;
 						}
