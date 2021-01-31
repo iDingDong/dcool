@@ -124,7 +124,7 @@ namespace dcool::core {
 			return iterator_;
 		}
 
-		public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Self_ {
+		public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
 			return left_.iterator - right_.iterator;
 		}
 

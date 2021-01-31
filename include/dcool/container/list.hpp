@@ -226,8 +226,8 @@ namespace dcool::container {
 			public: using typename Super_::Length;
 
 			public: using Index = Length;
-			public: using Iterator = Value*;
-			public: using ConstIterator = Value const*;
+			public: using Iterator = ::dcool::core::ContaminatedPointer<Value>;
+			public: using ConstIterator = ::dcool::core::ContaminatedPointer<Value const>;
 			public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
 			public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
@@ -547,7 +547,7 @@ namespace dcool::container {
 				Value* end_ = begin_ + this->m_storage_.length();
 				for (Value* current_ = begin_; current_ < end_; ++current_) {
 					try {
-						new (current_) Value;
+						current_ = new (current_) Value;
 					} catch (...) {
 						::dcool::core::batchDestruct(begin_, current_);
 						throw;
@@ -560,10 +560,10 @@ namespace dcool::container {
 			if constexpr (stuffed) {
 				for (Iterator current_ = this->begin(engine_); current_ < this->end(engine_); ++current_) {
 					if constexpr (noThrowFillableByDefault_()) {
-						new (::dcool::core::rawPointer(current_)) Value;
+						current_ = Iterator(new (::dcool::core::rawPointer(current_)) Value);
 					} else {
 						try {
-							new (::dcool::core::rawPointer(current_)) Value;
+							current_ = Iterator(new (::dcool::core::rawPointer(current_)) Value);
 						} catch (...) {
 							::dcool::core::batchDestruct(this->begin(engine_), current_);
 							throw;
@@ -862,7 +862,9 @@ namespace dcool::container {
 		> constexpr auto braveEmplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			this->makeRoom_<strategyC__>(engine_, position_);
 			try {
-				new (::dcool::core::rawPointer(position_)) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+				position_ = Iterator(
+					new (::dcool::core::rawPointer(position_)) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...)
+				);
 			} catch (...) {
 				this->reclaimRoom_<strategyC__>(engine_, position_);
 				throw;
@@ -885,7 +887,7 @@ namespace dcool::container {
 					Length lengthBeforePosition_ = static_cast<Length>(position_ - this->begin(engine_));
 					Value* newPosition_ = newStorage_.data(engine_) + lengthBeforePosition_;
 					try {
-						new (newPosition_) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+						newPosition_ = new (newPosition_) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
 					} catch (...) {
 						newStorage_.uninitialize(engine_);
 						throw;

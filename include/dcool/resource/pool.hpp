@@ -943,7 +943,7 @@ namespace dcool::resource {
 	> [[nodiscard("Might leak memory.")]] constexpr auto createPointerByPoolFor(PoolT_& pool_, ArgumentTs_&&... parameters_) {
 		ValueT_* pointer_ = static_cast<ValueT_*>(::dcool::resource::adaptedAllocatePointerFor<ValueT_>(pool_));
 		try {
-			new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(parameters_)...);
+			pointer_ = new (pointer_) ValueT_(::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		} catch (...) {
 			::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
 			throw;

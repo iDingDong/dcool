@@ -9,13 +9,6 @@ namespace dcool::core {
 	using ::std::forward;
 	using ::std::move;
 
-	template <typename T_> void relocate(T_& source, void* destination_) noexcept(
-		noexcept(::dcool::core::isNoThrowRelocatable<T_>)
-	) {
-		new (static_cast<T_*>(destination_)) T_(::dcool::core::move(source));
-		source.~T();
-	}
-
 	template <typename T_> concept SwappableByMember = requires (T_ first_, T_ second_) {
 		first_.swapWith(second_);
 	};
