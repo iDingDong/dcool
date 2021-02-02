@@ -56,6 +56,10 @@ namespace dcool::core {
 			return *this;
 		}
 
+		public: constexpr auto raw() noexcept -> Value* {
+			return this->m_pointer_;
+		}
+
 		public: constexpr auto operator ++() noexcept -> Self_& {
 			++(this->m_pointer_);
 			return *this;

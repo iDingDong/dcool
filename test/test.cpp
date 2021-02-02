@@ -24,9 +24,8 @@ int main() {
 				std::cout <<
 					caseResult.second.record.failures.length() <<
 					" of " << caseResult.second.record.checkCount <<
-					" performed checke(s) failed with " <<
-					(caseResult.second.endedByFatal ? "last failure fatal" : "all failures gentle") <<
-					""
+					" performed check(s) failed " <<
+					(caseResult.second.endedByFatal ? "with last failure fatal" : "gently")
 				;
 			} else {
 				std::cout  << "All " << caseResult.second.record.checkCount << " performed checks passed";
