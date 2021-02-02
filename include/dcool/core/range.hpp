@@ -124,7 +124,7 @@ namespace dcool::core {
 			return iterator_;
 		}
 
-		public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Self_ {
+		public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
 			return left_.iterator - right_.iterator;
 		}
 
@@ -199,16 +199,6 @@ namespace dcool::core {
 		return ::dcool::core::detail_::rangeLength_(begin_, end_);
 	}
 
-	template <
-		::dcool::core::ForwardIterator IteratorT_
-	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
-		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
-		while (begin_ != end_) {
-			::dcool::core::dereference(begin_).~Value_();
-			++begin_;
-		}
-	}
-
 	struct RangeInputTag {
 	};
 
@@ -275,6 +265,33 @@ namespace dcool::core {
 		return ::dcool::core::detail_::backOf_(toAccess_);
 	}
 
+	template <
+		::dcool::core::ForwardIterator IteratorT_
+	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
+		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
+		while (begin_ != end_) {
+			::dcool::core::dereference(begin_).~Value_();
+			++begin_;
+		}
+	}
+
+	template <::dcool::core::ForwardIterator IteratorT_> constexpr void batchDefaultInitialize(
+		IteratorT_ begin_, IteratorT_ end_
+	) noexcept(noexcept(new (::dcool::core::rawPointer(begin_)) ::dcool::core::IteratorValueType<IteratorT_>)) {
+		for (IteratorT_ current_ = begin_; current_ < end_; ++current_) {
+			if constexpr (noexcept(new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>)) {
+				new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>;
+			} else {
+				try {
+					new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>;
+				} catch (...) {
+					::dcool::core::batchDestruct(begin_, current_);
+					throw;
+				}
+			}
+		}
+	}
+
 	namespace detail_ {
 		template <
 			::dcool::core::ExceptionSafetyStrategy strategyC_,
@@ -285,7 +302,9 @@ namespace dcool::core {
 			SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
 		) -> DestinationIteratorT_ {
 			DestinationIteratorT_ result_;
-			if constexpr (::dcool::core::atAnyCost(strategyC_) && (!noexcept(::std::uninitialized_move(begin_, end_, destination_)))) {
+			if constexpr (
+				::dcool::core::atAnyCost(strategyC_) && (!noexcept(::std::uninitialized_move(begin_, end_, destination_)))
+			) {
 				result_ = ::std::uninitialized_copy(begin_, end_, destination_);
 			} else {
 				try {

@@ -122,8 +122,12 @@ namespace dcool::core {
 
 	template <typename T_, typename... Ts_> concept OneOf = ::dcool::core::isOneOf<T_, Ts_...>;
 
-	template <typename T_, typename... Ts_> concept FormOfSame = ::dcool::core::SameAs<
-		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
+	template <typename T_, typename... Ts_> concept QualifiedOfSame = ::dcool::core::SameAs<
+		::dcool::core::QualifierRemovedType<T_>, ::dcool::core::QualifierRemovedType<Ts_>...
+	>;
+
+	template <typename T_, typename... Ts_> concept FormOfSame = ::dcool::core::QualifiedOfSame<
+		::dcool::core::ReferenceRemovedType<T_>, ::dcool::core::ReferenceRemovedType<Ts_>...
 	>;
 
 	template <typename T_, typename... Ts_> concept FormOfOneOf = ::dcool::core::OneOf<

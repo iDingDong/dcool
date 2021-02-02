@@ -40,7 +40,7 @@ namespace dcool::algorithm {
 		if constexpr ((!::dcool::core::FormOfSequencedPolicy<PolicyT_>) || (!::dcool::core::RandomAccessIterator<IteratorT_>)) {
 			using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
 			using ListValue_ = ::std::reference_wrapper<Value_>;
-			::dcool::container::List<ListValue_> list_(::dcool::core::rangeInput, begin_, end_);
+			::dcool::container::StuffedList<ListValue_> list_(::dcool::core::rangeInput, begin_, end_);
 			::dcool::algorithm::detail_::forEach(
 				::dcool::core::forward<PolicyT_>(policy_), list_.begin(), list_.end(), [&function_](Value_& current_) {
 					::dcool::core::invoke(function_, current_);
@@ -58,7 +58,7 @@ namespace dcool::algorithm {
 		::dcool::core::InputIterator IteratorT_,
 		::dcool::core::Invocable<::dcool::core::IteratorReferenceType<IteratorT_>> FunctionT_
 	> void forEach(IteratorT_ begin_, IteratorT_ end_, FunctionT_&& function_) {
-		::dcool::algorithm::forEach(begin_, end_, ::dcool::core::forward<FunctionT_>(function_));
+		::dcool::algorithm::forEach(::dcool::core::serialExecution, begin_, end_, ::dcool::core::forward<FunctionT_>(function_));
 	}
 }
 

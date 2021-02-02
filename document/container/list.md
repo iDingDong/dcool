@@ -54,15 +54,19 @@ constexpr List() noexcept(/* unspecified expression */); // 1
 constexpr List(List const& other) noexcept(/* unspecified expression */); // 2
 constexpr List(List&& other) noexcept(/* unspecified expression */); // 3
 constexpr List(Length capacity) noexcept(/* unspecified expression */); // 4
-template <::dcool::core::InputIterator IteratorT> constexpr List(
-	::dcool::core::RangeInputTag, IteratorT otherBegin, IteratorT otherEnd
+template <dcool::core::InputIterator IteratorT> constexpr List(
+	dcool::core::RangeInputTag, IteratorT otherBegin, Length count
 ) noexcept(/* unspecified expression */); // 5
+template <dcool::core::InputIterator IteratorT> constexpr List(
+	dcool::core::RangeInputTag, IteratorT otherBegin, IteratorT otherEnd
+) noexcept(/* unspecified expression */); // 6
 ```
 
 - Overload 1: If `capacityFixed`, initialize the list with 0 capacity; Otherwise if `stuffed`, default-initialize `storageCapacity` count of items.
 - Overload 2, 3: Construct as a copy of `other` (as-if).
 - Overload 4: Construct with given capacity. If `stuffed`, default-initialize `capacity` items. This overload is unavailable if `capacityFixed`.
-- Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`).
+- Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `capacityFixed` and `stuffed`.
+- Overload 6: Construct by copy all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `capacityFixed` and `stuffed`.
 
 ## Assignments
 

@@ -83,7 +83,7 @@ namespace dcool::vigor {
 			}
 
 			public: constexpr void uninitialize_() noexcept {
-				this->value_().~Value();
+				this->value().~Value();
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
@@ -91,7 +91,7 @@ namespace dcool::vigor {
 			}
 
 			public: constexpr void relocateTo(Self_& other_) noexcept {
-				other_.initialize_(::dcool::core::move(this->value_()));
+				other_.initialize_(::dcool::core::move(this->value()));
 				this->uninitialize_();
 			}
 
@@ -103,20 +103,12 @@ namespace dcool::vigor {
 				return static_cast<Value*>(::dcool::core::addressOf(this->m_storage_));
 			}
 
-			private: constexpr auto value_(Engine& engine_) const noexcept -> Value const& {
-				return *(this->valueAddress_(engine_));
-			}
-
-			private: constexpr auto value_(Engine& engine_) noexcept -> Value& {
-				return *(this->valueAddress_(engine_));
-			}
-
 			public: constexpr auto value(Engine& engine_) const noexcept -> Value const& {
-				return this->value_();
+				return *::dcool::core::launder(this->valueAddress_(engine_));
 			}
 
 			public: constexpr auto value(Engine& engine_) noexcept -> Value& {
-				return this->value_();
+				return *::dcool::core::launder(this->valueAddress_(engine_));
 			}
 		};
 

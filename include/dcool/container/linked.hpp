@@ -172,7 +172,7 @@ namespace dcool::container {
 			}
 
 			public: constexpr auto nodeHeader(HandleConverter const& converter_) const noexcept -> NodeHeader& {
-				return *static_cast<NodeHeader*>(converter_(this->nodeHeaderHandle()));
+				return *::dcool::core::launder(static_cast<NodeHeader*>(converter_(this->nodeHeaderHandle())));
 			}
 
 			public: constexpr auto nodeHeader(Engine& engine_) const noexcept -> NodeHeader& {
@@ -552,11 +552,15 @@ namespace dcool::container {
 			}
 
 			private: constexpr auto sentryAddress_(Engine& engine_) const noexcept -> NodeHeader const* {
-				return static_cast<NodeHeader const*>(PoolAdaptor_::constHandleConverter(engine_.pool())(this->m_sentry_));
+				return ::dcool::core::launder(
+					static_cast<NodeHeader const*>(PoolAdaptor_::constHandleConverter(engine_.pool())(this->m_sentry_))
+				);
 			}
 
 			private: constexpr auto sentryAddress_(Engine& engine_) noexcept -> NodeHeader* {
-				return static_cast<NodeHeader*>(PoolAdaptor_::handleConverter(engine_.pool())(this->m_sentry_));
+				return ::dcool::core::launder(
+					static_cast<NodeHeader*>(PoolAdaptor_::handleConverter(engine_.pool())(this->m_sentry_))
+				);
 			}
 
 			public: constexpr auto sentry(Engine& engine_) const noexcept -> NodeHeader const& {
