@@ -13,6 +13,12 @@ DCOOL_TEST_CASE(dcoolContainer, listBasics) {
 	list1.erase(list1.begin() + 1);
 	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(1, 3));
 	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE(1, 2, 3));
+	list1.emplace(list1.begin(), 0);
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(0, 1, 3));
+	list1.emplace(list1.begin() + 2, 2);
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(0, 1, 2, 3));
+	list2.emplace(list2.begin(), 0);
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE(0, 1, 2, 3));
 }
 
 namespace {
@@ -38,4 +44,13 @@ DCOOL_TEST_CASE(dcoolContainer, stuffedlistBasics) {
 	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(1, 3));
 	DCOOL_TEST_EXPECT(list2.length() == list2.capacity());
 	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE(1, 2, 3));
+	list1.emplace(list1.begin(), 0);
+	DCOOL_TEST_EXPECT(list1.length() == list1.capacity());
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(0, 1, 3));
+	list1.emplace(list1.begin() + 2, 2);
+	DCOOL_TEST_EXPECT(list1.length() == list1.capacity());
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE(0, 1, 2, 3));
+	list2.emplace(list2.begin(), 0);
+	DCOOL_TEST_EXPECT(list2.length() == list2.capacity());
+	DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE(0, 1, 2, 3));
 }

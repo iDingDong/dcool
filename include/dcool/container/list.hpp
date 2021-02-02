@@ -21,14 +21,12 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 namespace dcool::container {
 	using OutOfRange = ::std::out_of_range;
 
-	template <typename T_> concept StaticListConfig = true;
-
 	namespace detail_ {
 		template <
 			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
 			typename DistinguisherT_ = void
-		> struct ArrayLightIteratorBase_ {
-			private: using Self_ = ArrayLightIteratorBase_<maxIndexC_, DistinguisherT_>;
+		> struct RandomAccessRangeLightIteratorBase_ {
+			private: using Self_ = RandomAccessRangeLightIteratorBase_<maxIndexC_, DistinguisherT_>;
 			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
 
 			public: using Length = ::dcool::core::IntegerType<maxIndex_>;
@@ -38,7 +36,10 @@ namespace dcool::container {
 
 			private: Index m_index_;
 
-			public: constexpr ArrayLightIteratorBase_(Index index_) noexcept: m_index_(index_) {
+			public: constexpr RandomAccessRangeLightIteratorBase_() noexcept: Self_(::std::numeric_limits<Index>::max()) {
+			}
+
+			public: constexpr explicit RandomAccessRangeLightIteratorBase_(Index index_) noexcept: m_index_(index_) {
 			}
 
 			public: constexpr auto index() const noexcept -> Index {
@@ -97,12 +98,14 @@ namespace dcool::container {
 		};
 
 		template <
-			::dcool::core::RandomAccessRange RangeT_,
+			typename RangeT_,
 			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
 			typename DistinguisherT_ = void
-		> struct ArrayLightIterator_: private ::dcool::container::detail_::ArrayLightIteratorBase_<maxIndexC_> {
-			private: using Self_ = ArrayLightIterator_<RangeT_, maxIndexC_, DistinguisherT_>;
-			private: using Super_ = ::dcool::container::detail_::ArrayLightIteratorBase_<maxIndexC_>;
+		> struct IndexableRangeLightIterator_: private ::dcool::container::detail_::RandomAccessRangeLightIteratorBase_<
+			maxIndexC_, DistinguisherT_
+		> {
+			private: using Self_ = IndexableRangeLightIterator_<RangeT_, maxIndexC_, DistinguisherT_>;
+			private: using Super_ = ::dcool::container::detail_::RandomAccessRangeLightIteratorBase_<maxIndexC_, DistinguisherT_>;
 			public: using Range = RangeT_;
 			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
 
@@ -116,6 +119,27 @@ namespace dcool::container {
 			public: using Super_::retreat;
 			public: using Value = ::dcool::core::ValueType<Range>;
 
+			public: constexpr IndexableRangeLightIterator_() noexcept = default;
+
+			public: constexpr IndexableRangeLightIterator_(
+				::dcool::container::detail_::IndexableRangeLightIterator_<::dcool::core::ConstRemovedType<Range>> const& other_
+			) noexcept: Self_(other_.index()) {
+			}
+
+			public: constexpr explicit IndexableRangeLightIterator_(Index index_) noexcept: Super_(index_) {
+			}
+
+			public: constexpr auto operator =(
+				::dcool::container::detail_::IndexableRangeLightIterator_<::dcool::core::ConstRemovedType<Range>> const& other_
+			) noexcept {
+				static_cast<Super_&>(*this) = static_cast<
+					::dcool::container::detail_::IndexableRangeLightIterator_<
+						::dcool::core::ConstRemovedType<Range>
+					>::Super_ const&
+				>(other_);
+				return *this;
+			}
+
 			public: constexpr auto next(Difference step_ = 1) noexcept -> Self_ {
 				return Self_(this->index() + step_);
 			}
@@ -124,8 +148,10 @@ namespace dcool::container {
 				return this->next(-step_);
 			}
 
-			public: constexpr auto dereferenceSelfWith(Range& range_) const noexcept {
-				return ::dcool::core::dereference(range_.begin() + this->index());
+			public: template <
+				::dcool::core::FormOfSame<Range> RangeT__
+			> constexpr auto dereferenceSelfWith(RangeT__&& range_) const noexcept {
+				return ::dcool::core::dereference(range_[this->index()]);
 			}
 
 			public: constexpr auto distanceTo(Self_ const& other_) const noexcept -> Difference {
@@ -162,7 +188,117 @@ namespace dcool::container {
 				return right_.distanceTo(left_);
 			}
 		};
+
+		template <
+			typename RangeT_,
+			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
+			typename DistinguisherT_ = void
+		> struct IndexableRangeIterator_: private ::dcool::container::detail_::IndexableRangeLightIterator_<
+			RangeT_, maxIndexC_, DistinguisherT_
+		> {
+			private: using Self_ = IndexableRangeIterator_<RangeT_, maxIndexC_, DistinguisherT_>;
+			private: using Super_ = ::dcool::container::detail_::IndexableRangeLightIterator_<
+				RangeT_, maxIndexC_, DistinguisherT_
+			>;
+			public: using Range = RangeT_;
+			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
+
+			public: using typename Super_::Length;
+			public: using typename Super_::Index;
+			public: using typename Super_::Difference;
+			public: using Super_::maxIndex;
+			public: using Super_::Super_;
+			public: using Super_::index;
+			public: using Super_::advance;
+			public: using Super_::retreat;
+			public: using Value = ::dcool::core::ValueType<Range>;
+
+			private: Range* m_range_;
+
+			public: constexpr IndexableRangeIterator_() noexcept = default;
+
+			public: constexpr IndexableRangeIterator_(
+				::dcool::container::detail_::IndexableRangeIterator_<::dcool::core::ConstRemovedType<Range>> const& other_
+			) noexcept: Self_(other_.m_range_, other_.index()) {
+			}
+
+			public: constexpr IndexableRangeIterator_(
+				Range& range_, Index index_
+			) noexcept: Super_(index_), m_range_(::dcool::core::addressOf(range_)) {
+			}
+
+			public: constexpr auto operator =(
+				::dcool::container::detail_::IndexableRangeIterator_<::dcool::core::ConstRemovedType<Range>> const& other_
+			) noexcept {
+				this->Super_::operator =(
+					static_cast<
+						::dcool::container::detail_::IndexableRangeIterator_<::dcool::core::ConstRemovedType<Range>>::Super_ const&
+					>(other_)
+				);
+				this->m_range_ = other_.m_range_;
+				return *this;
+			}
+
+			public: constexpr auto next(Difference step_ = 1) noexcept -> Self_ {
+				return Self_(this->index() + step_);
+			}
+
+			public: constexpr auto previous(Difference step_ = 1) noexcept -> Self_ {
+				return this->next(-step_);
+			}
+
+			public: constexpr auto dereferenceSelf() const noexcept {
+				return this->dereferenceSelfWith(*(this->m_range_));
+			}
+
+			public: constexpr auto operator *() const noexcept {
+				return this->dereferenceSelf();
+			}
+
+			public: constexpr auto operator ->() const noexcept {
+				return ::dcool::core::addressOf(this->dereferenceSelf());
+			}
+
+			public: constexpr auto distanceTo(Self_ const& other_) const noexcept -> Difference {
+				return this->Super_::distanceTo(other_);
+			}
+
+			public: friend constexpr auto operator <=>(
+				Self_ const& left_, Self_ const& right_
+			) noexcept -> ::dcool::core::StrongOrdering {
+				// Both iterator should point to the same range
+				return Super_::operator <=>(left_, right_);
+			}
+
+			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
+				this->advance(step_);
+				return *this;
+			}
+
+			public: friend constexpr auto operator +(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
+				return iterator_.next(step_);
+			}
+
+			public: friend constexpr auto operator +(Difference step_, Self_ const& iterator_) noexcept -> Self_ {
+				return iterator_ + step_;
+			}
+
+			public: constexpr auto operator -=(Difference step_) noexcept -> Self_& {
+				this->retreat(step_);
+				return *this;
+			}
+
+			public: friend constexpr auto operator -(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
+				return iterator_.previous(step_);
+			}
+
+			public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
+				return right_.distanceTo(left_);
+			}
+		};
 	}
+
+	template <typename ValueT_, typename ConfigT_> struct List;
 
 	namespace detail_ {
 		template <::dcool::core::Length storageCapacityC_, typename ConfigT_, typename ValueT_> struct ListConfigAdaptorBase_ {
@@ -176,6 +312,7 @@ namespace dcool::container {
 			public: static constexpr Length storageCapacity = static_cast<Length>(storageCapacityC_);
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, ::dcool::core::Empty<Self_>>;
+			public: static constexpr Length storageMaxCapacity = storageCapacity;
 		};
 
 		template <
@@ -205,6 +342,7 @@ namespace dcool::container {
 			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
 			public: using Handle = PoolAdaptor::Handle;
 			public: using Length = PoolAdaptor::Length;
+			public: static constexpr Length storageMaxCapacity = ::std::numeric_limits<::dcool::core::Difference>::max();
 		};
 
 		template <
@@ -224,21 +362,31 @@ namespace dcool::container {
 			public: using Value = ValueT_;
 
 			public: using typename Super_::Length;
+			public: using Super_::storageMaxCapacity;
 
 			public: using Index = Length;
-			public: using Iterator = ::dcool::core::ContaminatedPointer<Value>;
-			public: using ConstIterator = ::dcool::core::ContaminatedPointer<Value const>;
-			public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
-			public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
-			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-				::dcool::core::exceptionSafetyStrategyOf<Config>
-			;
 			public: static constexpr ::dcool::core::Boolean stuffed = ::dcool::container::detail_::extractedStuffedValue_<Config>(
 				false
 			);
 			public: static constexpr ::dcool::core::Boolean circular = ::dcool::container::detail_::extractedCircularValue_<Config>(
 				false
 			);
+			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+				::dcool::core::exceptionSafetyStrategyOf<Config>
+			;
+
+			public: using Iterator = ::dcool::core::ConditionalType<
+				circular,
+				::dcool::container::detail_::IndexableRangeIterator_<::dcool::container::List<Value, Config>, storageMaxCapacity>,
+				::dcool::core::ContaminatedPointer<Value>
+			>;
+			public: using ConstIterator = ::dcool::core::ConditionalType<
+				circular,
+				::dcool::container::detail_::IndexableRangeIterator_<::dcool::container::List<Value, Config> const, storageMaxCapacity>,
+				::dcool::core::ContaminatedPointer<Value const>
+			>;
+			public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
+			public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
 		};
 	}
 
@@ -489,18 +637,98 @@ namespace dcool::container {
 				return this->capacity();
 			}
 
-			public: constexpr void setLength(Engine& engine_, Length newLength_) noexcept {
+			public: constexpr void setLength(Engine& engine_, Index newLength_) noexcept {
 				this->setLength(newLength_);
 			}
 
 			// New length should be equal to capacity.
-			public: constexpr void setLength(Length newLength_) noexcept {
+			public: constexpr void setLength(Index newLength_) noexcept {
 			}
 		};
 
 		template <
 			typename ValueT_, typename ConfigT_
-		> using ListChassisStorage_ = ::dcool::container::detail_::ListChassisLengthRecordedStorage_<ValueT_, ConfigT_>;
+		> struct ListChassisBeginOffsettedStorage_: public ::dcool::container::detail_::ListChassisLengthRecordedStorage_<
+			ValueT_, ConfigT_
+		> {
+			private: using Self_ = ListChassisBeginOffsettedStorage_<ValueT_, ConfigT_>;
+			private: using Super_ = ::dcool::container::detail_::ListChassisLengthRecordedStorage_<ValueT_, ConfigT_>;
+			public: using Value = ValueT_;
+			public: using Config = ConfigT_;
+
+			private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Config, Value>;
+			public: using Engine = ConfigAdaptor_::Engine;
+			public: using Length = ConfigAdaptor_::Length;
+			public: using Index = ConfigAdaptor_::Index;
+
+			public: constexpr auto beginOffset(Engine& engine_) const noexcept -> Length {
+				return this->beginOffset();
+			}
+
+			public: constexpr auto beginOffset() const noexcept -> Length {
+				return 0;
+			}
+
+			public: constexpr void setBeginOffset(Engine& engine_, Length newBeginOffset_) noexcept {
+				this->setLength(newBeginOffset_);
+			}
+
+			// New begin offset should always be 0.
+			public: constexpr void setBeginOffset(Length newBeginOffset_) noexcept {
+			}
+		};
+
+		template <
+			typename ValueT_, ::dcool::container::CircularListConfig<ValueT_> ConfigT_
+		> struct ListChassisBeginOffsettedStorage_<
+			ValueT_, ConfigT_
+		>: public ::dcool::container::detail_::ListChassisLengthRecordedStorage_<ValueT_, ConfigT_> {
+			private: using Self_ = ListChassisBeginOffsettedStorage_<ValueT_, ConfigT_>;
+			private: using Super_ = ::dcool::container::detail_::ListChassisLengthRecordedStorage_<ValueT_, ConfigT_>;
+			public: using Value = ValueT_;
+			public: using Config = ConfigT_;
+
+			private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Config, Value>;
+			public: using Engine = ConfigAdaptor_::Engine;
+			public: using Length = ConfigAdaptor_::Length;
+
+			public: Length m_beginOffset_;
+
+			public: template <typename... ArgumentTs__> constexpr void initialize(ArgumentTs__&&... parameters_) noexcept {
+				this->Super_::initialize(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+				this->m_beginOffset_ = 0;
+			}
+
+			public: constexpr void relocateTo(Self_& other_) noexcept {
+				this->Super_::relocateTo(other_);
+				other_.setBeginOffset(this->beginOffset());
+			}
+
+			public: constexpr void swapWith(Self_& other_) noexcept {
+				this->Super_::swapWith(other_);
+				::dcool::core::intelliSwap(this->m_beginOffset_, other_.m_beginOffset_);
+			}
+
+			public: constexpr auto beginOffset(Engine& engine_) const noexcept -> Length {
+				return this->beginOffset();
+			}
+
+			public: constexpr auto beginOffset() const noexcept -> Length {
+				return this->m_beginOffset_;
+			}
+
+			public: constexpr void setBeginOffset(Engine& engine_, Length newBeginOffset_) noexcept {
+				this->setLength(newBeginOffset_);
+			}
+
+			// New begin index should always be 0.
+			public: constexpr void setBeginOffset(Length newBeginOffset_) noexcept {
+			}
+		};
+
+		template <
+			typename ValueT_, typename ConfigT_
+		> using ListChassisStorage_ = ::dcool::container::detail_::ListChassisBeginOffsettedStorage_<ValueT_, ConfigT_>;
 	}
 
 	template <typename ValueT_, ::dcool::container::ListConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct ListChassis {
@@ -518,6 +746,7 @@ namespace dcool::container {
 		public: using ReverseConstIterator = ConfigAdaptor_::ReverseConstIterator;
 		public: static constexpr ::dcool::core::Boolean capacityFixed = ConfigAdaptor_::capacityFixed;
 		public: static constexpr ::dcool::core::Boolean stuffed = ConfigAdaptor_::stuffed;
+		public: static constexpr ::dcool::core::Boolean circular = ConfigAdaptor_::circular;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			ConfigAdaptor_::exceptionSafetyStrategy
 		;
@@ -542,34 +771,15 @@ namespace dcool::container {
 
 		private: constexpr void fillByDefault_() noexcept(noThrowFillableByDefault_()) {
 			if constexpr (stuffed) {
-				static_assert(capacityFixed);
 				Value* begin_ = this->m_storage_.data();
-				Value* end_ = begin_ + this->m_storage_.length();
-				for (Value* current_ = begin_; current_ < end_; ++current_) {
-					try {
-						current_ = new (current_) Value;
-					} catch (...) {
-						::dcool::core::batchDestruct(begin_, current_);
-						throw;
-					}
-				}
+				::dcool::core::batchDefaultInitialize(begin_, begin_ + this->m_storage_.length());
 			}
 		}
 
 		private: constexpr void fillByDefault_(Engine& engine_) noexcept(noThrowFillableByDefault_()) {
 			if constexpr (stuffed) {
-				for (Iterator current_ = this->begin(engine_); current_ < this->end(engine_); ++current_) {
-					if constexpr (noThrowFillableByDefault_()) {
-						current_ = Iterator(new (::dcool::core::rawPointer(current_)) Value);
-					} else {
-						try {
-							current_ = Iterator(new (::dcool::core::rawPointer(current_)) Value);
-						} catch (...) {
-							::dcool::core::batchDestruct(this->begin(engine_), current_);
-							throw;
-						}
-					}
-				}
+				Value* begin_ = this->data(engine_);
+				::dcool::core::batchDefaultInitialize(begin_, begin_ + this->length(engine_));
 			}
 		}
 
@@ -580,7 +790,12 @@ namespace dcool::container {
 
 		private: constexpr void initialize_(Engine& engine_) {
 			this->m_storage_.initialize(engine_);
-			this->fillByDefault_(engine_);
+			try {
+				this->fillByDefault_(engine_);
+			} catch (...) {
+				this->uninitializeWithoutFilled_(engine_);
+				throw;
+			}
 		}
 
 		private: constexpr void initializeWithoutFill_(Engine& engine_) noexcept {
@@ -596,14 +811,45 @@ namespace dcool::container {
 			noexcept(::dcool::core::declval<Self_&>().fillByDefault_(engine_))
 		) {
 			this->initializeWithoutFill_(engine_);
-			this->fillByDefault_(engine_);
+			if constexpr (noexcept(this->fillByDefault_(engine_))) {
+				this->fillByDefault_(engine_);
+			} else {
+				try {
+					this->fillByDefault_(engine_);
+				} catch (...) {
+					this->uninitializeWithoutFilled_(engine_);
+					throw;
+				}
+			}
+		}
+
+		public: template <::dcool::core::InputIterator IteratorT__> constexpr void initialize(
+			Engine& engine_, IteratorT__ iterator_, Length count_
+		) {
+			this->initializeWithoutFill_(engine_, count_);
+			try {
+				Value* current_ = ::std::uninitialized_copy_n(iterator_, count_, this->data(engine_));
+				Value* end_ = this->data(engine_) + this->capacity(engine_);
+				if constexpr (stuffed && capacityFixed) {
+					::dcool::core::batchDefaultInitialize(current_, end_);
+				}
+			} catch (...) {
+				this->uninitializeWithoutFilled_(engine_);
+				throw;
+			}
+			this->m_storage_.setLength(engine_, count_);
 		}
 
 		public: constexpr void initialize(Engine& engine_, Length capacity_) noexcept(
 			noexcept(::dcool::core::declval<Self_&>().fillByDefault_(engine_))
 		) {
 			this->initializeWithoutFill_(engine_, capacity_);
-			this->fillByDefault_(engine_);
+			try {
+				this->fillByDefault_(engine_);
+			} catch (...) {
+				this->uninitializeWithoutFilled_(engine_);
+				throw;
+			}
 		}
 
 		private: constexpr void uninitializeWithoutFilled_() noexcept {
@@ -669,38 +915,42 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void swapWith(Self_& other_) noexcept {
-			if constexpr (!capacityFixed) {
-				this->m_storage_.swapWith(other_.m_storage_);
-			} else {
-				Length commonLength_ = ::dcool::core::min(this->m_storage_.length(), other_.m_storage_.length());
-				auto selfBegin_ = this->m_storage_.data();
-				auto otherBegin_ = other_.m_storage_.data();
-				Index index_ = 0;
-				try {
-					while (index_ < commonLength_) {
-						::dcool::core::intelliSwap(selfBegin_[index_], otherBegin_[index_]);
-					}
-					// At least one of the following call of 'batchRelocate' will be no-op.
-					::dcool::core::batchRelocate<strategyC__>(
-						selfBegin_ + commonLength_, selfBegin_ + this->m_storage_.length(), otherBegin_ + commonLength_
-					);
-					::dcool::core::batchRelocate<strategyC__>(
-						otherBegin_ + commonLength_, otherBegin_ + other_.m_storage_.length(), selfBegin_ + commonLength_
-					);
-					Length middleMan_ = this->m_storage_.length();
-					this->m_storage_.setLength(other_.m_storage_.length());
-					other_.m_storage_.setLength(middleMan_);
-				} catch (...) {
+			if constexpr (capacityFixed) {
+				if constexpr (circular) {
+					static_assert(!circular, "Not yet implemented.");
+				} else {
+					Length commonLength_ = ::dcool::core::min(this->m_storage_.length(), other_.m_storage_.length());
+					::dcool::core::ContaminatedPointer<Value> selfBegin_(this->m_storage_.data());
+					::dcool::core::ContaminatedPointer<Value> otherBegin_(other_.m_storage_.data());
+					Index index_ = 0;
 					try {
-						while (index_ > 0) {
-							--index_;
+						while (index_ < commonLength_) {
 							::dcool::core::intelliSwap(selfBegin_[index_], otherBegin_[index_]);
 						}
+						// At least one of the following call of 'batchRelocate' will be no-op.
+						::dcool::core::batchRelocate<strategyC__>(
+							selfBegin_ + commonLength_, selfBegin_ + this->m_storage_.length(), otherBegin_.raw() + commonLength_
+						);
+						::dcool::core::batchRelocate<strategyC__>(
+							otherBegin_ + commonLength_, otherBegin_ + other_.m_storage_.length(), selfBegin_.raw() + commonLength_
+						);
+						Length middleMan_ = this->m_storage_.length();
+						this->m_storage_.setLength(other_.m_storage_.length());
+						other_.m_storage_.setLength(middleMan_);
 					} catch (...) {
-						::dcool::core::goWeak<strategyC__>();
+						try {
+							while (index_ > 0) {
+								--index_;
+								::dcool::core::intelliSwap(selfBegin_[index_], otherBegin_[index_]);
+							}
+						} catch (...) {
+							::dcool::core::goWeak<strategyC__>();
+						}
+						throw;
 					}
-					throw;
 				}
+			} else {
+				this->m_storage_.swapWith(other_.m_storage_);
 			}
 		}
 
@@ -710,6 +960,13 @@ namespace dcool::container {
 
 		public: constexpr auto full(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
 			return this->length(engine_) == this->capacity(engine_);
+		}
+
+		public: constexpr auto contigious(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			if constexpr (circular) {
+				return this->length(engine_) <= this->frontPartCapacity_(engine_);
+			}
+			return true;
 		}
 
 		public: constexpr auto length(Engine& engine_) const noexcept -> Length {
@@ -730,6 +987,7 @@ namespace dcool::container {
 		}
 
 		private: constexpr auto data_() noexcept -> Value* {
+			static_assert(capacityFixed);
 			return this->m_storage_.data();
 		}
 
@@ -741,12 +999,44 @@ namespace dcool::container {
 			return this->m_storage_.data(engine_);
 		}
 
+		private: constexpr auto dataBegin_() const noexcept -> Value const* {
+			return this->data() + this->m_storage_.beginOffset();
+		}
+
+		public: constexpr auto dataBegin_() noexcept -> Value* {
+			return this->data() + this->m_storage_.beginOffset();
+		}
+
+		private: constexpr auto dataBegin_(Engine& engine_) const noexcept -> Value const* {
+			return this->data(engine_) + this->m_storage_.beginOffset(engine_);
+		}
+
+		public: constexpr auto dataBegin_(Engine& engine_) noexcept -> Value* {
+			return this->data(engine_) + this->m_storage_.beginOffset(engine_);
+		}
+
 		public: constexpr auto begin(Engine& engine_) const noexcept -> ConstIterator {
-			return this->data(engine_);
+			ConstIterator result_;
+			if constexpr (circular) {
+				result_ = ConstIterator(*this, 0);
+			} else {
+				result_ = ConstIterator(this->data(engine_));
+			}
+			return result_;
+		}
+
+		private: constexpr auto beginRawPointer_(Engine& engine_) noexcept -> Value* {
+			return this->data(engine_) + this->m_storage_.beginOffset(engine_);
 		}
 
 		public: constexpr auto begin(Engine& engine_) noexcept -> Iterator {
-			return this->data(engine_);
+			Iterator result_;
+			if constexpr (circular) {
+				result_ = Iterator(*this, this->m_storage_.beginOffset(engine_));
+			} else {
+				result_ = Iterator(this->data(engine_));
+			}
+			return result_;
 		}
 
 		public: constexpr auto end(Engine& engine_) const noexcept -> ConstIterator {
@@ -781,12 +1071,43 @@ namespace dcool::container {
 			return this->begin(engine_) + index_;
 		}
 
+		private: constexpr auto frontPartCapacity_(Engine& engine_) noexcept -> Length {
+			return this->capacity(engine_) - this->m_storage_.beginOffset(engine_);
+		}
+
+		private: constexpr auto backPartLength_(Engine& engine_) noexcept -> Length {
+			if (this->contigious(engine_)) {
+				return 0;
+			}
+			return this->length(engine_) - this->frontPartCapacity_(engine_);
+		}
+
+		private: constexpr auto itemOffset_(Engine& engine_, Index index_) noexcept -> Length {
+			Length lengthOfFrontPart_ = this->frontPartCapacity_(engine_);
+			if (index_ < lengthOfFrontPart_) {
+				return this->beginOffset(engine_) + index_;
+			}
+			return index_ - lengthOfFrontPart_;
+		}
+
 		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
-			return ::dcool::core::dereference(this->position(engine_, index_));
+			::dcool::core::ContaminatedPointer<Value const> pointer_;
+			if constexpr (circular) {
+				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data(engine_) + this->itemOffset_(engine_, index_));
+			} else {
+				pointer_ = this->position(engine_, index_);
+			}
+			return ::dcool::core::dereference(pointer_);
 		}
 
 		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
-			return ::dcool::core::dereference(this->position(engine_, index_));
+			::dcool::core::ContaminatedPointer<Value> pointer_;
+			if constexpr (circular) {
+				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data(engine_) + this->itemOffset_(engine_, index_));
+			} else {
+				pointer_ = this->position(engine_, index_);
+			}
+			return ::dcool::core::dereference(pointer_);
 		}
 
 		public: constexpr auto front(Engine& engine_) const noexcept -> Value const& {
@@ -805,6 +1126,50 @@ namespace dcool::container {
 			return this->access(engine_, this->length(engine_) - 1);
 		}
 
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr auto expandBack_(Engine& engine_, Length extra_) -> ::dcool::core::Boolean {
+			if constexpr (circular) {
+				if (!(this->contigious(engine_))) {
+					if constexpr (::dcool::core::atAnyCost(strategyC__) && (!::dcool::core::isNoThrowRelocatable<Value>)) {
+						return false;
+					}
+					Length oldCapacity_ = this->capacity(engine_);
+					Length oldFrontPartLength_ = this->frontPartCapacity_(engine_);
+					Length oldBackPartLength_ = this->backPartLength_(engine_);
+					if (!(this->m_storage_.expandBack(engine_, extra_))) {
+						return false;
+					}
+					if (oldFrontPartLength_ < oldBackPartLength_) {
+						::dcool::core::ContaminatedPointer<Value> beginToMove_(this->data(engine_) + this->m_storage_.beginOffset());
+						::dcool::core::ContaminatedPointer<Value> endToMove_ = beginToMove_ + oldFrontPartLength_;
+						Value* endOfDestination_ = this->data(engine_) + this->capacity(engine_);
+						::dcool::core::batchRelocateForward<strategyC__>(
+							::dcool::core::makeReverseIterator(endToMove_),
+							::dcool::core::makeReverseIterator(beginToMove_),
+							::dcool::core::makeReverseIterator(endOfDestination_)
+						);
+					} else {
+						::dcool::core::ContaminatedPointer<Value> beginToMove_(this->data(engine_));
+						::dcool::core::ContaminatedPointer<Value> endToMove_ =
+							beginToMove_ + ::dcool::core::min(oldFrontPartLength_, extra_)
+						;
+						Value* beginOfDestination_ = beginToMove_ + oldCapacity_;
+						::dcool::core::ContaminatedPointer<Value> endOfBackPart_ = beginToMove_ + oldFrontPartLength_;
+						::dcool::core::batchRelocate<strategyC__>(beginToMove_, endToMove_, beginOfDestination_);
+						try {
+							::dcool::core::batchRelocate<strategyC__>(endToMove_, endOfBackPart_, this->data(engine_));
+						} catch (...) {
+							::dcool::core::goWeak<strategyC__>();
+							::dcool::core::batchDestruct(endToMove_, endOfBackPart_);
+							throw;
+						}
+					}
+				}
+			}
+			return this->m_storage_.expandBack(engine_, extra_);
+		}
+
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void forceExpandBack(Engine& engine_, Length extra_) {
@@ -812,19 +1177,20 @@ namespace dcool::container {
 			if (extra_ == 0) {
 				return;
 			}
-			if (!(this->m_storage_.expandBack(engine_, extra_))) {
-				StorageType_ newStorage_;
-				Length newCapacity_ = this->capacity() + extra_;
-				newStorage_.initialize(engine_, newCapacity_);
-				try {
-					::dcool::core::batchRelocate<strategyC__>(this->begin(engine_), this->end(engine_), newStorage_.data(engine_));
-				} catch (...) {
-					newStorage_.uninitialize(engine_);
-					throw;
-				}
-				this->m_storage_.uninitialize(engine_);
-				newStorage_.relocateTo(this->m_storage_);
+			if (this->m_storage_.expandBack(engine_, extra_)) {
+				return;
 			}
+			StorageType_ newStorage_;
+			Length newCapacity_ = this->capacity() + extra_;
+			newStorage_.initialize(engine_, newCapacity_);
+			try {
+				::dcool::core::batchRelocate<strategyC__>(this->begin(engine_), this->end(engine_), newStorage_.data(engine_));
+			} catch (...) {
+				newStorage_.uninitialize(engine_);
+				throw;
+			}
+			this->m_storage_.uninitialize(engine_);
+			newStorage_.relocateTo(this->m_storage_);
 		}
 
 		public: template <
@@ -843,17 +1209,55 @@ namespace dcool::container {
 		> constexpr void makeRoom_(
 			Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1
 		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
-			::dcool::core::batchRelocateForward<strategyC__>(gapBegin_, this->end(engine_), gapBegin_ + gapLength_);
-			this->m_storage_.setLength(engine_, this->length(engine_) + gapLength_);
+			Length newLength_ = this->length(engine_) + gapLength_;
+			if constexpr (circular) {
+				Index gapBeginIndex_ = gapBegin_.index_();
+				if (gapBeginIndex_ == 0) {
+					this->m_storage_.setBeginOffset(this->m_storage_.beginOffset() - gapLength_);
+				} else {
+					Length oldFrontPartCapacity_ = this->frontPartCapacity_(engine_);
+					::dcool::core::ContaminatedPointer<Value> oldBegin_(this->data(engine_) + this->m_storage_.beginOffset());
+					if (newLength_ <= oldFrontPartCapacity_) {
+						::dcool::core::ContaminatedPointer<Value> gapBegin_ = oldBegin_ + gapBeginIndex_;
+						Value* newEnd_ = this->dataBegin_(engine_) + newLength_;
+						::dcool::core::batchRelocateForward<strategyC__>(
+							::dcool::core::makeReverseIterator(this->data(engine_) + this->length(engine_)),
+							::dcool::core::makeReverseIterator(gapBegin_),
+							::dcool::core::makeReverseIterator(this->data(engine_) + newLength_)
+						);
+					} else if (gapBeginIndex_ <= oldFrontPartCapacity_) {
+						::dcool::core::batchRelocateForward<strategyC__>(oldBegin_, oldBegin_ + gapBeginIndex_, oldBegin_.raw() - gapLength_);
+						this->m_storage_.setBeginOffset(this->m_storage_.beginOffset() - gapLength_);
+					} else {
+						::dcool::core::ContaminatedPointer<Value> gapBegin_(this->data(engine_) + (gapBeginIndex_ - oldFrontPartCapacity_));
+						::dcool::core::ContaminatedPointer<Value> newEnd_(this->data(engine_) + (newLength_ - oldFrontPartCapacity_));
+						::dcool::core::batchRelocateForward<strategyC__>(
+							::dcool::core::makeReverseIterator(newEnd_ - gapLength_),
+							::dcool::core::makeReverseIterator(gapBegin_),
+							::dcool::core::makeReverseIterator(newEnd_.raw())
+						);
+					}
+				}
+				this->m_storage_.setLength(engine_, newLength_);
+			} else {
+				::dcool::core::batchRelocateForward<strategyC__>(
+					this->reverseBegin(engine_),
+					::dcool::core::makeReverseIterator(gapBegin_),
+					::dcool::core::makeReverseIterator(this->data(engine_) + newLength_)
+				);
+				this->m_storage_.setLength(engine_, newLength_);
+			}
 		}
 
 		// This function is intended for recover a valid state after 'makeRoom_'. Failure of recovery would be considered fatal.
 		private: public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void reclaimRoom_(Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1) noexcept {
-			ReverseIterator reverseBegin_ = this->reverseBegin(engine_);
+			if (circular && (!this->contigious(engine_))) {
+				return;
+			}
 			::dcool::core::batchRelocateForward<strategyC__>(
-				reverseBegin_, ::dcool::core::makeReverseIterator(gapBegin_ + gapLength_), reverseBegin_ + gapLength_
+				gapBegin_ + gapLength_, this->end(engine_), this->data(engine_) + (gapBegin_ - this->begin(engine_))
 			);
 		}
 
@@ -1045,7 +1449,8 @@ namespace dcool::container {
 		}
 	};
 
-	template <typename ValueT_, ::dcool::container::ListConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct List {
+	template <typename ValueT_, typename ConfigT_ = ::dcool::core::Empty<>> struct List {
+		static_assert(::dcool::container::ListConfig<ConfigT_, ValueT_>);
 		private: using Self_ = List<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
@@ -1085,18 +1490,14 @@ namespace dcool::container {
 		}
 
 		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
-			::dcool::core::RangeInputTag, IteratorT_ otherBegin_, IteratorT_ otherEnd_
-		): Self_(static_cast<Length>(::dcool::core::rangeLength(otherBegin_, otherEnd_))) {
-			// May optimize this to prevent some unecessary checks
-			try {
-				while (otherBegin_ != otherEnd_) {
-					this->emplaceBack(::dcool::core::dereference(otherBegin_));
-					++otherBegin_;
-				}
-			} catch (...) {
-				this->chassis().uninitialize(this->engine_());
-				throw;
-			}
+			::dcool::core::RangeInputTag, IteratorT_ otherBegin_, Length count_
+		) {
+			this->chassis().initialize(this->engine_(), otherBegin_, count_);
+		}
+
+		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
+			::dcool::core::RangeInputTag tag_, IteratorT_ otherBegin_, IteratorT_ otherEnd_
+		): Self_(tag_, otherBegin_, ::dcool::core::rangeLength(otherBegin_, otherEnd_)) {
 		}
 
 		public: constexpr ~List() noexcept {
@@ -1283,10 +1684,18 @@ namespace dcool::container {
 		template <::dcool::core::Length storageCapacityC_> struct DefaultStaticListConfig_ {
 			static constexpr ::dcool::core::Length storageCapacity = storageCapacityC_;
 		};
+
+		struct DefaultStuffedListConfig_ {
+			static constexpr ::dcool::core::Boolean stuffed = true;
+		};
 	}
 
 	template <typename ValueT_, ::dcool::core::Length storageCapacityC_> using StaticList = ::dcool::container::List<
 		ValueT_, ::dcool::container::detail_::DefaultStaticListConfig_<storageCapacityC_>
+	>;
+
+	template <typename ValueT_> using StuffedList = ::dcool::container::List<
+		ValueT_, ::dcool::container::detail_::DefaultStuffedListConfig_
 	>;
 }
 
