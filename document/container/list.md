@@ -33,8 +33,8 @@ Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent
 | - | - |
 | `Value` | Defined by `using Value = ValueT;`. |
 | `Config` | Defined by `using Config = ConfigT;`. |
-| `Iterator` | Contigious iterator that can iterate through this list. |
-| `ConstIterator` | Contigious iterator that can iterate through this list. No write to any item through it permitted. |
+| `Iterator` | Contiguous iterator that can iterate through this list. |
+| `ConstIterator` | Contiguous iterator that can iterate through this list. No write to any item through it permitted. |
 | `Length` | An integer type that can represent the length or capacity of the list. |
 | `Index` | An integer type that can represent the index of an item in the list. |
 

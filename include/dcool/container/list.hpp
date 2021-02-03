@@ -962,7 +962,7 @@ namespace dcool::container {
 			return this->length(engine_) == this->capacity(engine_);
 		}
 
-		public: constexpr auto contigious(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+		public: constexpr auto contiguous(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
 			if constexpr (circular) {
 				return this->length(engine_) <= this->frontPartCapacity_(engine_);
 			}
@@ -1076,7 +1076,7 @@ namespace dcool::container {
 		}
 
 		private: constexpr auto backPartLength_(Engine& engine_) noexcept -> Length {
-			if (this->contigious(engine_)) {
+			if (this->contiguous(engine_)) {
 				return 0;
 			}
 			return this->length(engine_) - this->frontPartCapacity_(engine_);
@@ -1130,7 +1130,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto expandBack_(Engine& engine_, Length extra_) -> ::dcool::core::Boolean {
 			if constexpr (circular) {
-				if (!(this->contigious(engine_))) {
+				if (!(this->contiguous(engine_))) {
 					if constexpr (::dcool::core::atAnyCost(strategyC__) && (!::dcool::core::isNoThrowRelocatable<Value>)) {
 						return false;
 					}
@@ -1253,7 +1253,7 @@ namespace dcool::container {
 		private: public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void reclaimRoom_(Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1) noexcept {
-			if (circular && (!this->contigious(engine_))) {
+			if (circular && (!this->contiguous(engine_))) {
 				return;
 			}
 			::dcool::core::batchRelocateForward<strategyC__>(
