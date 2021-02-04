@@ -25,6 +25,7 @@ DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 			} else {
 				throw Axception();
 			}
+			return *this;
 		}
 
 		static consteval auto initialCountBeforeThrow() -> int {

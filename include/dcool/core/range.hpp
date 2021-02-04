@@ -10,14 +10,16 @@
 #	include <dcool/core/type_value_detector.hpp>
 #	include <dcool/core/utility.hpp>
 
-#	include <algorithm>
 #	include <iterator>
 #	include <ranges>
-#	include <cstring>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCatagory, ExtractedIteratorCatagoryType, IteratorCategory)
+DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
+	dcool::core::detail_, HasStandardTypeIteratorConcept_, ExtractedStandardIteratorConceptType_, iterator_concept
+)
 
 namespace dcool::core {
+	using RandomAccessIteratorTag = ::std::random_access_iterator_tag;
 	using ContiguousIteratorTag = ::std::contiguous_iterator_tag;
 
 	namespace detail_ {
@@ -50,7 +52,10 @@ namespace dcool::core {
 	>;
 
 	template <typename IteratorT_> using IteratorCatagoryType = ::dcool::core::ExtractedIteratorCatagoryType<
-		IteratorT_, typename ::std::iterator_traits<IteratorT_>::iterator_category
+		IteratorT_,
+		::dcool::core::detail_::ExtractedStandardIteratorConceptType_<
+			::std::iterator_traits<IteratorT_>, typename ::std::iterator_traits<IteratorT_>::iterator_category
+		>
 	>;
 
 	template <typename IteratorT_> using ReverseIterator = ::std::reverse_iterator<IteratorT_>;
@@ -133,7 +138,7 @@ namespace dcool::core {
 		}
 
 		public: constexpr auto operator ->() const noexcept -> Pointer {
-			return ::dcool::core::rawPointer(this->iterator);
+			return ::dcool::core::rawPointerOf(this->iterator);
 		}
 
 		public: friend auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
@@ -266,135 +271,11 @@ namespace dcool::core {
 	}
 
 	template <
-		::dcool::core::ForwardIterator IteratorT_
-	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
-		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
-		while (begin_ != end_) {
-			::dcool::core::dereference(begin_).~Value_();
-			++begin_;
-		}
-	}
-
-	template <::dcool::core::ForwardIterator IteratorT_> constexpr void batchDefaultInitialize(
-		IteratorT_ begin_, IteratorT_ end_
-	) noexcept(noexcept(new (::dcool::core::rawPointer(begin_)) ::dcool::core::IteratorValueType<IteratorT_>)) {
-		for (IteratorT_ current_ = begin_; current_ < end_; ++current_) {
-			if constexpr (noexcept(new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>)) {
-				new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>;
-			} else {
-				try {
-					new (::dcool::core::rawPointer(current_)) ::dcool::core::IteratorValueType<IteratorT_>;
-				} catch (...) {
-					::dcool::core::batchDestruct(begin_, current_);
-					throw;
-				}
-			}
-		}
-	}
-
-	namespace detail_ {
-		template <
-			::dcool::core::ExceptionSafetyStrategy strategyC_,
-			typename ValueT_,
-			typename SourceIteratorT_,
-			typename DestinationIteratorT_
-		> constexpr auto batchRelocateForward_(
-			SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-		) -> DestinationIteratorT_ {
-			DestinationIteratorT_ result_;
-			if constexpr (
-				::dcool::core::atAnyCost(strategyC_) && (!noexcept(::std::uninitialized_move(begin_, end_, destination_)))
-			) {
-				result_ = ::std::uninitialized_copy(begin_, end_, destination_);
-			} else {
-				try {
-					result_ = ::std::uninitialized_move(begin_, end_, destination_);
-				} catch (...) {
-					::dcool::core::goWeak<strategyC_>();
-					throw;
-				}
-			}
-			::dcool::core::batchDestruct(begin_, end_);
-			return result_;
-		}
-
-		template <
-			::dcool::core::ExceptionSafetyStrategy strategyC_,
-			::dcool::core::TriviallyRelocatable ValueT_,
-			::dcool::core::ContiguousIterator SourceIteratorT_,
-			::dcool::core::ContiguousIterator DestinationIteratorT_
-		> constexpr auto batchRelocateForward_(
-			SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-		) noexcept -> DestinationIteratorT_ {
-			auto length_ = end_ - begin_;
-			::dcool::core::Size sizeToCopy_ = static_cast<::dcool::core::Size>(end_ - begin_) * sizeof(ValueT_);
-			::std::memmove(::dcool::core::rawPointer(begin_), ::dcool::core::rawPointer(destination_), sizeToCopy_);
-			return destination_ + static_cast<::dcool::core::IteratorDifferenceType<DestinationIteratorT_>>(length_);
-		}
-
-		template <
-			::dcool::core::ExceptionSafetyStrategy strategyC_,
-			::dcool::core::TriviallyRelocatable ValueT_,
-			::dcool::core::ReversedContiguousIterator SourceIteratorT_,
-			::dcool::core::ReversedContiguousIterator DestinationIteratorT_
-		> constexpr auto batchRelocateForward_(
-			SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-		) noexcept -> DestinationIteratorT_ {
-			auto length_ = end_ - begin_;
-			DestinationIteratorT_ destinationEnd_ =
-				destination_ + static_cast<::dcool::core::IteratorDifferenceType<DestinationIteratorT_>>(length_)
-			;
-			::dcool::core::Size sizeToCopy_ = static_cast<::dcool::core::Size>(end_ - begin_) * sizeof(ValueT_);
-			::std::memmove(::dcool::core::rawPointer(end_ - 1), ::dcool::core::rawPointer(destinationEnd_ - 1), sizeToCopy_);
-			return destinationEnd_;
-		}
-	}
-
-	template <
-		::dcool::core::ExceptionSafetyStrategy strategyC_,
-		::dcool::core::ForwardIterator SourceIteratorT_,
-		::dcool::core::ForwardIterator DestinationIteratorT_
-	> requires ::dcool::core::isSame<
-		::dcool::core::IteratorValueType<SourceIteratorT_>, ::dcool::core::IteratorValueType<DestinationIteratorT_>
-	> constexpr auto batchRelocateForward(
-		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-	) -> DestinationIteratorT_ {
-		return ::dcool::core::detail_::batchRelocateForward_<
-			strategyC_, ::dcool::core::IteratorValueType<SourceIteratorT_>
-		>(begin_, end_, destination_);
-	}
-
-	template <
-		::dcool::core::ForwardIterator SourceIteratorT_,
-		::dcool::core::ForwardIterator DestinationIteratorT_
-	> requires ::dcool::core::isSame<
-		::dcool::core::IteratorValueType<SourceIteratorT_>, ::dcool::core::IteratorValueType<DestinationIteratorT_>
-	> constexpr auto batchRelocateForward(
-		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-	) -> DestinationIteratorT_ {
-		return ::dcool::core::batchRelocateForward<
-			::dcool::core::defaultExceptionSafetyStrategy, ::dcool::core::IteratorValueType<SourceIteratorT_>
-		>(begin_, end_, destination_);
-	}
-
-	template <
-		::dcool::core::ExceptionSafetyStrategy strategyC_,
-		::dcool::core::ForwardIterator SourceIteratorT_,
-		::dcool::core::ForwardIterator DestinationIteratorT_
-	> constexpr auto batchRelocate(
-		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-	) noexcept(noexcept(::dcool::core::batchRelocateForward<strategyC_>(begin_, end_, destination_))) -> DestinationIteratorT_ {
-		return ::dcool::core::batchRelocateForward<strategyC_>(begin_, end_, destination_);
-	}
-
-	template <
-		::dcool::core::ForwardIterator SourceIteratorT_, ::dcool::core::ForwardIterator DestinationIteratorT_
-	> requires ::dcool::core::isSame<
-		::dcool::core::IteratorValueType<SourceIteratorT_>, ::dcool::core::IteratorValueType<DestinationIteratorT_>
-	> constexpr auto batchRelocate(
-		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-	) noexcept(noexcept(::std::uninitialized_move(begin_, end_, destination_))) -> DestinationIteratorT_ {
-		return ::dcool::core::batchRelocate<::dcool::core::defaultExceptionSafetyStrategy>(begin_, end_, destination_);
+		::dcool::core::ForwardIterator LeftIteratorT_, ::dcool::core::ForwardIterator RightIteratorT_
+	> constexpr auto iteratorsToSame(
+		LeftIteratorT_ const& left_, RightIteratorT_ const& right_
+	) noexcept -> ::dcool::core::Boolean {
+		return ::dcool::core::rawPointerOf(left_) == ::dcool::core::rawPointerOf(right_);
 	}
 }
 

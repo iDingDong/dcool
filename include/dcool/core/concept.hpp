@@ -68,13 +68,17 @@ namespace dcool::core {
 
 	template <
 		typename T_
-	> constexpr ::dcool::core::Boolean isTriviallyRelocatable =::dcool::core::isTriviallyCopyable<T_>;
+	> constexpr ::dcool::core::Boolean isTriviallyRelocatable = ::dcool::core::isTriviallyCopyable<T_>;
 
 	template <typename T_> concept TriviallyRelocatable = ::dcool::core::isTriviallyRelocatable<T_>;
 
 	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMoveConstructible =
 		::std::is_nothrow_move_constructible_v<T_>
 	;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isTriviallyDestructible = ::std::is_trivially_destructible_v<T_>;
+
+	template <typename T_> concept TriviallyDestructible = ::dcool::core::isTriviallyDestructible<T_>;
 
 	template <typename T_> concept NoThrowMoveConstructible = ::dcool::core::isNoThrowMoveConstructible<T_>;
 
@@ -104,7 +108,7 @@ namespace dcool::core {
 
 	template <typename T_> concept Reference = ::std::is_reference_v<T_>;
 
-	template <typename T_> concept ConstReference = Const<::dcool::core::ReferenceRemovedType<T_>> && Reference<T_>;
+	template <typename T_> concept ConstReference = ::dcool::core::Const<::dcool::core::ReferenceRemovedType<T_>> && Reference<T_>;
 
 	template <typename T_> concept Pointer = ::std::is_pointer_v<T_>;
 
