@@ -17,6 +17,7 @@
 #	include <dcool/core/mutex.hpp>
 #	include <dcool/core/node.hpp>
 #	include <dcool/core/optional.hpp>
+#	include <dcool/core/range_operation.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>

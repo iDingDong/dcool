@@ -43,7 +43,7 @@ namespace dcool::core {
 
 		public: template <
 			::dcool::core::ContiguousIterator IteratorT__
-		> constexpr Span(IteratorT__ begin_) noexcept: m_begin_(::dcool::core::rawPointer(begin_)) {
+		> constexpr Span(IteratorT__ begin_) noexcept: m_begin_(::dcool::core::rawPointerOf(begin_)) {
 		}
 
 		public: template <
@@ -105,7 +105,7 @@ namespace dcool::core {
 
 		public: template <::dcool::core::ContiguousIterator IteratorT__> constexpr Span(
 			IteratorT__ begin_, Length length_
-		): m_begin_(::dcool::core::rawPointer(begin_)), m_length_(length_) {
+		): m_begin_(::dcool::core::rawPointerOf(begin_)), m_length_(length_) {
 		}
 
 		public: template <::dcool::core::ContiguousIterator IteratorT__> constexpr Span(
