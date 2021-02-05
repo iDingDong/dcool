@@ -1,9 +1,9 @@
-# Class template list
+# Class template `dcool::container::List`
 
 Include `<dcool/container.hpp>` to use.
 
 ```cpp
-template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::core::container::List;
+template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::container::List;
 ```
 
 A sequence container that can be configured as a dynamic or static array.
@@ -16,6 +16,7 @@ Its member shall customize the list as decribed:
 | - | - | - |
 | `static constexpr dcool::core::Length storageCapacity` | `dcool::core::dynamicExtent` | The capacity of list shall be dynamic during run time if it takes value `dcool::core::dynamicExtent`; otherwise the capacity shall be equal to `storageCapacity`. |
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
+| `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
 
 ### Examples
@@ -33,8 +34,8 @@ Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent
 | - | - |
 | `Value` | Defined by `using Value = ValueT;`. |
 | `Config` | Defined by `using Config = ConfigT;`. |
-| `Iterator` | Contigious iterator that can iterate through this list. |
-| `ConstIterator` | Contigious iterator that can iterate through this list. No write to any item through it permitted. |
+| `Iterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. |
+| `ConstIterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. No write through it permitted. |
 | `Length` | An integer type that can represent the length or capacity of the list. |
 | `Index` | An integer type that can represent the index of an item in the list. |
 
@@ -45,6 +46,7 @@ Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent
 | `storageCapacity` | `dcool::core::Length` | Determined by configuration `storageCapacity`. |
 | `capacityFixed` | `dcool::core::Boolean` | `false` if `storageCapacity` equals to `dcool::core::dynamicExtent`; otherwise `true`. |
 | `stuffed` | `dcool::core::Boolean` | Determined by configuration `stuffed`. |
+| `circular` | `dcool::core::Boolean` | Determined by configuration `circular`. |
 | `exceptionSafetyStrategy` | `dcool::core::ExceptionSafetyStrategy` | Determined by configuration `exceptionSafetyStrategy`. |
 
 ## Constructors
@@ -87,6 +89,10 @@ constexpr void swapWith(Self_& other) noexcept(/* unspecified expression */);
 
 Swap with `other`.
 
+#### Complexity
+
+Linear if `capacityFixed`, otherwise constant.
+
 ### `vacant`
 
 ```cpp
@@ -94,6 +100,10 @@ constexpr auto vacant() const noexcept -> ::dcool::core::Boolean;
 ```
 
 Returns `true` if the list does not hold any item. Otherwise returns `false`.
+
+#### Complexity
+
+Constant.
 
 ### `full`
 
@@ -103,6 +113,10 @@ constexpr auto full() const noexcept -> ::dcool::core::Boolean;
 
 Returns `true` if the length of list equals to its capacity. Otherwise returns `false`.
 
+#### Complexity
+
+Constant.
+
 ### `length`
 
 ```cpp
@@ -111,6 +125,10 @@ constexpr auto length() const noexcept -> Length;
 
 Returns the length of the list.
 
+#### Complexity
+
+Constant.
+
 ### `capacity`
 
 ```cpp
@@ -118,6 +136,10 @@ constexpr auto capacity() const noexcept -> Length;
 ```
 
 Returns the capacity of the list.
+
+#### Complexity
+
+Constant.
 
 ### `begin`
 
@@ -128,6 +150,10 @@ constexpr auto begin() noexcept -> Iterator;
 
 Returns an iterator to the first item of the list.
 
+#### Complexity
+
+Constant.
+
 ### `end`
 
 ```cpp
@@ -137,6 +163,10 @@ constexpr auto end() noexcept -> Iterator;
 
 Returns an iterator to the one-past-last item of the list.
 
+#### Complexity
+
+Constant.
+
 ### `operator []`
 
 ```cpp
@@ -145,6 +175,10 @@ constexpr auto operator [](Index index) noexcept -> Value&;
 ```
 
 Returns a reference to the item at index `index`.
+
+#### Complexity
+
+Constant.
 
 ### `emplace`
 
@@ -161,6 +195,29 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at `position` in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
+#### Complexity
+
+Linear if full and cannot in-place expand, otherwise linear by distance to either boundary of the list if circular, otherwise linear by distance to the end of the list if circular.
+
+### `emplaceFront`
+
+```cpp
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC, typename... ArgumentTs
+> constexpr void emplaceFront(ArgumentTs&&... parameters) noexcept(/* unspecified expression */); // 1
+template <typename... ArgumentTs> constexpr void emplaceFront(
+	ArgumentTs&&... parameters
+) noexcept(/* unspecified expression */); // 2
+```
+
+If `stuffed` and `capacityFixed`, this member is not available.
+
+Insert a new item at the beginning of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+#### Complexity
+
+Linear if full and cannot in-place expand, otherwise constant if `circular`, otherwise linear.
+
 ### `emplaceBack`
 
 ```cpp
@@ -176,6 +233,48 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at the end of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
+#### Complexity
+
+Linear if full and cannot in-place expand, otherwise constant.
+
+### `pushFront`
+
+```cpp
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+> constexpr void pushFront(Value const& value);
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+> constexpr void pushFront(Value&& value);
+```
+
+If `stuffed` and `capacityFixed`, this member is not available.
+
+Insert a new item at the beginning of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+#### Complexity
+
+Linear if full and cannot in-place expand, otherwise constant if `circular`, otherwise linear.
+
+### `pusbBack`
+
+```cpp
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+> constexpr void pusbBack(Value const& value);
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+> constexpr void pusbBack(Value&& value);
+```
+
+If `stuffed` and `capacityFixed`, this member is not available.
+
+Insert a new item at the end of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+#### Complexity
+
+Linear if full and cannot in-place expand, otherwise constant.
+
 ### `erase`
 
 ```cpp
@@ -188,6 +287,26 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Erase an item at `position`. Use `strategyC` instead of the default exception safety strategy.
 
+#### Complexity
+
+Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `capacityFixed`, otherwise linear by distance to either boundary of the list if `circular`, otherwise linear by distance to the end of the list if circular.
+
+### `popFront`
+
+```cpp
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
+> constexpr void popFront() noexcept(/* unspecified expression */);
+```
+
+If `stuffed` and `capacityFixed`, this member is not available.
+
+Erase the first item of the list. Use `strategyC` instead of the default exception safety strategy.
+
+#### Complexity
+
+Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `capacityFixed`, otherwise constant if `circular`, otherwise linear.
+
 ### `popBack`
 
 ```cpp
@@ -199,3 +318,7 @@ template <
 If `stuffed` and `capacityFixed`, this member is not available.
 
 Erase the last item of the list. Use `strategyC` instead of the default exception safety strategy.
+
+#### Complexity
+
+Linear if `stuffed`, otherwise constant.

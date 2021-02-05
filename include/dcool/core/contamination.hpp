@@ -25,7 +25,7 @@ namespace dcool::core {
 		public: using reference = Reference;
 		public: using iterator_category = IteratorCategory;
 
-		private: Pointer m_pointer_;
+		private: Pointer m_pointer_ = ::dcool::core::nullPointer;
 
 		public: constexpr ContaminatedPointer() noexcept = default;
 		public: constexpr ContaminatedPointer(Self_ const&) noexcept = default;
@@ -38,10 +38,12 @@ namespace dcool::core {
 		) noexcept: m_pointer_(other_.m_pointer_) {
 		}
 
-		public: constexpr ContaminatedPointer(Value* rawPointer_) noexcept: m_pointer_(rawPointer_) {
+		public: constexpr explicit ContaminatedPointer(Value* rawPointer_) noexcept: m_pointer_(rawPointer_) {
 		}
 
-		public: constexpr ContaminatedPointer(::dcool::core::NullPointer) noexcept: m_pointer_(::dcool::core::nullPointer) {
+		public: constexpr explicit ContaminatedPointer(
+			::dcool::core::NullPointer
+		) noexcept: m_pointer_(::dcool::core::nullPointer) {
 		}
 
 		public: constexpr auto operator =(Self_ const&) noexcept -> Self_& = default;
@@ -56,7 +58,7 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto raw() noexcept -> Value* {
+		public: constexpr auto rawPointer() noexcept -> Value* {
 			return this->m_pointer_;
 		}
 

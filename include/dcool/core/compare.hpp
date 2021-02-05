@@ -5,7 +5,7 @@
 #	include <compare>
 
 namespace dcool::core {
-	template <typename T_> concept EqualityComparable = ::std::equality_comparable<T_>;
+	template <typename T_, typename OtherT_ = T_> concept EqualityComparable = ::std::equality_comparable_with<T_, OtherT_>;
 	template <typename T_> concept TotallyOrdered = ::std::totally_ordered<T_>;
 
 	using PartialOrdering = ::std::partial_ordering;
