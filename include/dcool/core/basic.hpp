@@ -44,6 +44,19 @@ namespace dcool::core {
 
 	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
 
+	struct Pit {
+		template <typename... ArgumentTs_> constexpr Pit(ArgumentTs_&&... parameters_) noexcept {
+		}
+	};
+
+	template <typename ValueT_, ::dcool::core::Boolean validC_> struct StaticOptional {
+		::dcool::core::Pit value;
+	};
+
+	template <typename ValueT_> struct StaticOptional<ValueT_, true> {
+		ValueT_ value;
+	};
+
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
 		return ::std::addressof(toPoint_);
 	}

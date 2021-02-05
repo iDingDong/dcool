@@ -10,7 +10,7 @@ static auto executionDurationString(dcool::test::Duration const& duration) -> st
 }
 
 int main() {
-	auto result = dcool::test::Center::instance().executeAll(/*dcool::core::parallelExecution, dcool::core::parallelExecution*/);
+	auto result = dcool::test::Center::instance().executeAll(dcool::core::parallelExecution, dcool::core::parallelExecution);
 	std::cout << "Test report:\n";
 	for (auto& suiteResult: result.details) {
 		std::cout << "\t[Suite " << suiteResult.first << "] detail:\n";
