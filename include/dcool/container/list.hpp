@@ -2053,6 +2053,10 @@ namespace dcool::container {
 		struct DefaultStuffedListConfig_ {
 			static constexpr ::dcool::core::Boolean stuffed = true;
 		};
+
+		struct DefaultCircularListConfig_ {
+			static constexpr ::dcool::core::Boolean circular = true;
+		};
 	}
 
 	template <typename ValueT_, ::dcool::core::Length storageCapacityC_> using StaticList = ::dcool::container::List<
@@ -2061,6 +2065,10 @@ namespace dcool::container {
 
 	template <typename ValueT_> using StuffedList = ::dcool::container::List<
 		ValueT_, ::dcool::container::detail_::DefaultStuffedListConfig_
+	>;
+
+	template <typename ValueT_> using CircularList = ::dcool::container::List<
+		ValueT_, ::dcool::container::detail_::DefaultCircularListConfig_
 	>;
 }
 
