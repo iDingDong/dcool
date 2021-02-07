@@ -277,6 +277,10 @@ namespace dcool::core {
 	) noexcept -> ::dcool::core::Boolean {
 		return ::dcool::core::rawPointerOf(left_) == ::dcool::core::rawPointerOf(right_);
 	}
+
+	template <::dcool::core::ForwardIterator IteratorT_> constexpr auto next(IteratorT_ iterator_) noexcept -> IteratorT_ {
+		return ++iterator_;
+	}
 }
 
 #endif

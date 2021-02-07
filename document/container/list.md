@@ -256,15 +256,15 @@ Insert a new item at the beginning of list in-place constructed with `value`. Ov
 
 Linear if full and cannot in-place expand, otherwise constant if `circular`, otherwise linear.
 
-### `pusbBack`
+### `pushBack`
 
 ```cpp
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-> constexpr void pusbBack(Value const& value);
+> constexpr void pushBack(Value const& value);
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-> constexpr void pusbBack(Value&& value);
+> constexpr void pushBack(Value&& value);
 ```
 
 If `stuffed` and `capacityFixed`, this member is not available.

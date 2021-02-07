@@ -37,29 +37,17 @@ DCOOL_TEST_CASE(dcoolResource, sharedBasics) {
 
 	{
 		auto ptr1 = ::dcool::resource::wrapToShare(*new A);
-		DCOOL_TEST_EXPECT(A::living().contains(0));
-		DCOOL_TEST_EXPECT(!(A::living().contains(1)));
-		DCOOL_TEST_EXPECT(!(A::living().contains(2)));
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0));
 		{
-			DCOOL_TEST_EXPECT(A::living().contains(0));
-			DCOOL_TEST_EXPECT(!(A::living().contains(1)));
-			DCOOL_TEST_EXPECT(!(A::living().contains(2)));
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0));
 			auto ptr2 = ::dcool::resource::wrapToShare(*new A);
-			DCOOL_TEST_EXPECT(A::living().contains(0));
-			DCOOL_TEST_EXPECT(A::living().contains(1));
-			DCOOL_TEST_EXPECT(!(A::living().contains(2)));
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0, 1));
 			auto ptr3 = ::dcool::resource::wrapToShare(*new A);
-			DCOOL_TEST_EXPECT(A::living().contains(0));
-			DCOOL_TEST_EXPECT(A::living().contains(1));
-			DCOOL_TEST_EXPECT(A::living().contains(2));
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0, 1, 2));
 			ptr1 = ptr2;
-			DCOOL_TEST_EXPECT(!(A::living().contains(0)));
-			DCOOL_TEST_EXPECT(A::living().contains(1));
-			DCOOL_TEST_EXPECT(A::living().contains(2));
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(1, 2));
 		}
-		DCOOL_TEST_EXPECT(!(A::living().contains(0)));
-		DCOOL_TEST_EXPECT(A::living().contains(1));
-		DCOOL_TEST_EXPECT(!(A::living().contains(2)));
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(1));
 	}
 	DCOOL_TEST_EXPECT(A::living().empty());
 }
