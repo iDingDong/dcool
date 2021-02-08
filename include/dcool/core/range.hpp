@@ -134,12 +134,16 @@ namespace dcool::core {
 			return left_.iterator - right_.iterator;
 		}
 
+		public: constexpr auto rawPointer() const noexcept -> Pointer {
+			return ::dcool::core::rawPointerOf(this->iterator);
+		}
+
 		public: constexpr auto operator *() const noexcept -> Reference {
 			return ::dcool::core::dereference(this->iterator);
 		}
 
 		public: constexpr auto operator ->() const noexcept -> Pointer {
-			return ::dcool::core::rawPointerOf(this->iterator);
+			return this->rawPointer();
 		}
 
 		public: friend auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
@@ -282,6 +286,66 @@ namespace dcool::core {
 	template <::dcool::core::ForwardIterator IteratorT_> constexpr auto next(IteratorT_ iterator_) noexcept -> IteratorT_ {
 		return ++iterator_;
 	}
+
+	template <::dcool::core::ForwardIterator IteratorT_> struct PlacementOutputIterator {
+		private: using Self_ = PlacementOutputIterator<IteratorT_>;
+		public: using Iterator = IteratorT_;
+
+		public: using Difference = ::dcool::core::IteratorDifferenceType<Iterator>;
+		public: using Value = ::dcool::core::IteratorValueType<Iterator>;
+		public: using Pointer = ::dcool::core::IteratorPointerType<Iterator>;
+		public: using Reference = ::dcool::core::IteratorReferenceType<Iterator>;
+		public: using IteratorCategory = ::dcool::core::IteratorCategoryType<Iterator>;
+
+		private: struct AssignmentHijacker_ {
+			Iterator iterator;
+
+			constexpr auto operator =(Value const& value_) {
+				new (::dcool::core::rawPointerOf(this->iterator)) Value(value_);
+				return *this;
+			}
+
+			constexpr auto operator =(Value&& value_) {
+				new (::dcool::core::rawPointerOf(this->iterator)) Value(::dcool::core::move(value_));
+				return *this;
+			}
+		};
+
+		public: using difference_type = Difference;
+		public: using value_type = Value;
+		public: using pointer = Pointer;
+		public: using reference = Reference;
+		public: using iterator_category = IteratorCategory;
+
+		private: mutable AssignmentHijacker_ m_iterator_;
+
+		public: constexpr PlacementOutputIterator() noexcept = default;
+
+		public: constexpr explicit PlacementOutputIterator(Iterator iterator_) noexcept: m_iterator_{ .iterator = iterator_ } {
+		}
+
+		public: constexpr auto operator ++() noexcept -> Self_& {
+			++(this->m_iterator.iterator);
+			return *this;
+		}
+
+		public: constexpr auto operator ++(::dcool::core::PostDisambiguator) noexcept -> Self_ {
+			Self_ result_ = *this;
+			++(this->m_iterator.iterator);
+			return result_;
+		}
+
+		public: constexpr auto operator *() const noexcept -> AssignmentHijacker_& {
+			return this->m_iterator_;
+		}
+
+		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+
+		public: constexpr explicit operator Iterator() const noexcept {
+			return this->m_iterator.iterator;
+		}
+	};
 }
 
 #endif
