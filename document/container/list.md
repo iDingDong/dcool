@@ -6,7 +6,7 @@ Include `<dcool/container.hpp>` to use.
 template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::container::List;
 ```
 
-A sequence container that can be configured as a dynamic or static array.
+A sequence container that is stored in a contiguous storage.
 
 ## Configuration `ConfigT`
 
@@ -18,6 +18,10 @@ Its member shall customize the list as decribed:
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
 | `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
+
+### Note
+
+If the list has fixed capacity, implementation may store all items inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `storageCapacity` takes a large value.
 
 ### Examples
 
@@ -44,7 +48,7 @@ Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent
 | Name | type | Definition |
 | - | - | - |
 | `storageCapacity` | `dcool::core::Length` | Determined by configuration `storageCapacity`. |
-| `capacityFixed` | `dcool::core::Boolean` | `false` if `storageCapacity` equals to `dcool::core::dynamicExtent`; otherwise `true`. |
+| `capacityFixed` | `dcool::core::Boolean` | `false` if `storageCapacity` equals to `dcool::core::dynamicExtent`, otherwise `true`. |
 | `stuffed` | `dcool::core::Boolean` | Determined by configuration `stuffed`. |
 | `circular` | `dcool::core::Boolean` | Determined by configuration `circular`. |
 | `exceptionSafetyStrategy` | `dcool::core::ExceptionSafetyStrategy` | Determined by configuration `exceptionSafetyStrategy`. |
@@ -195,6 +199,8 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at `position` in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
 Linear if full and cannot in-place expand, otherwise linear by distance to either boundary of the list if circular, otherwise linear by distance to the end of the list if circular.
@@ -213,6 +219,8 @@ template <typename... ArgumentTs> constexpr void emplaceFront(
 If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at the beginning of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -233,6 +241,8 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at the end of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
 Linear if full and cannot in-place expand, otherwise constant.
@@ -251,6 +261,8 @@ template <
 If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at the beginning of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -271,6 +283,8 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Insert a new item at the end of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
 Linear if full and cannot in-place expand, otherwise constant.
@@ -286,6 +300,8 @@ template <
 If `stuffed` and `capacityFixed`, this member is not available.
 
 Erase an item at `position`. Use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -303,6 +319,8 @@ If `stuffed` and `capacityFixed`, this member is not available.
 
 Erase the first item of the list. Use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
 Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `capacityFixed`, otherwise constant if `circular`, otherwise linear.
@@ -318,6 +336,8 @@ template <
 If `stuffed` and `capacityFixed`, this member is not available.
 
 Erase the last item of the list. Use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 

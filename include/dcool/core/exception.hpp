@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_EXCEPTION_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
+#	include <dcool/core/execution.hpp>
 #	include <dcool/core/member_detector.hpp>
 
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
