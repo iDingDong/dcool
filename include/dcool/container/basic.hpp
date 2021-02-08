@@ -65,6 +65,51 @@ namespace dcool::container {
 	) {
 		::dcool::container::detail_::generalPopFrontOf_(container_);
 	}
+
+	template <
+		typename ContainerT_, typename ValueT_ = ::dcool::core::CompatibleValueType<ContainerT_>
+	> requires ::dcool::container::CompatibleBackPushable<ContainerT_, ValueT_> struct BackPushIterator {
+		private: using Self_ = BackPushIterator<ContainerT_>;
+		public: using Container = ContainerT_;
+		public: using Value = ValueT_;
+
+		public: using value_type = Value;
+		public: using pointer = Value*;
+		public: using reference = Value&;
+		public: using difference_type = ::dcool::core::Difference;
+		public: using iterator_category = ::dcool::core::OutputIteratorTag;
+
+		private: struct AssignmentHijacker_ {
+			Container* container;
+
+			constexpr auto operator =(Value const& value_) {
+				::dcool::container::generalPushBackTo(::dcool::core::dereference(this->container), value_);
+				return *this;
+			}
+
+			constexpr auto operator =(Value&& value_) {
+				::dcool::container::generalPushBackTo(::dcool::core::dereference(this->container), ::dcool::core::move(value_));
+				return *this;
+			}
+		};
+
+		private: mutable AssignmentHijacker_ m_holder_ = { .container = ::dcool::core::nullPointer };
+
+		public: constexpr BackPushIterator() noexcept = default;
+
+		public: constexpr BackPushIterator(
+			Container& container_
+		) noexcept: m_holder_{ .container = ::dcool::core::addressOf(container_) } {
+		}
+
+		public: constexpr auto operator *() const noexcept -> AssignmentHijacker_& {
+			return this->m_holder_;
+		}
+
+		public: constexpr auto operator ++() const noexcept -> Self_& {
+			return *this;
+		}
+	};
 }
 
 #endif
