@@ -13,12 +13,13 @@
 #	include <iterator>
 #	include <ranges>
 
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCatagory, ExtractedIteratorCatagoryType, IteratorCategory)
+DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeIteratorCategory, ExtractedIteratorCategoryType, IteratorCategory)
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 	dcool::core::detail_, HasStandardTypeIteratorConcept_, ExtractedStandardIteratorConceptType_, iterator_concept
 )
 
 namespace dcool::core {
+	using OutputIteratorTag = ::std::output_iterator_tag;
 	using RandomAccessIteratorTag = ::std::random_access_iterator_tag;
 	using ContiguousIteratorTag = ::std::contiguous_iterator_tag;
 
@@ -51,7 +52,7 @@ namespace dcool::core {
 		IteratorT_, typename ::std::iterator_traits<IteratorT_>::difference_type
 	>;
 
-	template <typename IteratorT_> using IteratorCatagoryType = ::dcool::core::ExtractedIteratorCatagoryType<
+	template <typename IteratorT_> using IteratorCategoryType = ::dcool::core::ExtractedIteratorCategoryType<
 		IteratorT_,
 		::dcool::core::detail_::ExtractedStandardIteratorConceptType_<
 			::std::iterator_traits<IteratorT_>, typename ::std::iterator_traits<IteratorT_>::iterator_category
@@ -72,7 +73,7 @@ namespace dcool::core {
 		public: using Value = ::dcool::core::IteratorValueType<Iterator>;
 		public: using Pointer = ::dcool::core::IteratorPointerType<Iterator>;
 		public: using Reference = ::dcool::core::IteratorReferenceType<Iterator>;
-		public: using IteratorCategory = ::dcool::core::IteratorCatagoryType<Iterator>;
+		public: using IteratorCategory = ::dcool::core::IteratorCategoryType<Iterator>;
 
 		public: using difference_type = Difference;
 		public: using value_type = Value;

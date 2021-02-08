@@ -9,7 +9,7 @@ namespace dcool::container {
 			container_.pushBack(container_, ::dcool::core::forward<ValueT_>(value_));
 		};
 
-		template <typename ContainerT_, typename ValueT_> constexpr void pushBackTo_(
+		template <typename ContainerT_, typename ValueT_> constexpr void generalPushBackTo_(
 			ContainerT_& container_, ValueT_&& value_
 		) noexcept(noexcept(container_.push_back(::dcool::core::forward<ValueT_>(value_)))) {
 			container_.push_back(::dcool::core::forward<ValueT_>(value_));
@@ -17,23 +17,23 @@ namespace dcool::container {
 
 		template <
 			typename ValueT_, ::dcool::container::detail_::DirectlyBackPushable_<ValueT_&&> ContainerT_
-		> constexpr void pushBackTo_(ContainerT_& container_, ValueT_&& value_) noexcept(
+		> constexpr void generalPushBackTo_(ContainerT_& container_, ValueT_&& value_) noexcept(
 			noexcept(container_.pushBack(::dcool::core::forward<ValueT_>(value_)))
 		) {
 			container_.pushBack(::dcool::core::forward<ValueT_>(value_));
 		}
 	}
 
-	template <typename T_, typename ValueT_> concept BackPushable = requires (T_ container_, ValueT_&& value_) {
-		::dcool::container::detail_::pushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_));
+	template <typename T_, typename ValueT_> concept CompatibleBackPushable = requires (T_ container_, ValueT_&& value_) {
+		::dcool::container::detail_::generalPushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_));
 	};
 
 	template <
-		typename ValueT_, ::dcool::container::BackPushable<ValueT_&&> ContainerT_
-	> constexpr void pushBackTo(ContainerT_& container_, ValueT_&& value_) noexcept(
-		noexcept(::dcool::container::detail_::pushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_)))
+		typename ValueT_, ::dcool::container::CompatibleBackPushable<ValueT_&&> ContainerT_
+	> constexpr void generalPushBackTo(ContainerT_& container_, ValueT_&& value_) noexcept(
+		noexcept(::dcool::container::detail_::generalPushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_)))
 	) {
-		::dcool::container::detail_::pushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_));
+		::dcool::container::detail_::generalPushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_));
 	}
 
 	namespace detail_ {
@@ -41,7 +41,7 @@ namespace dcool::container {
 			container_.popFront(container_);
 		};
 
-		template <typename ContainerT_> constexpr void popFrontOf_(ContainerT_& container_) noexcept(
+		template <typename ContainerT_> constexpr void generalPopFrontOf_(ContainerT_& container_) noexcept(
 			noexcept(container_.pop_front())
 		) {
 			container_.pop_front();
@@ -49,19 +49,21 @@ namespace dcool::container {
 
 		template <
 			::dcool::container::detail_::DirectlyFrontPoppable_ ContainerT_
-		> constexpr void popFrontOf_(ContainerT_& container_) noexcept(noexcept(container_.popFront())) {
+		> constexpr void generalPopFrontOf_(ContainerT_& container_) noexcept(noexcept(container_.popFront())) {
 			container_.popFront();
 		}
 	}
 
-	template <typename T_> concept FrontPoppable = requires (T_ container_) {
-		::dcool::container::detail_::popFrontOf_(container_);
+	template <typename T_> concept CompatibleFrontPoppable = requires (T_ container_) {
+		::dcool::container::detail_::generalPopFrontOf_(container_);
 	};
 
-	template <::dcool::container::FrontPoppable ContainerT_> constexpr void popFrontOf(ContainerT_& container_) noexcept(
-		noexcept(::dcool::container::detail_::popFrontOf_(container_))
+	template <
+		::dcool::container::CompatibleFrontPoppable ContainerT_
+	> constexpr void generalPopFrontOf(ContainerT_& container_) noexcept(
+		noexcept(::dcool::container::detail_::generalPopFrontOf_(container_))
 	) {
-		::dcool::container::detail_::popFrontOf_(container_);
+		::dcool::container::detail_::generalPopFrontOf_(container_);
 	}
 }
 

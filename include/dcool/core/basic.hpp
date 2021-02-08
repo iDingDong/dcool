@@ -3,13 +3,11 @@
 
 #	include <cstdint>
 #	include <cstddef>
-#	include <exception>
 #	include <new>
 #	include <utility>
 
 namespace dcool::core {
 	using ::std::declval;
-	using ::std::terminate;
 
 	using Byte = ::std::byte;
 	using Boolean = bool;
