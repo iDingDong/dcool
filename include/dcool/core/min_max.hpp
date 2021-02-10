@@ -1,5 +1,5 @@
-#ifndef DCOOL_CORE_MIN_HPP_INCLUDED_
-#	define DCOOL_CORE_MIN_HPP_INCLUDED_ 1
+#ifndef DCOOL_CORE_MIN_MAX_HPP_INCLUDED_
+#	define DCOOL_CORE_MIN_MAX_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/compare.hpp>
@@ -15,6 +15,16 @@ namespace dcool::core {
 		::dcool::core::TotallyOrdered T_, ::dcool::core::TotallyOrdered... Ts_
 	> constexpr auto min(T_ const& first_, Ts_ const&... rests_) -> T_ const& {
 		return ::std::min(first_, ::dcool::core::min(rests_...));
+	}
+
+	template <TotallyOrdered T_> constexpr auto max(T_ const& first_) -> T_ const& {
+		return first_;
+	}
+
+	template <
+		::dcool::core::TotallyOrdered T_, ::dcool::core::TotallyOrdered... Ts_
+	> constexpr auto max(T_ const& first_, Ts_ const&... rests_) -> T_ const& {
+		return ::std::max(first_, ::dcool::core::max(rests_...));
 	}
 }
 
