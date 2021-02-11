@@ -25,6 +25,10 @@ namespace dcool::core {
 		return input_;
 	}
 
+	template <typename T_> constexpr auto constantizePointer(T_* input_) -> T_ const* {
+		return input_;
+	}
+
 	using PostDisambiguator = int;
 
 	template <typename... Ts_> struct Empty {
