@@ -16,7 +16,7 @@ using dcool::core::StorageRequirement = /* unspecified trivial type */;
 constexpr auto size(dcool::core::StorageRequirement requirement) -> dcool::core::Size;
 ```
 
-Returns the size requirement holded by `requirement`.
+Returns the size requirement holded by `requirement`. This helper is expected to be removed after `document/dependency_bugs.md#Bug_1` gets fixed.
 
 ### `alignment`
 
@@ -24,7 +24,7 @@ Returns the size requirement holded by `requirement`.
 constexpr auto alignment(dcool::core::StorageRequirement requirement) -> dcool::core::Alignment;
 ```
 
-Returns the alignment requirement holded by `requirement`.
+Returns the alignment requirement holded by `requirement`. This helper is expected to be removed after `document/dependency_bugs.md#Bug_1` gets fixed.
 
 ## Other helper
 
@@ -37,7 +37,7 @@ template <
 > constexpr dcool::core::StorageRequirement dcool::core::storageRequirement;
 ```
 
-A constant storage requirement holding size equals to `size` and alignment equals to `alignment`.
+A constant storage requirement holding size equals to `size` and alignment equals to `alignment`. This helper is expected to be removed after `document/dependency_bugs.md#Bug_1` gets fixed.
 
 The default value for `alignment` is the same as `std::aligned_storage_t<size>`'s alignment requirement. If the default value is not used, `alignment` must be the value of `alignof(T)` for some type `T`, or the behavior is undefined.
 

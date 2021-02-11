@@ -3,10 +3,10 @@
 Include `<dcool/core.hpp>` to use.
 
 ```cpp
-template <dcool::core::StorageRequirement requirement> using dcool::core::AlignedStorage = /* unspecified type */;
+template <dcool::core::StorageRequirement requirementC> using dcool::core::AlignedStorage = /* unspecified type */;
 ```
 
-A trivial standard-layout type suitable for use as uninitialized storage for any object whose size is at most `dcool::core::size(requirement)` and whose alignment requirement is a divisor of `dcool::core::alignment(requirement)`. Further restrictions are identical to `std::aligned_storage_t<dcool::core::size(requirement), dcool::core::alignment(requirement)>`.
+A trivial standard-layout type suitable for use as uninitialized storage for any object whose size is at most `dcool::core::size(requirementC)` and whose alignment requirement is a divisor of `dcool::core::alignment(requirementC)`. Further restrictions are identical to `std::aligned_storage_t<dcool::core::size(requirementC), dcool::core::alignment(requirementC)>`.
 
 ## Other helpers
 
