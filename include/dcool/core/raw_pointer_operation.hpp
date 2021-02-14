@@ -8,7 +8,17 @@ namespace dcool::core {
 	template <typename T_> constexpr auto stepByByte(
 		T_* pointer_, ::dcool::core::Difference step_
 	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, T_>* {
-		return reinterpret_cast<::dcool::core::IdenticallyQualifiedType<::dcool::core::Byte, T_>*>(pointer_) + step_;
+		auto generalPointer_ = static_cast<::dcool::core::IdenticallyQualifiedType<void, T_>*>(pointer_);
+		return static_cast<::dcool::core::IdenticallyQualifiedType<::dcool::core::Byte, T_>*>(generalPointer_) + step_;
+	}
+
+	inline constexpr auto differenceByByte(
+		void const volatile* left_, void const volatile* right_
+	) noexcept -> ::dcool::core::Difference {
+		return
+			static_cast<::dcool::core::Byte const volatile*>(left_) -
+			static_cast<::dcool::core::Byte const volatile*>(right_)
+		;
 	}
 }
 
