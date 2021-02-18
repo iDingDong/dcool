@@ -5,6 +5,7 @@
 #	include <dcool/resource/dismissor.hpp>
 #	include <dcool/resource/pool.hpp>
 #	include <dcool/resource/shared.hpp>
+#	include <dcool/resource/squeezing.hpp>
 #	include <dcool/resource/unique_pointer.hpp>
 
 #endif
