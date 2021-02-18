@@ -3,13 +3,11 @@
 
 #	include <cstdint>
 #	include <cstddef>
-#	include <exception>
 #	include <new>
 #	include <utility>
 
 namespace dcool::core {
 	using ::std::declval;
-	using ::std::terminate;
 
 	using Byte = ::std::byte;
 	using Boolean = bool;
@@ -24,6 +22,10 @@ namespace dcool::core {
 	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
 
 	template <typename T_> constexpr auto constantize(T_& input_) -> T_ const& {
+		return input_;
+	}
+
+	template <typename T_> constexpr auto constantizePointer(T_* input_) -> T_ const* {
 		return input_;
 	}
 

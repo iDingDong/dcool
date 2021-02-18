@@ -2,6 +2,7 @@
 #	define DCOOL_CORE_MUTEX_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
+#	include <dcool/core/functional.hpp>
 #	include <dcool/core/member_detector.hpp>
 
 #	include <concepts>
@@ -143,17 +144,15 @@ namespace dcool::core {
 	> constexpr void generalLock(MutexT_& mutex_) noexcept(noexcept(mutex_.lock())) {
 		mutex_.lock();
 	}
+}
 
-	namespace detail_ {
-		template <typename MutexT_> constexpr auto generalTryLock_(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
-			return mutex_.try_lock();
-		}
-
-		template <::dcool::core::Mutex MutexT_> constexpr auto generalTryLock_(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
-			return mutex_.tryLock();
-		}
+DCOOL_CORE_DEFINE_MEMBER_CALLER(
+	dcool::core::detail_, HasCallableTryLock_, generalTryLock_, tryLock, [](auto& mutex_) -> ::dcool::core::Boolean {
+		return mutex_.try_lock();
 	}
+)
 
+namespace dcool::core {
 	template <
 		::dcool::core::CompatibleMutex MutexT_
 	> constexpr auto generalTryLock(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
@@ -165,55 +164,52 @@ namespace dcool::core {
 	> constexpr void generalUnlock(MutexT_& mutex_) noexcept {
 		mutex_.unlock();
 	}
+}
 
-	namespace detail_ {
-		template <typename MutexT_> constexpr void generalLockShared_(MutexT_& mutex_) noexcept(noexcept(mutex_.lock_shared())) {
-			return mutex_.lock_shared();
-		}
-
-		template <
-			::dcool::core::SharedMutex MutexT_
-		> constexpr void generalLockShared_(MutexT_& mutex_) noexcept(noexcept(mutex_.lockShared())) {
-			return mutex_.lockShared();
-		}
+DCOOL_CORE_DEFINE_MEMBER_CALLER(
+	dcool::core::detail_, HasCallableLockShared_, generalLockShared_, lockShared, [](auto& mutex_) {
+		mutex_.lock_shared();
 	}
+)
 
+namespace dcool::core {
 	template <
 		::dcool::core::CompatibleSharedMutex MutexT_
 	> constexpr void generalLockShared(MutexT_& mutex_) noexcept(noexcept(::dcool::core::detail_::generalLockShared_(mutex_))) {
 		::dcool::core::detail_::generalLockShared_(mutex_);
 	}
+}
 
-	namespace detail_ {
-		template <typename MutexT_> constexpr auto generalTryLockShared_(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
-			return mutex_.try_lock_shared();
-		}
-
-		template <
-			::dcool::core::SharedMutex MutexT_
-		> constexpr auto generalTryLockShared_(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
-			return mutex_.tryLockShared();
-		}
+DCOOL_CORE_DEFINE_MEMBER_CALLER(
+	dcool::core::detail_,
+	HasCallableTryLockShared_,
+	generalTryLockShared_, tryLockShared,
+	[](auto& mutex_) -> ::dcool::core::Boolean {
+		return mutex_.try_lock_shared();
 	}
+)
 
+namespace dcool::core {
 	template <
 		::dcool::core::CompatibleSharedMutex MutexT_
 	> constexpr auto generalTryLockShared(MutexT_& mutex_) noexcept -> ::dcool::core::Boolean {
 		return ::dcool::core::detail_::generalTryLockShared_(mutex_);
 	}
+}
 
-	namespace detail_ {
-		template <typename MutexT_> constexpr void generalUnockShared_(MutexT_& mutex_) noexcept {
-			return mutex_.unlock_shared();
-		}
-
-		template <::dcool::core::SharedMutex MutexT_> constexpr void generalUnockShared_(MutexT_& mutex_) noexcept {
-			return mutex_.unlockShared();
-		}
+DCOOL_CORE_DEFINE_MEMBER_CALLER(
+	dcool::core::detail_,
+	HasCallableUnlockShared_,
+	generalUnlockShared_,
+	unlockShared,
+	[](auto& mutex_) {
+		return mutex_.unlock_shared();
 	}
+)
 
+namespace dcool::core {
 	template <::dcool::core::CompatibleSharedMutex MutexT_> constexpr void generalUnlockShared(MutexT_& mutex_) noexcept {
-		::dcool::core::detail_::generalUnockShared_(mutex_);
+		::dcool::core::detail_::generalUnlockShared_(mutex_);
 	}
 
 	namespace detail_ {

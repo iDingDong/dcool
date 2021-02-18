@@ -6,7 +6,7 @@ Include `<dcool/container.hpp>` to use.
 template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::container::List;
 ```
 
-A sequence container that can be configured as a dynamic or static array.
+A sequence container that is stored in a contiguous storage.
 
 ## Configuration `ConfigT`
 
@@ -14,19 +14,25 @@ Its member shall customize the list as decribed:
 
 | Member | Default | Behavior |
 | - | - | - |
-| `static constexpr dcool::core::Length storageCapacity` | `dcool::core::dynamicExtent` | The capacity of list shall be dynamic during run time if it takes value `dcool::core::dynamicExtent`; otherwise the capacity shall be equal to `storageCapacity`. |
+| `static constexpr dcool::core::Boolean squeezedOnly` | `false` | All items will only be stored inside the list object if it takes value `true`; otherwise items will be stored in an dynamically allocated storage if capacity exceeds `squeezedCapacity`. |
+| `static constexpr dcool::core::Length squeezedCapacity` | 0 | The capacity allowed to store inside the list object shall be equal to `squeezedCapacity`. Currently it is only experimentally if `squeezedCapacity` is greater than 0 and `squeezedOnly` is `false`. |
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
 | `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
 
+### Note
+
+If the list has fixed capacity, implementation may store all items inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `squeezedCapacity` takes a large value.
+
 ### Examples
 
-Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent`):
+Given constant `dcool::core::Length N` (assumes `N > 0` is true):
 
-- Given `storageCapacity = dcool::core::dynamicExtent` and `stuffed = false`, the list shall behave similarly to `std::vector<Value>`.
-- Given `storageCapacity = N` and `stuffed = false`, the list shall behave similarly to `boost::static_vector<Value, N>`.
-- Given `storageCapacity = N` and `stuffed = true`, the list shall behave similarly to `std::array<Value, N>`.
-- Given `storageCapacity = dcool::core::dynamicExtent` and `stuffed = true`, the list shall behave behave similarly to `std::vector<Value>` except that it cannot be reserved an will always have its length equals to its capacity.
+- Given `squeezedOnly = false`, `squeezedCapacity = 0` and `stuffed = false`, the list shall behave similarly to `std::vector<Value>`.
+- Given `squeezedOnly = false`, `squeezedCapacity = N` and `stuffed = false`, the list shall behave similarly to `boost::small_vector<Value, N>`.
+- Given `squeezedOnly = true`, `squeezedCapacity = N` and `stuffed = false`, the list shall behave similarly to `boost::static_vector<Value, N>`.
+- Given `squeezedOnly = true`, `squeezedCapacity = N` and `stuffed = true`, the list shall behave similarly to `std::array<Value, N>`.
+- Given `squeezedOnly = false`, `squeezedCapacity = 0` and `stuffed = true`, the list shall behave behave similarly to `std::vector<Value>` except that it cannot be reserved an will always have its length equals to its capacity.
 
 ## Member types
 
@@ -43,8 +49,8 @@ Given constant `dcool::core::Length N` (assumes `N != dcool::core::dynamicExtent
 
 | Name | type | Definition |
 | - | - | - |
-| `storageCapacity` | `dcool::core::Length` | Determined by configuration `storageCapacity`. |
-| `capacityFixed` | `dcool::core::Boolean` | `false` if `storageCapacity` equals to `dcool::core::dynamicExtent`; otherwise `true`. |
+| `squeezedOnly` | `dcool::core::Boolean` | Determined by configuration `squeezedOnly`. |
+| `squeezedCapacity` | `dcool::core::Length` | Determined by configuration `squeezedCapacity`. |
 | `stuffed` | `dcool::core::Boolean` | Determined by configuration `stuffed`. |
 | `circular` | `dcool::core::Boolean` | Determined by configuration `circular`. |
 | `exceptionSafetyStrategy` | `dcool::core::ExceptionSafetyStrategy` | Determined by configuration `exceptionSafetyStrategy`. |
@@ -64,11 +70,11 @@ template <dcool::core::InputIterator IteratorT> constexpr List(
 ) noexcept(/* unspecified expression */); // 6
 ```
 
-- Overload 1: If `capacityFixed`, initialize the list with 0 capacity; Otherwise if `stuffed`, default-initialize `storageCapacity` count of items.
+- Overload 1: If `squeezedOnly`, initialize the list with 0 capacity; Otherwise if `stuffed`, default-initialize `squeezedCapacity` count of items.
 - Overload 2, 3: Construct as a copy of `other` (as-if).
-- Overload 4: Construct with given capacity. If `stuffed`, default-initialize `capacity` items. This overload is unavailable if `capacityFixed`.
-- Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `capacityFixed` and `stuffed`.
-- Overload 6: Construct by copy all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `capacityFixed` and `stuffed`.
+- Overload 4: Construct with given capacity. If `stuffed`, default-initialize `capacity` items. This overload is unavailable if `squeezedOnly`.
+- Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `squeezedOnly` and `stuffed`.
+- Overload 6: Construct by copy all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `squeezedOnly` and `stuffed`.
 
 ## Assignments
 
@@ -91,7 +97,7 @@ Swap with `other`.
 
 #### Complexity
 
-Linear if `capacityFixed`, otherwise constant.
+Linear if `squeezedOnly`, otherwise constant.
 
 ### `vacant`
 
@@ -191,9 +197,11 @@ template <typename... ArgumentTs> constexpr auto emplace(
 ) noexcept(/* unspecified expression */) -> Iterator; // 2
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Insert a new item at `position` in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -210,9 +218,11 @@ template <typename... ArgumentTs> constexpr void emplaceFront(
 ) noexcept(/* unspecified expression */); // 2
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Insert a new item at the beginning of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -229,9 +239,11 @@ template <typename... ArgumentTs> constexpr void emplaceBack(
 ) noexcept(/* unspecified expression */); // 2
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Insert a new item at the end of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -248,28 +260,32 @@ template <
 > constexpr void pushFront(Value&& value);
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Insert a new item at the beginning of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
 Linear if full and cannot in-place expand, otherwise constant if `circular`, otherwise linear.
 
-### `pusbBack`
+### `pushBack`
 
 ```cpp
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-> constexpr void pusbBack(Value const& value);
+> constexpr void pushBack(Value const& value);
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-> constexpr void pusbBack(Value&& value);
+> constexpr void pushBack(Value&& value);
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Insert a new item at the end of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 
@@ -283,13 +299,15 @@ template <
 > constexpr auto erase(Iterator position) noexcept(/* unspecified expression */) -> Iterator;
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Erase an item at `position`. Use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
-Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `capacityFixed`, otherwise linear by distance to either boundary of the list if `circular`, otherwise linear by distance to the end of the list if circular.
+Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `squeezedOnly`, otherwise linear by distance to either boundary of the list if `circular`, otherwise linear by distance to the end of the list if circular.
 
 ### `popFront`
 
@@ -299,13 +317,15 @@ template <
 > constexpr void popFront() noexcept(/* unspecified expression */);
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Erase the first item of the list. Use `strategyC` instead of the default exception safety strategy.
 
+Invalidates all previously obtained iterators.
+
 #### Complexity
 
-Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `capacityFixed`, otherwise constant if `circular`, otherwise linear.
+Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and not `squeezedOnly`, otherwise constant if `circular`, otherwise linear.
 
 ### `popBack`
 
@@ -315,9 +335,11 @@ template <
 > constexpr void popBack() noexcept(/* unspecified expression */);
 ```
 
-If `stuffed` and `capacityFixed`, this member is not available.
+If `stuffed` and `squeezedOnly`, this member is not available.
 
 Erase the last item of the list. Use `strategyC` instead of the default exception safety strategy.
+
+Invalidates all previously obtained iterators.
 
 #### Complexity
 

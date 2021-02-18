@@ -2,7 +2,9 @@
 #	define DCOOL_CORE_EXECUTION_HPP_INCLUDED_ 1
 
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/utility.hpp>
 
+#	include <exception>
 #	include <execution>
 
 namespace dcool::core {
@@ -47,6 +49,18 @@ namespace dcool::core {
 	template <typename T_> concept FormOfSequencedPolicy = ::dcool::core::SequencedPolicy<
 		::dcool::core::QualifiedReferenceRemovedType<T_>
 	>;
+
+	template <
+		typename ReturnedT_, typename... ArgumentTs_
+	> [[noreturn]] auto terminate(ArgumentTs_&&...) noexcept -> ReturnedT_ {
+		::std::terminate();
+	}
+
+	template <
+		typename... ArgumentTs_
+	> [[noreturn]] void terminate(ArgumentTs_&&... parameters_) noexcept {
+		::dcool::core::terminate<void>(::dcool::core::forward<ArgumentTs_>(parameters_)...);
+	}
 }
 
 #endif
