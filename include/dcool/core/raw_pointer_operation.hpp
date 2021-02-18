@@ -37,6 +37,12 @@ namespace dcool::core {
 	template <::dcool::core::TriviallyCopyable T_> constexpr void writeToBuffer(T_ const& value_, void* buffer_) noexcept {
 		::std::memcpy(buffer_, ::dcool::core::addressOf(value_), sizeof(value_));
 	}
+
+	template <::dcool::core::TriviallyCopyable T_> constexpr auto readFromBuffer(void const* buffer_) noexcept -> T_ {
+		T_ result_;
+		::std::memcpy(::dcool::core::addressOf(result_), buffer_, sizeof(result_));
+		return result_;
+	}
 }
 
 #endif
