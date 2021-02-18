@@ -1104,8 +1104,8 @@ namespace dcool::resource {
 			RebindedAllocatorTraits_::deallocate(rebinded_, static_cast<Value_*>(handle_), length_);
 		}
 
-		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
-		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
 	// using DefaultPool = ::dcool::resource::PoolFromClassic<::dcool::resource::DefaultClassicPool>;
