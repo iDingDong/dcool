@@ -8,6 +8,7 @@
 #	include <dcool/core/counter.hpp>
 #	include <dcool/core/converter.hpp>
 #	include <dcool/core/dereference.hpp>
+#	include <dcool/core/destruct.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/execution.hpp>
 #	include <dcool/core/functional.hpp>

@@ -55,7 +55,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void deactivateItems() noexcept {
-			this->items().~Items();
+			::dcool::core::destruct(this->items());
 		}
 
 		public: constexpr void activateAlternative() {
@@ -74,11 +74,11 @@ namespace dcool::resource {
 			return ::dcool::core::dereference(::dcool::core::launder(::dcool::core::addressOf(this->m_storage_.items_)));
 		}
 
-		public: constexpr auto alternative() const noexcept -> Items const& {
+		public: constexpr auto alternative() const noexcept -> Alternative const& {
 			return ::dcool::core::dereference(::dcool::core::launder(::dcool::core::addressOf(this->m_storage_.alternative_)));
 		}
 
-		public: constexpr auto alternative() noexcept -> Items& {
+		public: constexpr auto alternative() noexcept -> Alternative& {
 			return ::dcool::core::dereference(::dcool::core::launder(::dcool::core::addressOf(this->m_storage_.alternative_)));
 		}
 	};
