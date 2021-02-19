@@ -3,6 +3,7 @@
 
 #	include <dcool/core/compare.hpp>
 #	include <dcool/core/contamination.hpp>
+#	include <dcool/core/destruct.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/range.hpp>
 
@@ -15,12 +16,11 @@ namespace dcool::core {
 			::dcool::core::ForwardIterator BeginIteratorT_, ::dcool::core::ForwardIterator EndIteratorT_
 		> constexpr void batchDestruct_(BeginIteratorT_ begin_, EndIteratorT_ end_) noexcept {
 			using Value_ = ::dcool::core::IteratorValueType<BeginIteratorT_>;
-			if constexpr (::dcool::core::isTriviallyDestructible<Value_>) {
-				return;
-			}
-			while (!::dcool::core::iteratorsToSame(begin_, end_)) {
-				::dcool::core::dereference(begin_).~Value_();
-				++begin_;
+			if constexpr (!::dcool::core::isTriviallyDestructible<Value_>) {
+				while (!::dcool::core::iteratorsToSame(begin_, end_)) {
+					::dcool::core::destruct(::dcool::core::dereference(begin_));
+					++begin_;
+				}
 			}
 		}
 	}
