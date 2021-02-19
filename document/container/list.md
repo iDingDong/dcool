@@ -8,21 +8,27 @@ template <typename ValueT, typename ConfigT = /* unspecified type */> struct dco
 
 A sequence container that is stored in a contiguous storage.
 
+## Terms
+
+### squeezed
+
+If all items are stored inside a size-fixed storage, we call the list a squeezed list.
+
 ## Configuration `ConfigT`
 
 Its member shall customize the list as decribed:
 
 | Member | Default | Behavior |
 | - | - | - |
-| `static constexpr dcool::core::Boolean squeezedOnly` | `false` | All items will only be stored inside the list object if it takes value `true`; otherwise items will be stored in an dynamically allocated storage if capacity exceeds `squeezedCapacity`. |
-| `static constexpr dcool::core::Length squeezedCapacity` | 0 | The capacity allowed to store inside the list object shall be equal to `squeezedCapacity`. Currently it is only experimentally if `squeezedCapacity` is greater than 0 and `squeezedOnly` is `false`. |
+| `static constexpr dcool::core::Boolean squeezedOnly` | `false` | All items will only be stored inside a size-fixed storage (prefers static allocation) if it takes value `true`; otherwise items will be stored in an dynamically allocated storage if capacity exceeds `squeezedCapacity`. |
+| `static constexpr dcool::core::Length squeezedCapacity` | 0 | The capacity provided by a size-fixed storage shall be equal to `squeezedCapacity`. Behavior is undefined if `squeezedOnly` takes value true and `squeezedCapacity` takes value 0. which means `squeezedCapacity` is always expected to be user-defined if `squeezedOnly`. |
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
 | `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
 
 ### Note
 
-If the list has fixed capacity, implementation may store all items inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `squeezedCapacity` takes a large value.
+If the list has a `squeezedCapacity` greater than 0, implementation may allocate the size-fixed storage inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `squeezedCapacity` takes a large value. Also, squeezed list might cost more to copy or move. Operations on a possibly squeezed list might cost more to guarantee exception safety, or have to downgrade to weak exception safety on certain occasions.
 
 ### Examples
 
@@ -72,7 +78,7 @@ template <dcool::core::InputIterator IteratorT> constexpr List(
 
 - Overload 1: If `squeezedOnly`, initialize the list with 0 capacity; Otherwise if `stuffed`, default-initialize `squeezedCapacity` count of items.
 - Overload 2, 3: Construct as a copy of `other` (as-if).
-- Overload 4: Construct with given capacity. If `stuffed`, default-initialize `capacity` items. This overload is unavailable if `squeezedOnly`.
+- Overload 4: Construct with capacity no less than argument `capacity`. If `stuffed`, the capacity of the constructed list would be exactly `capacity`, and `capacity` number of items will be default-initialized. This overload is unavailable if `squeezedOnly`.
 - Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `squeezedOnly` and `stuffed`.
 - Overload 6: Construct by copy all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `squeezedOnly` and `stuffed`.
 

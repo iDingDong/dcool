@@ -655,10 +655,13 @@ namespace dcool::container {
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
-				if (!(this->squeezed(engine_))) {
+				if (this->squeezed(engine_)) {
+					this->m_storage_.deactivateItems();
+				} else {
 					::dcool::resource::adaptedDeallocateFor<Value>(
 						engine_.pool(), this->m_storage_.alternative(), this->capacity(engine_)
 					);
+					this->m_storage_.deactivateAlternative();
 				}
 			}
 
@@ -1706,9 +1709,9 @@ namespace dcool::container {
 			);
 		}
 
-		public: template <
+		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
-		> constexpr auto braveEmplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+		> constexpr auto braveEmplace_(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			this->makeRoom_<strategyC__>(engine_, position_);
 			try {
 				new (::dcool::core::rawPointerOf(position_)) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
@@ -1721,12 +1724,27 @@ namespace dcool::container {
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
+		> constexpr auto braveEmplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+			static_assert(!stuffed);
+			return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto braveEmplace(
+			Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator {
+			return this->braveEmplace<exceptionSafetyStrategy>(
+				engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			if (this->full(engine_)) {
 				if constexpr (!squeezedOnly) {
 					Length extraCapacity_ = (((!stuffed) && this->capacity(engine_) > 0) ? this->capacity(engine_) : 1);
 					if (this->m_storage_.expandBack(engine_, extraCapacity_)) {
-						return this->braveEmplace<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+						return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 					}
 					Self_ newChassis_;
 					Length newCapacity_ = this->capacity(engine_) + extraCapacity_;
@@ -1771,13 +1789,16 @@ namespace dcool::container {
 						throw;
 					}
 					newChassis_.m_storage_.setLength(engine_, this->length(engine_) + 1);
-					this->uninitialize(engine_);
+					this->uninitializeWithoutFilled_(engine_);
 					newChassis_.relocateTo(engine_, engine_, *this);
+					if constexpr (circular) {
+						newPosition_ = this->position(engine_, newPosition_.index());
+					}
 					return newPosition_;
 				}
 				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
 			}
-			return this->braveEmplace<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+			return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
 		public: template <typename... ArgumentTs__> constexpr auto emplace(
@@ -1947,37 +1968,40 @@ namespace dcool::container {
 				this->popBack(engine_);
 				return position_;
 			}
-			Self_ newChassis_;
+			Self_ backupChassis_;
+			this->unsqueezedRelocateTo_(engine_, engine_, backupChassis_);
+			if constexpr (circular) {
+				position_ = backupChassis_.position(position_.index());
+			}
 			Length newLength_ = this->length(engine_) - 1;
-			newChassis_.initializeWithoutFill_(engine_, newLength_);
+			this->initializeWithoutFill_(engine_, newLength_);
 			Iterator newPosition_;
 			try {
-				if (copyRequiredToErase_(strategyC__)) {
-					newPosition_ = ::std::uninitialized_copy(this->begin(engine_), position_, newChassis_.begin(engine_));
-				} else {
-					newPosition_ = ::std::uninitialized_move(this->begin(engine_), position_, newChassis_.begin(engine_));
-				}
+				newPosition_ = ::dcool::core::batchMoveConstruct<strategyC__>(
+					backupChassis_.begin(engine_), position_, this->begin(engine_)
+				);
 				try {
-					::dcool::core::batchRelocate<strategyC__>(position_ + 1, this->end(engine_), newPosition_);
+					::dcool::core::batchRelocate<strategyC__>(position_ + 1, backupChassis_.end(engine_), newPosition_);
 				} catch (...) {
 					if (!copyRequiredToErase_(strategyC__)) {
 						try {
-							::std::move(newChassis_.begin(engine_), newPosition_, this->begin(engine_));
+							::dcool::core::batchMove<strategyC__>(this->begin(engine_), newPosition_, backupChassis_.begin(engine_));
 						} catch (...) {
 							::dcool::core::goWeak<strategyC__>();
 							throw;
 						}
 					}
-					::dcool::core::batchDestruct(newChassis_.begin(engine_), newPosition_);
+					::dcool::core::batchDestruct(this->begin(engine_), newPosition_);
 					throw;
 				}
-				newChassis_.m_storage_.setLength(engine_, newLength_);
 			} catch (...) {
-				newChassis_.uninitializeWithoutFilled_(engine_);
+				this->uninitializeWithoutFilled_(engine_);
+				backupChassis_.unsqueezedRelocateTo_(engine_, engine_, *this);
 				throw;
 			}
-			this->uninitializeWithoutFilled_(engine_);
-			newChassis_.relocateTo(engine_, engine_, *this);
+			::dcool::core::batchDestruct(backupChassis_.begin(engine_), position_);
+			this->m_storage_.setLength(engine_, newLength_);
+			backupChassis_.uninitializeWithoutFilled_(engine_);
 			return newPosition_;
 		}
 
@@ -2294,6 +2318,11 @@ namespace dcool::container {
 			static constexpr ::dcool::core::Length squeezedCapacity = capacityC_;
 		};
 
+		template <::dcool::core::Length squeezedCapacityC_> struct DefaultSmallListConfig_ {
+			static constexpr ::dcool::core::Boolean squeezedOnly = false;
+			static constexpr ::dcool::core::Length squeezedCapacity = squeezedCapacityC_;
+		};
+
 		struct DefaultStuffedListConfig_ {
 			static constexpr ::dcool::core::Boolean stuffed = true;
 		};
@@ -2305,6 +2334,10 @@ namespace dcool::container {
 
 	template <typename ValueT_, ::dcool::core::Length capacityC_> using StaticList = ::dcool::container::List<
 		ValueT_, ::dcool::container::detail_::DefaultStaticListConfig_<capacityC_>
+	>;
+
+	template <typename ValueT_, ::dcool::core::Length squeezedCapacityC_> using SmallList = ::dcool::container::List<
+		ValueT_, ::dcool::container::detail_::DefaultSmallListConfig_<squeezedCapacityC_>
 	>;
 
 	template <typename ValueT_> using StuffedList = ::dcool::container::List<
