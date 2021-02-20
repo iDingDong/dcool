@@ -641,7 +641,7 @@ namespace dcool::container {
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
 			static_assert(
 				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
-				"User-defined 'Pool' does not match return value of 'Engine::listPool'"
+				"User-defined 'Pool' does not match return value of 'Engine::pool'"
 			);
 
 			public: using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
