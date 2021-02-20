@@ -514,7 +514,7 @@ namespace dcool::container {
 				::dcool::container::detail_::extractedSqueezedCapacityValue_<Config>(::dcool::core::Length(0))
 			;
 
-			public: using BasicStorage = ::dcool::resource::Squeezer<Value, Handle, squeezedCapacity>;
+			public: using BasicStorage = ::dcool::resource::ArraySqueezer<Value, Handle, squeezedCapacity>;
 		};
 
 		template <

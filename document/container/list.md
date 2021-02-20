@@ -28,7 +28,7 @@ Its member shall customize the list as decribed:
 
 ### Note
 
-If the list has a `squeezedCapacity` greater than 0, implementation may allocate the size-fixed storage inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `squeezedCapacity` takes a large value. Also, squeezed list might cost more to copy or move. Operations on a possibly squeezed list might cost more to guarantee exception safety, or have to downgrade to weak exception safety on certain occasions.
+If the list has a `squeezedCapacity` greater than 0, implementation may allocate the size-fixed storage inside the `dcool::container::List` object, which means the `dcool::container::List` object might be huge if `squeezedCapacity` takes a large value. Also, squeezed list might cost more to move or swap. Operations on a possibly squeezed list might cost more to guarantee exception safety, or have to downgrade to weak exception safety on certain occasions.
 
 ### Examples
 
