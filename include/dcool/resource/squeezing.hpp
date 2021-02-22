@@ -51,7 +51,7 @@ namespace dcool::resource {
 		} m_storage_;
 
 		public: constexpr void activateItems() {
-			new (::dcool::core::addressOf(this->m_storage_.items_)) decltype(this->m_storage_.items_);
+			new (::dcool::core::addressOf(this->m_storage_.items_)) Items;
 		}
 
 		public: constexpr void deactivateItems() noexcept {
@@ -59,7 +59,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr void activateAlternative() {
-			new (::dcool::core::addressOf(this->m_storage_.alternative_)) decltype(this->m_storage_.alternative_);
+			new (::dcool::core::addressOf(this->m_storage_.alternative_)) Alternative;
 		}
 
 		public: constexpr void deactivateAlternative() noexcept {
@@ -130,7 +130,7 @@ namespace dcool::resource {
 			} m_storage_;
 
 			public: constexpr void activateItem() {
-				new (::dcool::core::addressOf(this->m_storage_.item_)) decltype(this->m_storage_.items_);
+				new (::dcool::core::addressOf(this->m_storage_.item_)) Item;
 			}
 
 			public: constexpr void deactivateItem() noexcept {
@@ -138,7 +138,7 @@ namespace dcool::resource {
 			}
 
 			public: constexpr void activateAlternative() {
-				new (::dcool::core::addressOf(this->m_storage_.alternative_)) decltype(this->m_storage_.alternative_);
+				new (::dcool::core::addressOf(this->m_storage_.alternative_)) Alternative;
 			}
 
 			public: constexpr void deactivateAlternative() noexcept {

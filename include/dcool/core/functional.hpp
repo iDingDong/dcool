@@ -15,6 +15,16 @@ namespace dcool::core {
 
 	constexpr NoOp noOp;
 
+	struct ComparableNoOp: public NoOp {
+		private: using Self_ = ComparableNoOp;
+
+		friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean {
+			return true;
+		}
+	};
+
+	constexpr ComparableNoOp comparableNoOp;
+
 	template <typename T_> using Function = ::std::function<T_>;
 
 	using ::std::invoke;

@@ -90,6 +90,8 @@ namespace dcool::core {
 	template <typename FirstT_, typename SecondT_> using SmallerType = ::dcool::core::ConditionalType<
 		sizeof(FirstT_) <= sizeof(SecondT_), FirstT_, SecondT_
 	>::type;
+
+	template <typename T_> using DecayedType = ::std::decay_t<T_>;
 }
 
 #endif

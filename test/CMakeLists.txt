@@ -5,6 +5,7 @@ add_executable(
 	"./container/list.cpp"
 	"./resource/shared.cpp"
 	"./vigor/sealer.cpp"
+	"./utility/any.cpp"
 )
 
 target_link_libraries(test_dcool PRIVATE dcool_test)
