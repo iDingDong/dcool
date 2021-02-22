@@ -61,7 +61,7 @@ namespace dcool::resource {
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
 		> [[nodiscard("Might leak memory.")]] constexpr auto allocate() -> Handle<storageRequirementC__> {
-			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
+			if constexpr (!::dcool::core::requiredStorable(storageRequirementC__, unitStorageRequirement)) {
 				throw ::dcool::resource::BadAllocation();
 			}
 			if (this->exhausted()) {
@@ -75,7 +75,7 @@ namespace dcool::resource {
 		public: template <
 			::dcool::core::StorageRequirement storageRequirementC__
 		> constexpr void deallocate(Handle<storageRequirementC__> handle_) noexcept {
-			if constexpr (!::dcool::core::requiredStorable<storageRequirementC__, unitStorageRequirement>) {
+			if constexpr (!::dcool::core::requiredStorable(storageRequirementC__, unitStorageRequirement)) {
 				::dcool::core::terminate();
 			}
 			this->link_(handle_, this->m_first_);

@@ -5,6 +5,9 @@
 #	include <dcool/core/execution.hpp>
 #	include <dcool/core/member_detector.hpp>
 
+#	include <exception>
+#	include <stdexcept>
+
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 	dcool::core, HasExceptionSafetyStrategy, extractedExceptionSafetyStrategyValue, exceptionSafetyStrategy
 )
@@ -66,6 +69,31 @@ namespace dcool::core {
 			::dcool::core::terminate();
 		}
 	}
+
+	using ExceptionPointer = ::std::exception_ptr;
+
+	inline auto currentException() noexcept -> ::dcool::core::ExceptionPointer {
+		return ::std::current_exception();
+	}
+
+	[[noreturn]] inline void rethrow(ExceptionPointer pointer_) {
+		::std::rethrow_exception(pointer_);
+	}
+
+	template <typename... Ts_> class ExceptionSafetyDowngrade : ::std::runtime_error {
+		private: using Super_ = ::std::runtime_error;
+
+		private: ExceptionPointer m_underlying_;
+
+		public: ExceptionSafetyDowngrade(
+			ExceptionPointer pointer_ = ::dcool::core::currentException(), const char* what_ = "Exception safety downgraded."
+		): Super_(what_), m_underlying_(pointer_) {
+		}
+
+		public: [[noreturn]] void rethrowUnderlying() const {
+			::dcool::core::rethrow(this->m_underlying_);
+		}
+	};
 }
 
 #endif

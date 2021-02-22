@@ -63,32 +63,54 @@ namespace dcool::core {
 #	endif
 
 	template <
-		::dcool::core::Object ValueT_
+		typename ValueT_
 	> constexpr ::dcool::core::StorageRequirement storageRequirementFor = ::dcool::core::storageRequirement<
 		sizeof(ValueT_), alignof(ValueT_)
 	>;
 
-	template <
-		::dcool::core::StorageRequirement requiredC_, ::dcool::core::StorageRequirement availableC_
-	> constexpr ::dcool::core::Boolean requiredStorable =
-		::dcool::core::size(requiredC_) <= ::dcool::core::size(availableC_) && ::dcool::core::alignment(requiredC_) <= ::dcool::core::alignment(availableC_)
-	;
+	template <> constexpr ::dcool::core::StorageRequirement storageRequirementFor<void> = ::dcool::core::storageRequirement<0, 0>;
+
+	constexpr auto requiredStorable(
+		::dcool::core::StorageRequirement required_, ::dcool::core::StorageRequirement available_
+	) noexcept -> ::dcool::core::Boolean {
+		return
+			::dcool::core::size(required_) <= ::dcool::core::size(available_) &&
+			::dcool::core::alignment(required_) <= ::dcool::core::alignment(available_)
+		;
+	}
+
+	template <typename T_> constexpr auto storable(
+		::dcool::core::StorageRequirement available_
+	) noexcept -> ::dcool::core::Boolean {
+		return ::dcool::core::requiredStorable(storageRequirementFor<T_>, available_);
+	}
 
 	template <
-		::dcool::core::Object T_, ::dcool::core::StorageRequirement availableC_
-	> constexpr ::dcool::core::Boolean isStorable = ::dcool::core::requiredStorable<storageRequirementFor<T_>, availableC_>;
+		typename T_, ::dcool::core::StorageRequirement availableC_
+	> constexpr ::dcool::core::Boolean isStorable = ::dcool::core::storable<T_>(availableC_);
 
 	template <
 		typename T_, ::dcool::core::StorageRequirement availableC_
 	> concept Storable = isStorable<T_, availableC_>;
 
+	namespace detail_ {
+		template <::dcool::core::Size sizeC_, ::dcool::core::Alignment alignmentC_> struct AlignedStorageHelper_ {
+			using Type_ = ::std::aligned_storage_t<sizeC_, alignmentC_>;
+		};
+
+		template <> struct AlignedStorageHelper_<0, 0> {
+			struct Type_ {
+			};
+		};
+	}
+
 	template <
 		::dcool::core::StorageRequirement storageRequirementC_
-	> using AlignedStorage = ::std::aligned_storage_t<
+	> using AlignedStorage = ::dcool::core::detail_::AlignedStorageHelper_<
 		::dcool::core::size(storageRequirementC_), ::dcool::core::alignment(storageRequirementC_)
-	>;
+	>::Type_;
 
-	template <::dcool::core::Object ValueT_> using StorageFor = ::dcool::core::AlignedStorage<
+	template <typename ValueT_> using StorageFor = ::dcool::core::AlignedStorage<
 		::dcool::core::storageRequirementFor<ValueT_>
 	>;
 }
