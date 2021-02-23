@@ -63,7 +63,7 @@ namespace dcool::utility {
 					return this->partPool;
 				}
 
-				public: constexpr auto exetendedOperationExecutor() noexcept -> ExtendedOpterationExecutor& {
+				public: constexpr auto extendedOperationExecutor() noexcept -> ExtendedOpterationExecutor& {
 					return this->partExetendedOperationExecutor;
 				}
 
@@ -181,8 +181,8 @@ namespace dcool::utility {
 				}
 				default: {
 					auto actualParameter_ = static_cast<ParameterForExtendedOperation_*>(parameter_);
-					actualParameter_->engine_->exetendedOperationExecutor()(
-						::dcool::core::typed<void>, actualParameter_->customizedParameter_
+					actualParameter_->engine_->extendedOperationExecutor()(
+						::dcool::core::typed<void>, opcode_, actualParameter_->customizedParameter_
 					);
 					break;
 				}
@@ -243,6 +243,8 @@ namespace dcool::utility {
 						actualParameter_->other_.self_->m_storage_.activateAlternative();
 						actualParameter_->other_.self_->m_storage_.alternative() = actualParameter_->input_.self_->m_storage_.alternative();
 						actualParameter_->input_.self_->m_storage_.deactivateAlternative();
+						actualParameter_->other_.self_->m_executor_ = basicOperationExecutor_<ValueT__>;
+						actualParameter_->input_.self_->m_executor_ = nilOperationExecutor_;
 					}
 					break;
 				}
@@ -253,8 +255,8 @@ namespace dcool::utility {
 				}
 				default: {
 					auto actualParameter_ = static_cast<ParameterForExtendedOperation_*>(parameter_);
-					actualParameter_->engine_->exetendedOperationExecutor()(
-						::dcool::core::typed<ValueT__>, actualParameter_->customizedParameter_
+					actualParameter_->engine_->extendedOperationExecutor()(
+						::dcool::core::typed<ValueT__>, opcode_, actualParameter_->customizedParameter_
 					);
 					break;
 				}
@@ -327,7 +329,8 @@ namespace dcool::utility {
 		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
 			Self_ middleMan_;
 			this->relocateTo<engineWillBeSwappedC__>(engine_, engine_, middleMan_);
-			struct UniqueType_;
+			struct UniqueType_ {
+			};
 			try {
 				other_.relocateTo<engineWillBeSwappedC__>(otherEngine_, engine_, *this);
 				try {
@@ -367,7 +370,7 @@ namespace dcool::utility {
 			return *parameter_;
 		}
 
-		public: constexpr auto storageRequirement(Engine& engine_) const noexcept {
+		public: constexpr auto storageRequirement(Engine& engine_) const noexcept -> ::dcool::core::StorageRequirement {
 			ParameterToGetStorageRequirement_ parameter_;
 			this->m_executor_(Opcode::dcoolGetStorageRequirement_, ::dcool::core::addressOf(parameter_));
 			return parameter_;
@@ -431,9 +434,7 @@ namespace dcool::utility {
 			return this->access<ValueT__>(engine_);
 		}
 
-		protected: constexpr void executeCustomizedOperation(
-			Engine& engine_, Opcode opcode_, void* customizedParameter_
-		) const {
+		protected: constexpr void executeCustomizedOperation(Engine& engine_, Opcode opcode_, void* customizedParameter_) const {
 			ParameterForExtendedOperation_ parameter_ = {
 				.engine_ = ::dcool::core::addressOf(engine_), .customizedParameter_ = customizedParameter_
 			};
@@ -464,7 +465,7 @@ namespace dcool::utility {
 		}
 
 		public: constexpr Any(Self_ const& other_) {
-			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine, *this);
+			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
 		}
 
 		public: constexpr Any(Self_&& other_) {
@@ -540,7 +541,7 @@ namespace dcool::utility {
 			return this->chassis().typeInfo(this->mutableEngine());
 		}
 
-		public: constexpr auto storageRequirement() const noexcept {
+		public: constexpr auto storageRequirement() const noexcept -> ::dcool::core::StorageRequirement {
 			return this->chassis().storageRequirement(this->mutableEngine());
 		}
 

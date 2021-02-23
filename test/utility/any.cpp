@@ -1,3 +1,4 @@
+#include <dcool/core.hpp>
 #include <dcool/test.hpp>
 #include <dcool/utility.hpp>
 
@@ -46,4 +47,13 @@ DCOOL_TEST_CASE(dcoolUtility, anyBasics) {
 		}
 		DCOOL_TEST_EXPECT(thrown);
 	}
+	auto bigObject = dcool::core::Tuple<int, int, int, int, int>(7, 3, 4, 6, 5);
+	dcool::utility::Any any3 = bigObject;
+	DCOOL_TEST_EXPECT(any3.value<decltype(bigObject)>() == bigObject);
+	any2 = any3;
+	DCOOL_TEST_EXPECT(any2.value<decltype(bigObject)>() == bigObject);
+	DCOOL_TEST_EXPECT(any3.value<decltype(bigObject)>() == bigObject);
+	any1 = dcool::core::move(any3);
+	DCOOL_TEST_EXPECT(any1.value<decltype(bigObject)>() == bigObject);
+	DCOOL_TEST_EXPECT(any2.value<decltype(bigObject)>() == bigObject);
 }

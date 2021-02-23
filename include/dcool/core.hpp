@@ -18,6 +18,7 @@
 #	include <dcool/core/mutex.hpp>
 #	include <dcool/core/node.hpp>
 #	include <dcool/core/optional.hpp>
+#	include <dcool/core/preprocessor.hpp>
 #	include <dcool/core/range_operation.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/raw_pointer_operation.hpp>

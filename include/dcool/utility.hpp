@@ -2,5 +2,6 @@
 #	define DCOOL_UTILITY_HPP_INCLUDED_ 1
 
 #	include <dcool/utility/any.hpp>
+#	include <dcool/utility/function.hpp>
 
 #endif
