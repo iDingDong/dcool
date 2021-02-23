@@ -85,8 +85,8 @@ template <dcool::core::InputIterator IteratorT> constexpr List(
 ## Assignments
 
 ```cpp
-constexpr auto operator =(List const&) noexcept(/* unspecified expression */) -> List&;
-constexpr auto operator =(List&&) noexcept(/* unspecified expression */) -> List&;
+constexpr auto operator =(List const& other) noexcept(/* unspecified expression */) -> List&;
+constexpr auto operator =(List&& other) noexcept(/* unspecified expression */) -> List&;
 ```
 
 Assign as a copy of `other` (as-if).
@@ -96,7 +96,7 @@ Assign as a copy of `other` (as-if).
 ### `swapWith`
 
 ```cpp
-constexpr void swapWith(Self_& other) noexcept(/* unspecified expression */);
+constexpr void swapWith(List& other) noexcept(/* unspecified expression */);
 ```
 
 Swap with `other`.
