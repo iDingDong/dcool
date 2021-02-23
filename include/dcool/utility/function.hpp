@@ -9,7 +9,9 @@
 
 #	define DCOOL_UTILITY_FUNCTION_BASIC_OPERATIONS \
 	DCOOL_UTILITY_ANY_BASIC_OPERATIONS, \
-	dcoolInvoke_
+	dcoolGetImmutablyInvocability_, \
+	dcoolInvoke_, \
+	dcoolInvokeMutable_
 
 namespace dcool::utility {
 	using BadFunctionCall = ::std::bad_function_call;
@@ -71,7 +73,18 @@ namespace dcool::utility {
 				"User-defined 'Pool' does not match return value of 'Engine::pool'"
 			);
 
+			public: using ParameterToGetImmutablyInvocability = ::dcool::core::Boolean;
+
 			public: struct ParameterToInvoke {
+				struct {
+					Engine* const engine;
+					::dcool::utility::detail_::FunctionChassis_<Prototype, Config> const* const self;
+					ArgumentPack argumentPack;
+				} input;
+				[[no_unique_address]] ::dcool::core::StorageFor<Return> output;
+			};
+
+			public: struct ParameterToInvokeMutable {
 				struct {
 					Engine* const engine;
 					::dcool::utility::detail_::FunctionChassis_<Prototype, Config>* const self;
@@ -86,18 +99,45 @@ namespace dcool::utility {
 			};
 
 			private: struct AnyExtendedOpterationExecutor_ {
-				template <typename ValueT__> constexpr void operator()(
+				constexpr void operator()(::dcool::core::TypedTag<void> typedTag_, Opcode opcode_, void* parameter_) {
+					switch (opcode_) {
+						case Opcode::dcoolGetImmutablyInvocability_: {
+							*static_cast<ParameterToGetImmutablyInvocability*>(parameter_) = false;
+							break;
+						}
+						case Opcode::dcoolInvoke_:
+						case Opcode::dcoolInvokeMutable_: {
+							throw ::dcool::utility::BadFunctionCall();
+							break;
+						}
+						default: {
+							auto actualParameter_ = static_cast<ParameterForExtendedOperation*>(parameter_);
+							actualParameter_->engine->exetendedOperationExecutor()(
+								typedTag_, opcode_, actualParameter_->customizedParameter
+							);
+							break;
+						}
+					}
+				}
+
+				template <::dcool::core::NonVoid ValueT__> constexpr void operator()(
 					::dcool::core::TypedTag<ValueT__> typedTag_, Opcode opcode_, void* parameter_
 				) {
 					switch (opcode_) {
+						case Opcode::dcoolGetImmutablyInvocability_: {
+							*static_cast<ParameterToGetImmutablyInvocability*>(parameter_) =
+								::dcool::core::Invocable<ValueT__ const&, ParameterTs_...>
+							;
+							break;
+						}
 						case Opcode::dcoolInvoke_: {
-							if constexpr (::dcool::core::NonVoid<ValueT__>) {
+							if constexpr (::dcool::core::Invocable<ValueT__ const&, ParameterTs_...>) {
 								auto actualParameter_ = static_cast<ParameterToInvoke*>(parameter_);
 								if constexpr (::dcool::core::NonVoid<Return>) {
 									new (reinterpret_cast<Return*>(::dcool::core::addressOf(actualParameter_->output))) Return(
 										::dcool::core::apply(
 											actualParameter_->input.self->template access<ValueT__>(*(actualParameter_->input.engine)),
-											actualParameter_->input.argumentPack
+											::dcool::core::move(actualParameter_->input.argumentPack)
 										)
 									);
 								} else {
@@ -108,6 +148,23 @@ namespace dcool::utility {
 								}
 							} else {
 								throw ::dcool::utility::BadFunctionCall();
+							}
+							break;
+						}
+						case Opcode::dcoolInvokeMutable_: {
+							auto actualParameter_ = static_cast<ParameterToInvokeMutable*>(parameter_);
+							if constexpr (::dcool::core::NonVoid<Return>) {
+								new (reinterpret_cast<Return*>(::dcool::core::addressOf(actualParameter_->output))) Return(
+									::dcool::core::apply(
+										actualParameter_->input.self->template access<ValueT__>(*(actualParameter_->input.engine)),
+										::dcool::core::move(actualParameter_->input.argumentPack)
+									)
+								);
+							} else {
+								::dcool::core::apply(
+									actualParameter_->input.self->template access<ValueT__>(*(actualParameter_->input.engine)),
+									actualParameter_->input.argumentPack
+								);
 							}
 							break;
 						}
@@ -172,7 +229,9 @@ namespace dcool::utility {
 			public: using Opcode = ConfigAdaptor_::Opcode;
 			public: using Engine = ConfigAdaptor_::Engine;
 			private: using AnyEngine_ = Super_::Engine;
+			private: using ParameterToGetImmutablyInvocability_ = ConfigAdaptor_::ParameterToGetImmutablyInvocability;
 			private: using ParameterToInvoke_ = ConfigAdaptor_::ParameterToInvoke;
+			private: using ParameterToInvokeMutable_ = ConfigAdaptor_::ParameterToInvokeMutable;
 			private: using ParameterForExtendedOperation_ = ConfigAdaptor_::ParameterForExtendedOperation;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 				ConfigAdaptor_::exceptionSafetyStrategy
@@ -243,6 +302,16 @@ namespace dcool::utility {
 				return this->Super_::valid(anyEngine_);
 			}
 
+			public: constexpr auto immutablyInvocable(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+				AnyEngine_ anyEngine_ = { .underlying = ::dcool::core::addressOf(engine_) };
+				ParameterToGetImmutablyInvocability_ parameter_;
+				static_assert(::dcool::core::isSame<ParameterToGetImmutablyInvocability_, ::dcool::core::Boolean>);
+				this->Super_::executeCustomizedOperation(
+					anyEngine_, Opcode::dcoolGetImmutablyInvocability_, ::dcool::core::addressOf(parameter_)
+				);
+				return parameter_;
+			}
+
 			public: constexpr auto typeInfo(Engine& engine_) const noexcept -> ::dcool::core::TypeInfo const& {
 				AnyEngine_ anyEngine_ = { .underlying = ::dcool::core::addressOf(engine_) };
 				return this->Super_::typeInfo(anyEngine_);
@@ -283,7 +352,7 @@ namespace dcool::utility {
 				return this->Super_::template value<ValueT__>(anyEngine_);
 			}
 
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) -> Return {
+			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) const -> Return {
 				AnyEngine_ anyEngine_ = { .underlying = ::dcool::core::addressOf(engine_) };
 				ParameterToInvoke_ parameter_ = {
 					.input = {
@@ -293,6 +362,23 @@ namespace dcool::utility {
 					}
 				};
 				this->Super_::executeCustomizedOperation(anyEngine_, Opcode::dcoolInvoke_, ::dcool::core::addressOf(parameter_));
+				if constexpr (::dcool::core::NonVoid<Return>) {
+					return ::dcool::core::move(
+						*::dcool::core::launder(reinterpret_cast<Return*>(::dcool::core::addressOf(parameter_.output)))
+					);
+				}
+			}
+
+			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) -> Return {
+				AnyEngine_ anyEngine_ = { .underlying = ::dcool::core::addressOf(engine_) };
+				ParameterToInvokeMutable_ parameter_ = {
+					.input = {
+						.engine = ::dcool::core::addressOf(engine_),
+						.self = this,
+						.argumentPack = ArgumentPack(::dcool::core::forward<ParameterTs_>(parameters_)...)
+					}
+				};
+				this->Super_::executeCustomizedOperation(anyEngine_, Opcode::dcoolInvokeMutable_, ::dcool::core::addressOf(parameter_));
 				if constexpr (::dcool::core::NonVoid<Return>) {
 					return ::dcool::core::move(
 						*::dcool::core::launder(reinterpret_cast<Return*>(::dcool::core::addressOf(parameter_.output)))
@@ -424,6 +510,10 @@ namespace dcool::utility {
 			return this->chassis().valid(this->mutableEngine());
 		}
 
+		public: constexpr auto immutablyInvocable() const noexcept -> ::dcool::core::Boolean {
+				return this->chassis().immutablyInvocable(this->mutableEngine());
+			}
+
 		public: constexpr auto typeInfo() const noexcept -> ::dcool::core::TypeInfo const& {
 			return this->chassis().typeInfo(this->mutableEngine());
 		}
@@ -456,8 +546,16 @@ namespace dcool::utility {
 			return this->chassis().template value<ValueT__>(this->mutableEngine());
 		}
 
+		public: constexpr auto invokeSelf(ParameterTs_... parameters_) const -> Return {
+			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
+		}
+
 		public: constexpr auto invokeSelf(ParameterTs_... parameters_) -> Return {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
+		}
+
+		public: constexpr auto operator()(ParameterTs_... parameters_) const -> Return {
+			return this->invokeSelf(::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
 		public: constexpr auto operator()(ParameterTs_... parameters_) -> Return {

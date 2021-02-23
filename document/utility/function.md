@@ -75,6 +75,16 @@ constexpr auto valid() const noexcept -> dcool::core::Boolean;
 
 Returns true if the function holds an object, otherwise returns false.
 
+### `immutablyInvocable`
+
+```cpp
+constexpr auto immutablyInvocable() const noexcept -> dcool::core::Boolean;
+```
+
+Returns true if the function can be invoked with a constant reference to this function without directly throwing a `dcool::utility::BadFunctionCall`, otherwise returns false.
+
+Note that `dcool::utility::BadFunctionCall` indirectly thrown when invoking the holded object does not count.
+
 ### `typeInfo`
 
 ```cpp
@@ -121,14 +131,18 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
+constexpr auto invokeSelf(ParameterTs... parameters) const -> Return;
 constexpr auto invokeSelf(ParameterTs... parameters) -> Return;
 ```
 
-Equivalent to `dcool::core::invoke(holdedObject, dcool::core::forward<ParameterTs>(parameters)...)` (where `holdedObject` is the object holded by function) if the function holds an object, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
+Equivalent to `dcool::core::invoke(this->access<ValueT>, dcool::core::forward<ParameterTs>(parameters)...)` (where `ValueT` is the type of the object holded by function) if the function holds an object, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
+
+For overload 1, if the const reference to the holded object is not invocable as above, throws a `dcool::utility::BadFunctionCall`.
 
 ### `operator ()`
 
 ```cpp
+constexpr auto operator ()(ParameterTs... parameters) const -> Return;
 constexpr auto operator ()(ParameterTs... parameters) -> Return;
 ```
 
