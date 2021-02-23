@@ -40,7 +40,7 @@ namespace dcool::core {
 	constexpr ::dcool::core::InPlaceTag inPlace = ::std::in_place;
 
 	template <typename T_> struct TypedTag {
-		using T = T_;
+		using Type = T_;
 	};
 
 	template <typename T_> constexpr ::dcool::core::TypedTag<T_> typed;

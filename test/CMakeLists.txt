@@ -4,8 +4,9 @@ add_executable(
 	"./container/linked.cpp"
 	"./container/list.cpp"
 	"./resource/shared.cpp"
-	"./vigor/sealer.cpp"
 	"./utility/any.cpp"
+	"./utility/function.cpp"
+	"./vigor/sealer.cpp"
 )
 
 target_link_libraries(test_dcool PRIVATE dcool_test)
