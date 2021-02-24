@@ -17,8 +17,7 @@ Its member shall customize the list as decribed:
 
 | Member | Default | Behavior |
 | - | - | - |
-| Scoped enumeration type `Opcode` | *Unspecified* | See *Customized extended operations* for more details. |
-| Type `ExtendedOpterationExecutor` | *Unspecified* | See *Customized extended operations* for more details. |
+| Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of function. |
 | Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
@@ -28,7 +27,7 @@ Its member shall customize the list as decribed:
 
 | Name | Definition |
 | - | - |
-| `Opcode` | Determined by configuration `Opcode`. |
+| `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
 | `Return` | Defined by `using Return = ReturnT;`. |
 
 ## Constructors
@@ -85,14 +84,6 @@ Returns true if the function can be invoked with a constant reference to this fu
 
 Note that `dcool::utility::BadFunctionCall` indirectly thrown when invoking the holded object does not count.
 
-### `typeInfo`
-
-```cpp
-constexpr auto typeInfo() const noexcept -> dcool::core::TypeInfo const&
-```
-
-Returns the typeid of the holded object if exists, otherwise returns `typeid(void)`.
-
 ### `storageRequirement`
 
 ```cpp
@@ -101,14 +92,23 @@ constexpr auto storageRequirement() const noexcept -> dcool::core::StorageRequir
 
 Returns the storage requirement of the holded object if exists, otherwise returns `dcool::core::storageRequirement<0, 0>`.
 
-### `storage`
+### `typeInfo`
 
 ```cpp
-constexpr auto storage() const noexcept -> void const*;
-constexpr auto storage() const noexcept -> void*;
+constexpr auto typeInfo() const noexcept -> dcool::core::TypeInfo const&
 ```
 
-Returns a pointer to the holded object if exists, otherwise returns a null pointer.
+Returns the typeid of the holded object if exists, otherwise returns `typeid(void)`.
+
+### `extendedInformation`
+
+```cpp
+constexpr auto extendedInformation() const noexcept -> ExtendedInformation const&
+```
+
+Returns a reference to the extended information with static storage duration constructed by `ExtendedInformation(dcool::core::typed<ValueT>)` (where `ValueT` is the type of the holded object).
+
+See *Customized extended operations* for more details.
 
 ### `access`
 
@@ -148,16 +148,6 @@ constexpr auto operator ()(ParameterTs... parameters) -> Return;
 
 Equivalent to `this->invokeSelf(dcool::core::forward<ParameterTs>(parameters)...)`.
 
-### `executeCustomizedOperation`
-
-```cpp
-protected: constexpr void executeCustomizedOperation(Opcode opcode, void* customizedParameter) const;
-```
-
-Equivalent to `this->mutableEngine().extendedOperationExecutor()(dcool::core::typed<T>, opcode, customizedParameter)` (where `T` is the type of the holded object or `void` if no object is holded). The behavior is undefined if the `opcode` is not an user-defined value.
-
-See *Customized extended operations* for more details.
-
 ## Customized extended operations
 
-Customizing extended operations is almost exactly the same as extending `dcool::utility::Any`, except that your opcode type should contain `DCOOL_UTILITY_FUNCTION_BASIC_OPERATIONS` instead of `DCOOL_UTILITY_ANY_BASIC_OPERATIONS`, and you should inherit `dcool::utility::Function` instead of ``dcool::utility::Any`.
+Customizing extended operations is almost exactly the same as extending `dcool::utility::Any`, except that you should change all `dcool::utility::Any` to a proper `dcool::utility::Function` type.

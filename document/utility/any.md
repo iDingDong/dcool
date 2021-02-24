@@ -14,8 +14,7 @@ Its member shall customize the list as decribed:
 
 | Member | Default | Behavior |
 | - | - | - |
-| Scoped enumeration type `Opcode` | *Unspecified* | See *Customized extended operations* for more details. |
-| Type `ExtendedOpterationExecutor` | *Unspecified* | See *Customized extended operations* for more details. |
+| Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of any. |
 | Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
@@ -25,7 +24,7 @@ Its member shall customize the list as decribed:
 
 | Name | Definition |
 | - | - |
-| `Opcode` | Determined by configuration `Opcode`. |
+| `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
 
 ## Constructors
 
@@ -71,14 +70,6 @@ constexpr auto valid() const noexcept -> dcool::core::Boolean;
 
 Returns true if the any holds an object, otherwise returns false.
 
-### `typeInfo`
-
-```cpp
-constexpr auto typeInfo() const noexcept -> dcool::core::TypeInfo const&
-```
-
-Returns the typeid of the holded object if exists, otherwise returns `typeid(void)`.
-
 ### `storageRequirement`
 
 ```cpp
@@ -87,14 +78,23 @@ constexpr auto storageRequirement() const noexcept -> dcool::core::StorageRequir
 
 Returns the storage requirement of the holded object if exists, otherwise returns `dcool::core::storageRequirement<0, 0>`.
 
-### `storage`
+### `typeInfo`
 
 ```cpp
-constexpr auto storage() const noexcept -> void const*;
-constexpr auto storage() const noexcept -> void*;
+constexpr auto typeInfo() const noexcept -> dcool::core::TypeInfo const&
 ```
 
-Returns a pointer to the holded object if exists, otherwise returns a null pointer.
+Returns the typeid of the holded object if exists, otherwise returns `typeid(void)`.
+
+### `extendedInformation`
+
+```cpp
+constexpr auto extendedInformation() const noexcept -> ExtendedInformation const&
+```
+
+Returns a reference to a potentially-overlapping extended information with static storage duration constructed by `ExtendedInformation(dcool::core::typed<ValueT>)` (where `ValueT` is the type of the holded object).
+
+See *Customized extended operations* for more details.
 
 ### `access`
 
@@ -114,79 +114,41 @@ template <typename ValueT> constexpr auto value() noexcept -> ValueT&;
 
 Returns a reference to the holded object if `ValueT` is exactly the same as the holded object, otherwise throws a `dcool::utility::BadAnyCast` (might be the same as `std::bad_any_cast`).
 
-### `executeCustomizedOperation`
-
-```cpp
-protected: constexpr void executeCustomizedOperation(Opcode opcode, void* customizedParameter) const;
-```
-
-Equivalent to `this->mutableEngine().extendedOperationExecutor()(dcool::core::typed<T>, opcode, customizedParameter)` (where `T` is the type of the holded object or `void` if no object is holded). The behavior is undefined if the `opcode` is not an user-defined value.
-
-See *Customized extended operations* for more details.
-
 ## Customized extended operations
 
 User may inherit an instantiated 'dcool::utility::Any' to implement customized extended operations on any object with compile-time type information. We will go through an example to implement a customized any type named `MyAny` that can perform convertion to string (and requires `std::to_string` accepts the holded object as the argument).
 
-Firstly, we need to configure our own opcode type. It should be an scoped enumeration type that has `DCOOL_UTILITY_ANY_BASIC_OPERATIONS` (which would be expanded to a list of reserved identifiers seperated by comma) inside its definition to help define the basic operations used by dcool library. Our opcode looks like this:
-
 ```cpp
-enum class MyOpcode {
-	DCOOL_UTILITY_ANY_BASIC_OPERATIONS,
-	toString
-};
-```
-
-It does not matter where you put `DCOOL_UTILITY_ANY_BASIC_OPERATIONS` in your *enumerator-list*. You need to avoid defining any enumeration constant in your opcode type that shares the same value with the basic operations, which makes it impossible to portably implement with any constant defined after `DCOOL_UTILITY_ANY_BASIC_OPERATIONS` with a designated value.
-
-We need to define a customized parameter type to feed `executeCustomizedOperation` since only one customized parameter is allowed.
-
-```cpp
-struct MyCustomizedParameter {
-	MyAny const* self;
-	std::string result;
-};
-```
-
-We also need to define a functor type that handles our customized opcode. Our extended opteration executor looks like this:
-
-```cpp
-class MyExtendedOperationExecutor {
-	public: template <typename ValueT> void operator ()(dcool::core::TypedTag<ValueT>, MyOpcode opcode, void* parameter) {
-		auto typedParameter = static_cast<MyCustomizedParameter*>(parameter);
-		// Dcool any will make sure the any is currently holding an 'ValueT' (if not 'void')
-		if constexpr (dcool::core::NonVoid<ValueT>) {
-			typedParameter->result = std::to_string(typedParameter->self->template access<ValueT>());
-		}
+class MyAny {
+	// Firstly, we need to define a function that can convert an any with statically known holded object type to string.
+	template <typename ValueT> static auto myToString(MyAny const& myAny) -> std::string {
+		return std::to_string(myAny.m_underlying.access<ValueT>());
 	}
-};
-```
 
-Note that a extended operation executor should always accept three argument as above and should be properly overloaded or templated to accept all possible `ValueT`.
+	// We then need to define a customized 'virtual table' as our extended information.
+	//
+	// The extended information is required to be constructible with a single argument of type `dcool::core::Typed<ValueT>` and
+	// should be properly overloaded or templated to accept all possibly holded object types.
+	struct MyVirtualTable {
+		using ConverterToString = auto (*)(MyAny const&) -> std::string;
+		ConverterToString converterToString;
 
-Now we can define the config type for any like this:
+		template <typename ValueT> MyVirtualTable(dcool::core::TypedTag<ValueT>) noexcept: converterToString(myToString<ValueT>) {
+		}
+	};
 
-```cpp
-class MyAnyConfig {
-	public: using Opcode = MyOpcode;
-	public: using ExtendedOperationExecutor = MyExtendedOperationExecutor;
-};
-```
+	// Now we need to define a config type for 'dcool::utility::Any'.
+	class MyAnyConfig {
+		public: using ExtendedInformation = MyVirtualTable;
+	};
 
-Our any type should inherit `dcool::core::Any` to access `executeCustomizedOperation` since it is protected. The rationale is that `executeCustomizedOperation` accepts an general pointer that should be manually casted to the exact customized parameter type and should be discouraged to expose. It is also encouraged use private inheritance to avoid exposing `executeCustomizedOperation` or any other members that might not be properly implemented for your type like `swapWith`.
-
-```cpp
-class MyAny: private dcool::utility::Any<MyAnyConfig> {
-	// Other members omitted
+	// Other possible members are omitted.
+	private: dcool::utility::Any<MyAnyConfig> m_underlying;
 
 	public: auto toString() const -> std::string {
-		MyCustomizedParameter parameter = { .self = this };
-		this->dcool::utility::Any<MyAnyConfig>::executeCustomizedOperation(MyOpcode::toString, &parameter);
-		return parameter.result;
+		return this->m_underlying.extendedInformation().converterToString(*this);
 	}
 };
 ```
-
-Note that the parameter should exactly match the type you casted in the extended operation executor or behavior will be undefined.
 
 For a more complicated example of extending `dcool::utility::Any`, you may read the implementation of `dcool::utility::Function`.
