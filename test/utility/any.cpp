@@ -7,7 +7,6 @@ DCOOL_TEST_CASE(dcoolUtility, anyBasics) {
 	DCOOL_TEST_EXPECT(!(any1.valid()));
 	DCOOL_TEST_EXPECT(any1.typeInfo() == typeid(void));
 	DCOOL_TEST_EXPECT(dcool::core::size(any1.storageRequirement()) == 0);
-	DCOOL_TEST_EXPECT(any1.storage() == dcool::core::nullPointer);
 	{
 		dcool::core::Boolean thrown = false;
 		try {
@@ -21,7 +20,6 @@ DCOOL_TEST_CASE(dcoolUtility, anyBasics) {
 	DCOOL_TEST_EXPECT(any2.valid());
 	DCOOL_TEST_EXPECT(any2.typeInfo() == typeid(int));
 	DCOOL_TEST_EXPECT(any2.storageRequirement() == dcool::core::storageRequirementFor<int>);
-	DCOOL_TEST_EXPECT(any2.storage() != dcool::core::nullPointer);
 	DCOOL_TEST_EXPECT(any2.value<int>() == 237);
 	{
 		dcool::core::Boolean thrown = false;
@@ -36,7 +34,6 @@ DCOOL_TEST_CASE(dcoolUtility, anyBasics) {
 	DCOOL_TEST_EXPECT(any1.valid());
 	DCOOL_TEST_EXPECT(any1.typeInfo() == typeid(int));
 	DCOOL_TEST_EXPECT(any1.storageRequirement() == dcool::core::storageRequirementFor<int>);
-	DCOOL_TEST_EXPECT(any1.storage() != dcool::core::nullPointer);
 	DCOOL_TEST_EXPECT(any1.value<int>() == 137);
 	{
 		dcool::core::Boolean thrown = false;

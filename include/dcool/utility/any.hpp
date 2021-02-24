@@ -7,26 +7,16 @@
 #	include <any>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
-	dcool::utility::detail_, HasTypeOpcode_, ExtractedOpcodeType_, Opcode
-);
-DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
-	dcool::utility::detail_, HasTypeExtendedOperationExecutor_, ExtractedOperationExecutorType_, ExtendedOpterationExecutor
+	dcool::utility::detail_, HasTypeExtendedInformation_, ExtractedExtendedInformationType_, ExtendedInformation
 );
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 	dcool::utility::detail_, HasValueSqueezedTankage_, extractedSqueezedTankage_, squeezedTankage
 );
 
-#	define DCOOL_UTILITY_ANY_BASIC_OPERATIONS \
-	dcoolGetTypeInfo_, \
-	dcoolGetStorageRequirement_, \
-	dcoolGetRawPointer_, \
-	dcoolGetRawPointerToMutable_, \
-	dcoolCloneTo_, \
-	dcoolRelocateTo_, \
-	dcoolDestruct_
-
 namespace dcool::utility {
 	using BadAnyCast = ::std::bad_any_cast;
+
+	template <typename ConfigT_> struct AnyChassis_;
 
 	namespace detail_ {
 		enum class DefaultAnyOpcode_ {
@@ -39,12 +29,8 @@ namespace dcool::utility {
 
 			public: using Pool = ::dcool::resource::PoolType<Config>;
 			public: using DynamicHandle = ::dcool::resource::UnifiedHandleType<Pool>;
-			public: using Opcode = ::dcool::utility::detail_::ExtractedOpcodeType_<
-				Config, ::dcool::utility::detail_::DefaultAnyOpcode_
-			>;
-			public: using OperationExecutor = void (*)(Opcode, void*);
-			public: using ExtendedOpterationExecutor = ::dcool::utility::detail_::ExtractedOperationExecutorType_<
-				Config, ::dcool::core::ComparableNoOp
+			public: using ExtendedInformation = ::dcool::utility::detail_::ExtractedExtendedInformationType_<
+				Config, ::dcool::core::Pit
 			>;
 			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage =
 				::dcool::utility::detail_::extractedSqueezedTankage_<Config>(::dcool::core::storageRequirementFor<DynamicHandle>)
@@ -57,14 +43,9 @@ namespace dcool::utility {
 				private: using Self_ = DefaultEngine_;
 
 				public: [[no_unique_address]] Pool partPool;
-				public: [[no_unique_address]] ExtendedOpterationExecutor partExetendedOperationExecutor;
 
 				public: constexpr auto pool() noexcept -> Pool& {
 					return this->partPool;
-				}
-
-				public: constexpr auto extendedOperationExecutor() noexcept -> ExtendedOpterationExecutor& {
-					return this->partExetendedOperationExecutor;
 				}
 
 				public: friend auto operator ==(Self_ const&, Self_ const&) -> ::dcool::core::Boolean = default;
@@ -79,6 +60,277 @@ namespace dcool::utility {
 
 			static_assert(sizeof(DynamicHandle) > 0);
 		};
+
+		template <typename ConfigT_> struct AnyChassis_ {
+			private: using Self_ = AnyChassis_<ConfigT_>;
+			public: using Config = ConfigT_;
+
+			private: using ConfigAdaptor_ = ::dcool::utility::detail_::AnyConfigAdaptor_<Config>;
+			public: using DynamicHandle = ConfigAdaptor_::DynamicHandle;
+			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
+			public: using Engine = ConfigAdaptor_::Engine;
+			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
+			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+				ConfigAdaptor_::exceptionSafetyStrategy
+			;
+			public: static constexpr ::dcool::core::Boolean noThrowMovable = ::dcool::core::atAnyCost(exceptionSafetyStrategy);
+			private: template <typename ValueT__> static constexpr ::dcool::core::Boolean squeezable_ =
+				::dcool::core::isStorable<ValueT__, squeezedTankage> &&
+				((!::dcool::core::atAnyCost(exceptionSafetyStrategy)) || ::dcool::core::NoThrowMoveConstructible<ValueT__>)
+			;
+
+			private: using Storage_ = ::dcool::resource::StorageSqueezer<squeezedTankage, DynamicHandle>;
+			private: using Cloner_ = void (*)(Engine& engine_, Self_ const& self_, Engine& otherEngine_, Self_& other_);
+			private: using Relocator_ = void (*)(Engine& engine_, Self_& self_, Self_& other_) noexcept(noThrowMovable);
+			private: using CrossRelocator_ = void (*)(Engine& engine_, Self_& self_, Engine& otherEngine_, Self_& other_);
+			private: using Destructor_ = void (*)(Engine& engine_, Self_& self_) noexcept;
+
+			private: struct InformationTable_ {
+				::dcool::core::StorageRequirement storageRequirement_;
+				::dcool::core::TypeInfo const& typeInfo_;
+				Cloner_ cloner_;
+				Relocator_ relocator_;
+				CrossRelocator_ crossRelocator_;
+				Destructor_ destructor_;
+				[[no_unique_address]] ExtendedInformation extendedInformation_;
+			};
+
+			private: InformationTable_ const* m_informationTable_;
+			private: Storage_ m_storage_;
+			private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
+
+			private: template <typename ValueT__> static void clone_(
+				Engine& engine_, Self_ const& from_, Engine& otherEngine_, Self_& to_
+			) {
+				if constexpr (::dcool::core::NonVoid<ValueT__>) {
+					to_.initialize<ValueT__>(otherEngine_, ::dcool::core::inPlace, from_.access<ValueT__>(engine_));
+				} else {
+					to_.initialize(otherEngine_);
+				}
+			}
+
+			private: template <typename ValueT__> static void relocate_(
+				Engine& engine_, Self_& from_, Self_& to_
+			) noexcept(noThrowMovable) {
+				if constexpr (::dcool::core::NonVoid<ValueT__>) {
+					if constexpr (squeezable_<ValueT__>) {
+						to_.initialize<ValueT__>(engine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_)));
+						destruct_<ValueT__>(engine_, from_);
+					} else {
+						to_.m_storage_.activateAlternative();
+						to_.m_storage_.alternative() = from_.m_storage_.alternative();
+						from_.m_storage_.deactivateAlternative();
+						to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
+						from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+					}
+				} else {
+					to_.initialize(engine_);
+					destruct_<ValueT__>(engine_, from_);
+				}
+			}
+
+			private: template <typename ValueT__> static void crossRelocate_(
+				Engine& engine_, Self_& from_, Engine& otherEngine_, Self_& to_
+			) {
+				if constexpr (::dcool::core::NonVoid<ValueT__>) {
+					if constexpr (squeezable_<ValueT__>) {
+						to_.initialize<ValueT__>(
+							otherEngine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_))
+						);
+						destruct_<ValueT__>(engine_, from_);
+					} else {
+						if (engine_ == otherEngine_) {
+							to_.m_storage_.activateAlternative();
+							to_.m_storage_.alternative() = from_.m_storage_.alternative();
+							from_.m_storage_.deactivateAlternative();
+							to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
+							from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+						} else {
+							to_.initialize<ValueT__>(
+								otherEngine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_))
+							);
+							destruct_<ValueT__>(engine_, from_);
+						}
+					}
+				} else {
+					to_.initialize(otherEngine_);
+					destruct_<ValueT__>(engine_, from_);
+				}
+			}
+
+			private: template <typename ValueT__> static void destruct_(Engine& engine_, Self_& self_) noexcept {
+				self_.destructSelf_<ValueT__>(engine_);
+			}
+
+			private: template <typename ValueT__> static constexpr InformationTable_ informationTable_ = {
+				.storageRequirement_ = ::dcool::core::storageRequirementFor<ValueT__>,
+				.typeInfo_ = typeid(ValueT__),
+				.cloner_ = clone_<ValueT__>,
+				.relocator_ = relocate_<ValueT__>,
+				.crossRelocator_ = crossRelocate_<ValueT__>,
+				.destructor_ = destruct_<ValueT__>,
+				.extendedInformation_ = ExtendedInformation(::dcool::core::typed<ValueT__>)
+			};
+
+			public: constexpr void initialize(Engine& engine_) noexcept {
+				this->m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+			}
+
+			public: template <typename ValueT__> constexpr void initialize(Engine& engine_, ValueT__&& value_) noexcept(
+				noexcept(
+					::dcool::core::declval<Self_&>().template initialize<::dcool::core::DecayedType<ValueT__>>(
+						engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
+					)
+				)
+			) {
+				this->initialize<::dcool::core::DecayedType<ValueT__>>(
+					engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
+				);
+			}
+
+			public: template <typename ValueT__, typename... ArgumentTs__> constexpr void initialize(
+				Engine& engine_, ::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+			) noexcept(squeezable_<ValueT__> && noexcept(ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...))) {
+				static_assert(!::dcool::core::Const<ValueT__>);
+				if constexpr (squeezable_<ValueT__>) {
+					this->m_storage_.activateItem();
+					new (this->rawPointer_<ValueT__>(engine_)) ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+				} else {
+					this->m_storage_.activateAlternative();
+					this->m_storage_.alternative() = ::dcool::resource::createHandleByPoolFor<ValueT__>(
+						engine_.pool(), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+					);
+				}
+				this->m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
+			}
+
+			private: template <typename ValueT__> constexpr void destructSelf_(Engine& engine_) noexcept {
+				if constexpr (::dcool::core::NonVoid<ValueT__>) {
+					if constexpr (squeezable_<ValueT__>) {
+						::dcool::core::destruct(this->access<ValueT__>(engine_));
+						this->m_storage_.deactivateItem();
+					} else {
+						::dcool::resource::destroyHandleByPoolFor<ValueT__>(engine_.pool(), this->m_storage_.alternative());
+						this->m_storage_.deactivateAlternative();
+					}
+				}
+			}
+
+			public: constexpr void uninitialize(Engine& engine_) noexcept {
+				this->m_informationTable_->destructor_(engine_, *this);
+			}
+
+			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+				this->m_informationTable_->cloner_(engine_, *this, otherEngine_, other_);
+			}
+
+			public: template <
+				::dcool::core::Boolean engineWillBeUniformedC__ = false
+			> constexpr void relocateTo(
+				Engine& engine_, Engine& otherEngine_, Self_& other_
+			) noexcept(engineWillBeUniformedC__ && noThrowMovable) {
+				if constexpr (engineWillBeUniformedC__) {
+					this->m_informationTable_->relocator_(engine_, *this, other_);
+				} else {
+					this->m_informationTable_->crossRelocator_(engine_, *this, other_);
+				}
+			}
+
+			public: template <
+				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
+				::dcool::core::Boolean engineWillBeSwappedC__ = false
+			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+				Self_ middleMan_;
+				this->relocateTo<true>(engine_, engine_, middleMan_);
+				struct UniqueType_ {
+				};
+				try {
+					other_.relocateTo<engineWillBeSwappedC__>(otherEngine_, engine_, *this);
+					try {
+						middleMan_.relocateTo<engineWillBeSwappedC__>(engine_, otherEngine_, other_);
+					} catch (...) {
+						try {
+							this->relocateTo<engineWillBeSwappedC__>(engine_, otherEngine_, other_);
+						} catch (...) {
+							::dcool::core::goWeak<strategyC__>();
+							middleMan_.uninitialize(engine_);
+							other_.initialize(engine_);
+							throw ::dcool::core::ExceptionSafetyDowngrade<UniqueType_>();
+						}
+						throw;
+					}
+				} catch (::dcool::core::ExceptionSafetyDowngrade<UniqueType_> const& exception_) {
+					exception_.rethrowUnderlying();
+				} catch (...) {
+					try {
+						middleMan_.relocateTo<true>(engine_, engine_, *this);
+					} catch (...) {
+						::dcool::core::goWeak<strategyC__>();
+						middleMan_.uninitialize(engine_);
+						this->initialize(engine_);
+					}
+					throw;
+				}
+			}
+
+			public: constexpr auto storageRequirement(Engine& engine_) const noexcept -> ::dcool::core::StorageRequirement {
+				return this->m_informationTable_->storageRequirement_;
+			}
+
+			public: constexpr auto valid(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+				return ::dcool::core::size(this->storageRequirement(engine_)) > 0;
+			}
+
+			public: constexpr auto typeInfo(Engine& engine_) const noexcept -> ::dcool::core::TypeInfo const& {
+				return this->m_informationTable_->typeInfo_;
+			}
+
+			public: constexpr auto extendedInformation(Engine& engine_) const noexcept -> ExtendedInformation const& {
+				return this->m_informationTable_->extendedInformation_;
+			}
+
+			private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) const noexcept -> ValueT__ const* {
+				static_assert(!::dcool::core::Const<ValueT__>);
+				if constexpr (squeezable_<ValueT__>) {
+					return reinterpret_cast<ValueT__ const*>(::dcool::core::addressOf(this->m_storage_.item()));
+				}
+				return static_cast<ValueT__ const*>(
+					::dcool::resource::adaptedFromHandleFor<ValueT__>(engine_.pool(), this->m_storage_.alternative())
+				);
+			}
+
+			private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) noexcept -> ValueT__* {
+				static_assert(!::dcool::core::Const<ValueT__>);
+				if constexpr (squeezable_<ValueT__>) {
+					return reinterpret_cast<ValueT__*>(::dcool::core::addressOf(this->m_storage_.item()));
+				}
+				return static_cast<ValueT__*>(
+					::dcool::resource::adaptedFromHandleFor<ValueT__>(engine_.pool(), this->m_storage_.alternative())
+				);
+			}
+
+			public: template <typename ValueT__> constexpr auto access(Engine& engine_) const noexcept -> ValueT__ const& {
+				return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
+			}
+
+			public: template <typename ValueT__> constexpr auto access(Engine& engine_) noexcept -> ValueT__& {
+				return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
+			}
+
+			public: template <typename ValueT__> constexpr auto value(Engine& engine_) const -> ValueT__ const& {
+				if (typeid(ValueT__) != this->typeInfo(engine_)) {
+					throw ::dcool::utility::BadAnyCast();
+				}
+				return this->access<ValueT__>(engine_);
+			}
+
+			public: template <typename ValueT__> constexpr auto value(Engine& engine_) -> ValueT__& {
+				if (typeid(ValueT__) != this->typeInfo(engine_)) {
+					throw ::dcool::utility::BadAnyCast();
+				}
+				return this->access<ValueT__>(engine_);
+			}
+		};
 	}
 
 	template <typename T_> concept AnyConfig = requires {
@@ -87,370 +339,17 @@ namespace dcool::utility {
 
 	template <typename ConfigT_> using AnyConfigAdaptor = ::dcool::utility::detail_::AnyConfigAdaptor_<ConfigT_>;
 
-	template <::dcool::utility::AnyConfig ConfigT_ = ::dcool::core::Empty<>> struct AnyChassis {
-		private: using Self_ = AnyChassis<ConfigT_>;
-		public: using Config = ConfigT_;
-
-		private: using ConfigAdaptor_ = ::dcool::utility::AnyConfigAdaptor<Config>;
-		public: using DynamicHandle = ConfigAdaptor_::DynamicHandle;
-		public: using Opcode = ConfigAdaptor_::Opcode;
-		public: using OperationExecutor = ConfigAdaptor_::OperationExecutor;
-		public: using Engine = ConfigAdaptor_::Engine;
-		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
-		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-			ConfigAdaptor_::exceptionSafetyStrategy
-		;
-
-		private: using Storage_ = ::dcool::resource::StorageSqueezer<squeezedTankage, DynamicHandle>;
-
-		private: struct GeneralParameter_ {
-			Engine* const engine_;
-			Self_ const* const self_;
-		};
-
-		private: struct GeneralMutableParameter_ {
-			Engine* const engine_;
-			Self_* const self_;
-		};
-
-		private: using ParameterToGetTypeInfo_ = ::dcool::core::TypeInfo const*;
-		private: using ParameterToGetStorageRequirement_ = ::dcool::core::StorageRequirement;
-
-		private: struct ParameterToGetRawPointer_ {
-			GeneralParameter_ const input_;
-			void const* output_;
-		};
-
-		private: struct ParameterToGetRawPointerToMutable_ {
-			GeneralMutableParameter_ const input_;
-			void* output_;
-		};
-
-		private: struct ParameterToCloneTo_ {
-			GeneralParameter_ const input_;
-			GeneralMutableParameter_ const other_;
-		};
-
-		private: struct ParameterToRelocateTo_ {
-			::dcool::core::Boolean engineWillBeSwapped_;
-			GeneralMutableParameter_ const input_;
-			GeneralMutableParameter_ const other_;
-		};
-
-		private: using ParameterToDestruct_ = GeneralMutableParameter_;
-
-		private: struct ParameterForExtendedOperation_ {
-			Engine* const engine_;
-			void* const customizedParameter_;
-		};
-
-		private: Storage_ m_storage_;
-		private: OperationExecutor m_executor_;
-		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
-
-		private: static constexpr void nilOperationExecutor_(Opcode opcode_, void* parameter_) {
-			switch (opcode_) {
-				case Opcode::dcoolGetTypeInfo_: {
-					*static_cast<ParameterToGetTypeInfo_*>(parameter_) = ::dcool::core::addressOf(typeid(void));
-					break;
-				}
-				case Opcode::dcoolGetStorageRequirement_: {
-					*static_cast<ParameterToGetStorageRequirement_*>(parameter_) = ::dcool::core::storageRequirement<0, 0>;
-					break;
-				}
-				case Opcode::dcoolGetRawPointer_: {
-					static_cast<ParameterToGetRawPointer_*>(parameter_)->output_ = ::dcool::core::nullPointer;
-					break;
-				}
-				case Opcode::dcoolGetRawPointerToMutable_: {
-					static_cast<ParameterToGetRawPointerToMutable_*>(parameter_)->output_ = ::dcool::core::nullPointer;
-					break;
-				}
-				case Opcode::dcoolCloneTo_: {
-					auto actualParameter_ = static_cast<ParameterToCloneTo_*>(parameter_);
-					actualParameter_->other_.self_->initialize(*(actualParameter_->other_.engine_));
-					break;
-				}
-				case Opcode::dcoolRelocateTo_: {
-					auto actualParameter_ = static_cast<ParameterToRelocateTo_*>(parameter_);
-					actualParameter_->other_.self_->initialize(*(actualParameter_->other_.engine_));
-					break;
-				}
-				case Opcode::dcoolDestruct_: {
-					break;
-				}
-				default: {
-					auto actualParameter_ = static_cast<ParameterForExtendedOperation_*>(parameter_);
-					actualParameter_->engine_->extendedOperationExecutor()(
-						::dcool::core::typed<void>, opcode_, actualParameter_->customizedParameter_
-					);
-					break;
-				}
-			}
-		}
-
-		private: template <typename ValueT__> static constexpr void basicOperationExecutor_(Opcode opcode_, void* parameter_) {
-			switch (opcode_) {
-				case Opcode::dcoolGetTypeInfo_: {
-					*static_cast<ParameterToGetTypeInfo_*>(parameter_) = ::dcool::core::addressOf(typeid(ValueT__));
-					break;
-				}
-				case Opcode::dcoolGetStorageRequirement_: {
-					*static_cast<ParameterToGetStorageRequirement_*>(parameter_) = ::dcool::core::storageRequirementFor<ValueT__>;
-					break;
-				}
-				case Opcode::dcoolGetRawPointer_: {
-					auto actualParameter_ = static_cast<ParameterToGetRawPointer_*>(parameter_);
-					actualParameter_->output_ = actualParameter_->input_.self_->template rawPointer_<ValueT__>(
-						*(actualParameter_->input_.engine_)
-					);
-					break;
-				}
-				case Opcode::dcoolGetRawPointerToMutable_: {
-					auto actualParameter_ = static_cast<ParameterToGetRawPointerToMutable_*>(parameter_);
-					actualParameter_->output_ = actualParameter_->input_.self_->template rawPointer_<ValueT__>(
-						*(actualParameter_->input_.engine_)
-					);
-					break;
-				}
-				case Opcode::dcoolCloneTo_: {
-					auto actualParameter_ = static_cast<ParameterToCloneTo_*>(parameter_);
-					actualParameter_->other_.self_->template initialize<ValueT__>(
-						*(actualParameter_->other_.engine_),
-						::dcool::core::inPlace,
-						actualParameter_->input_.self_->template access<ValueT__>(*(actualParameter_->input_.engine_))
-					);
-					break;
-				}
-				case Opcode::dcoolRelocateTo_: {
-					auto actualParameter_ = static_cast<ParameterToRelocateTo_*>(parameter_);
-					if (
-						::dcool::core::isStorable<ValueT__, squeezedTankage> ||
-						(
-							(!(actualParameter_->engineWillBeSwapped_)) &&
-							*(actualParameter_->input_.engine_) != *(actualParameter_->other_.engine_)
-						)
-					) {
-						actualParameter_->other_.self_->template initialize<ValueT__>(
-							*(actualParameter_->other_.engine_),
-							::dcool::core::inPlace,
-							::dcool::core::move(
-								actualParameter_->input_.self_->template access<ValueT__>(*(actualParameter_->other_.engine_))
-							)
-						);
-						actualParameter_->input_.self_->template destruct_<ValueT__>(*(actualParameter_->input_.engine_));
-					} else {
-						actualParameter_->other_.self_->m_storage_.activateAlternative();
-						actualParameter_->other_.self_->m_storage_.alternative() = actualParameter_->input_.self_->m_storage_.alternative();
-						actualParameter_->input_.self_->m_storage_.deactivateAlternative();
-						actualParameter_->other_.self_->m_executor_ = basicOperationExecutor_<ValueT__>;
-						actualParameter_->input_.self_->m_executor_ = nilOperationExecutor_;
-					}
-					break;
-				}
-				case Opcode::dcoolDestruct_: {
-					auto actualParameter_ = static_cast<ParameterToDestruct_*>(parameter_);
-					actualParameter_->self_->template destruct_<ValueT__>(*(actualParameter_->engine_));
-					break;
-				}
-				default: {
-					auto actualParameter_ = static_cast<ParameterForExtendedOperation_*>(parameter_);
-					actualParameter_->engine_->extendedOperationExecutor()(
-						::dcool::core::typed<ValueT__>, opcode_, actualParameter_->customizedParameter_
-					);
-					break;
-				}
-			}
-		}
-
-		public: constexpr void initialize(Engine& engine_) noexcept {
-			this->m_executor_ = nilOperationExecutor_;
-		}
-
-		public: template <typename ValueT__> constexpr void initialize(Engine& engine_, ValueT__&& value_) {
-			this->initialize<::dcool::core::DecayedType<ValueT__>>(
-				engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
-			);
-		}
-
-		public: template <typename ValueT__, typename... ArgumentTs__> constexpr void initialize(
-			Engine& engine_, ::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
-		) {
-			static_assert(!::dcool::core::Const<ValueT__>);
-			if constexpr (::dcool::core::isStorable<ValueT__, squeezedTankage>) {
-				this->m_storage_.activateItem();
-				new (this->rawPointer_<ValueT__>(engine_)) ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...);
-			} else {
-				this->m_storage_.activateAlternative();
-				this->m_storage_.alternative() = ::dcool::resource::createHandleByPoolFor<ValueT__>(
-					engine_.pool(), ::dcool::core::forward<ArgumentTs__>(parameters_)...
-				);
-			}
-			this->m_executor_ = basicOperationExecutor_<ValueT__>;
-		}
-
-		private: template <typename ValueT__> constexpr void destruct_(Engine& engine_) {
-			if constexpr (::dcool::core::isStorable<ValueT__, squeezedTankage>) {
-				::dcool::core::destruct(this->access<ValueT__>(engine_));
-				this->m_storage_.deactivateItem();
-			} else {
-				::dcool::resource::destroyHandleByPoolFor<ValueT__>(engine_.pool(), this->m_storage_.alternative());
-				this->m_storage_.deactivateAlternative();
-			}
-		}
-
-		public: constexpr void uninitialize(Engine& engine_) {
-			ParameterToDestruct_ parameter_ = { .engine_ = ::dcool::core::addressOf(engine_), .self_ = this };
-			this->m_executor_(Opcode::dcoolDestruct_, ::dcool::core::addressOf(parameter_));
-		}
-
-		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
-			ParameterToCloneTo_ parameter_ = {
-				.input_ = { .engine_ = ::dcool::core::addressOf(engine_), .self_ = this },
-				.other_ = { .engine_ = ::dcool::core::addressOf(otherEngine_), .self_ = ::dcool::core::addressOf(other_) },
-			};
-			this->m_executor_(Opcode::dcoolCloneTo_, ::dcool::core::addressOf(parameter_));
-		}
-
-		public: template <
-			::dcool::core::Boolean engineWillBeSwappedC__ = false
-		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-			ParameterToRelocateTo_ parameter_ = {
-				.engineWillBeSwapped_ = engineWillBeSwappedC__,
-				.input_ = { .engine_ = ::dcool::core::addressOf(engine_), .self_ = this },
-				.other_ = { .engine_ = ::dcool::core::addressOf(otherEngine_), .self_ = ::dcool::core::addressOf(other_) },
-			};
-			this->m_executor_(Opcode::dcoolRelocateTo_, ::dcool::core::addressOf(parameter_));
-		}
-
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
-			::dcool::core::Boolean engineWillBeSwappedC__ = false
-		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-			Self_ middleMan_;
-			this->relocateTo<engineWillBeSwappedC__>(engine_, engine_, middleMan_);
-			struct UniqueType_ {
-			};
-			try {
-				other_.relocateTo<engineWillBeSwappedC__>(otherEngine_, engine_, *this);
-				try {
-					middleMan_.relocateTo<engineWillBeSwappedC__>(engine_, otherEngine_, other_);
-				} catch (...) {
-					try {
-						this->relocateTo(engine_, otherEngine_, other_);
-					} catch (...) {
-						::dcool::core::goWeak<strategyC__>();
-						middleMan_.uninitialize(engine_);
-						other_.initialize(engine_);
-						throw ::dcool::core::ExceptionSafetyDowngrade<UniqueType_>();
-					}
-					throw;
-				}
-			} catch (::dcool::core::ExceptionSafetyDowngrade<UniqueType_> const& exception_) {
-				exception_.rethrowUnderlying();
-			} catch (...) {
-				try {
-					middleMan_.relocateTo(engine_, engine_, *this);
-				} catch (...) {
-					::dcool::core::goWeak<strategyC__>();
-					middleMan_.uninitialize(engine_);
-					this->initialize(engine_);
-				}
-				throw;
-			}
-		}
-
-		public: constexpr auto valid(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
-			return ::dcool::core::size(this->storageRequirement(engine_)) > 0;
-		}
-
-		public: constexpr auto typeInfo(Engine& engine_) const noexcept -> ::dcool::core::TypeInfo const& {
-			ParameterToGetTypeInfo_ parameter_;
-			this->m_executor_(Opcode::dcoolGetTypeInfo_, ::dcool::core::addressOf(parameter_));
-			return *parameter_;
-		}
-
-		public: constexpr auto storageRequirement(Engine& engine_) const noexcept -> ::dcool::core::StorageRequirement {
-			ParameterToGetStorageRequirement_ parameter_;
-			this->m_executor_(Opcode::dcoolGetStorageRequirement_, ::dcool::core::addressOf(parameter_));
-			return parameter_;
-		}
-
-		private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) const noexcept -> ValueT__ const* {
-			if constexpr (::dcool::core::isStorable<ValueT__, squeezedTankage>) {
-				return reinterpret_cast<ValueT__ const*>(::dcool::core::addressOf(this->m_storage_.item()));
-			}
-			return static_cast<ValueT__*>(
-				::dcool::resource::adaptedFromHandleFor<ValueT__>(engine_.pool(), this->m_storage_.alternative())
-			);
-		}
-
-		private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) noexcept -> ValueT__* {
-			if constexpr (::dcool::core::isStorable<ValueT__, squeezedTankage>) {
-				return reinterpret_cast<ValueT__*>(::dcool::core::addressOf(this->m_storage_.item()));
-			}
-			return static_cast<ValueT__*>(
-				::dcool::resource::adaptedFromHandleFor<ValueT__>(engine_.pool(), this->m_storage_.alternative())
-			);
-		}
-
-		public: constexpr auto storage(Engine& engine_) const noexcept -> void const* {
-			ParameterToGetRawPointer_ parameter_ = { .input_ = { .engine_ = ::dcool::core::addressOf(engine_), .self_ = this } };
-			this->m_executor_(Opcode::dcoolGetRawPointer_, ::dcool::core::addressOf(parameter_));
-			return parameter_.output_;
-		}
-
-		public: constexpr auto storage(Engine& engine_) noexcept -> void* {
-			ParameterToGetRawPointerToMutable_ parameter_ = {
-				.input_ = { .engine_ = ::dcool::core::addressOf(engine_), .self_ = this }
-			};
-			this->m_executor_(Opcode::dcoolGetRawPointerToMutable_, ::dcool::core::addressOf(parameter_));
-			return parameter_.output_;
-		}
-
-		public: template <typename ValueT__> constexpr auto access(Engine& engine_) const noexcept -> ValueT__ const& {
-			static_assert(!::dcool::core::Const<ValueT__>);
-			return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
-		}
-
-		public: template <typename ValueT__> constexpr auto access(Engine& engine_) noexcept -> ValueT__& {
-			static_assert(!::dcool::core::Const<ValueT__>);
-			return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
-		}
-
-		public: template <typename ValueT__> constexpr auto value(Engine& engine_) const -> ValueT__ const& {
-			static_assert(!::dcool::core::Const<ValueT__>);
-			if (typeid(ValueT__) != this->typeInfo(engine_)) {
-				throw ::dcool::utility::BadAnyCast();
-			}
-			return this->access<ValueT__>(engine_);
-		}
-
-		public: template <typename ValueT__> constexpr auto value(Engine& engine_) -> ValueT__& {
-			static_assert(!::dcool::core::Const<ValueT__>);
-			if (typeid(ValueT__) != this->typeInfo(engine_)) {
-				throw ::dcool::utility::BadAnyCast();
-			}
-			return this->access<ValueT__>(engine_);
-		}
-
-		protected: constexpr void executeCustomizedOperation(Engine& engine_, Opcode opcode_, void* customizedParameter_) const {
-			ParameterForExtendedOperation_ parameter_ = {
-				.engine_ = ::dcool::core::addressOf(engine_), .customizedParameter_ = customizedParameter_
-			};
-			this->m_executor_(opcode_, ::dcool::core::addressOf(parameter_));
-		}
-	};
+	template <
+		::dcool::utility::AnyConfig ConfigT_ = ::dcool::core::Empty<>
+	> using AnyChassis = ::dcool::utility::detail_::AnyChassis_<ConfigT_>;
 
 	template <::dcool::utility::AnyConfig ConfigT_ = ::dcool::core::Empty<>> struct Any {
 		private: using Self_ = Any<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		public: using Chassis = ::dcool::utility::AnyChassis<Config>;
-		private: using ConfigAdaptor_ = ::dcool::utility::AnyConfigAdaptor<Config>;
-		public: using DynamicHandle = ConfigAdaptor_::DynamicHandle;
-		public: using Opcode = ConfigAdaptor_::Opcode;
-		public: using OperationExecutor = ConfigAdaptor_::OperationExecutor;
+		private: using ConfigAdaptor_ = ::dcool::utility::detail_::AnyConfigAdaptor_<Config>;
+		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
@@ -469,7 +368,8 @@ namespace dcool::utility {
 		}
 
 		public: constexpr Any(Self_&& other_) {
-			other_.chassis().relocateTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
+			other_.chassis().relocateTo<true>(other_.mutableEngine(), other_->mutableEngine(), this->chassis());
+			this->m_engine_ = ::dcool::core::move(other_->mutableEngine());
 			other_.chassis().initialize(this->mutableEngine());
 		}
 
@@ -533,6 +433,10 @@ namespace dcool::utility {
 			return this->m_engine_;
 		}
 
+		public: constexpr auto storageRequirement() const noexcept -> ::dcool::core::StorageRequirement {
+			return this->chassis().storageRequirement(this->mutableEngine());
+		}
+
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
 			return this->chassis().valid(this->mutableEngine());
 		}
@@ -541,16 +445,8 @@ namespace dcool::utility {
 			return this->chassis().typeInfo(this->mutableEngine());
 		}
 
-		public: constexpr auto storageRequirement() const noexcept -> ::dcool::core::StorageRequirement {
-			return this->chassis().storageRequirement(this->mutableEngine());
-		}
-
-		public: constexpr auto storage() const noexcept -> void const* {
-			return this->chassis().storage(this->mutableEngine());
-		}
-
-		public: constexpr auto storage() noexcept -> void* {
-			return this->chassis().storage(this->mutableEngine());
+		public: constexpr auto extendedInformation() const noexcept -> ExtendedInformation const& {
+			return this->chassis().extendedInformation(this->mutableEngine());
 		}
 
 		public: template <typename ValueT__> constexpr auto access() const noexcept -> ValueT__ const& {
@@ -567,10 +463,6 @@ namespace dcool::utility {
 
 		public: template <typename ValueT__> constexpr auto value() -> ValueT__& {
 			return this->chassis().template value<ValueT__>(this->mutableEngine());
-		}
-
-		protected: constexpr void executeCustomizedOperation(Opcode opcode_, void* customizedParameter_) const {
-			this->chassis().executeCustomizedOperation(this->mutableEngine(), opcode_, customizedParameter_);
 		}
 	};
 }

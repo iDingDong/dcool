@@ -9,17 +9,17 @@
 			typename T_::MemberName_; \
 		}; \
 		\
-		template <typename T_, typename DefaultT_> struct ExtractorName_##DcmCoreHelper_ { \
+		template <typename T_, typename DefaultT_> struct ExtractorName_##DcoolCoreHelper_ { \
 			using Result_ = DefaultT_; \
 		}; \
 		\
-		template <::namespaceName_::ConceptName_ T_, typename DefaultT_> struct ExtractorName_##DcmCoreHelper_<T_, DefaultT_> { \
+		template <::namespaceName_::ConceptName_ T_, typename DefaultT_> struct ExtractorName_##DcoolCoreHelper_<T_, DefaultT_> { \
 			using Result_ = T_::MemberName_; \
 		}; \
 		\
 		template < \
 			typename T_, typename DefaultT_ \
-		> using ExtractorName_ = ::namespaceName_::ExtractorName_##DcmCoreHelper_<T_, DefaultT_>::Result_; \
+		> using ExtractorName_ = ::namespaceName_::ExtractorName_##DcoolCoreHelper_<T_, DefaultT_>::Result_; \
 	}
 
 #	define DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(namespaceName_, ConceptName_, extractorName_, memberName_) \
