@@ -38,6 +38,12 @@ namespace dcool::core {
 
 	using InPlaceTag = ::std::in_place_t;
 	constexpr ::dcool::core::InPlaceTag inPlace = ::std::in_place;
+
+	template <typename T_> struct TypedTag {
+		using Type = T_;
+	};
+
+	template <typename T_> constexpr ::dcool::core::TypedTag<T_> typed;
 }
 
 #endif

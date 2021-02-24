@@ -4,6 +4,8 @@ add_executable(
 	"./container/linked.cpp"
 	"./container/list.cpp"
 	"./resource/shared.cpp"
+	"./utility/any.cpp"
+	"./utility/function.cpp"
 	"./vigor/sealer.cpp"
 )
 

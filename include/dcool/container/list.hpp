@@ -514,7 +514,7 @@ namespace dcool::container {
 				::dcool::container::detail_::extractedSqueezedCapacityValue_<Config>(::dcool::core::Length(0))
 			;
 
-			public: using BasicStorage = ::dcool::resource::Squeezer<Value, Handle, squeezedCapacity>;
+			public: using BasicStorage = ::dcool::resource::ArraySqueezer<Value, Handle, squeezedCapacity>;
 		};
 
 		template <
@@ -2079,8 +2079,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto operator =(Self_&& other_) -> Self_& {
-			Self_ middleMan_(::dcool::core::move(other_));
-			this->swapWith(middleMan_);
+			this->swapWith(other_);
 			return *this;
 		}
 

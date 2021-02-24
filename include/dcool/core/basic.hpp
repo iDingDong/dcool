@@ -4,6 +4,7 @@
 #	include <cstdint>
 #	include <cstddef>
 #	include <new>
+#	include <typeinfo>
 #	include <utility>
 
 namespace dcool::core {
@@ -18,6 +19,7 @@ namespace dcool::core {
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
 	using NullPointer = decltype(nullptr);
+	using TypeInfo = ::std::type_info;
 
 	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
 

@@ -45,6 +45,7 @@ In addition, names defined in namespace `*::detail_`, or names followed by taili
 
 Unless otherwise specified, there could be major differences as follows:
 
+- `public` access specifiers are omitted in the document and you are safe to assume all documented members are public unless otherwise specified.
 - Parameter names may be different.
 - Additional constraints might be applied for better diagnostics.
 - Type names might be aliases even if specified as `struct`, `union`, etc.
