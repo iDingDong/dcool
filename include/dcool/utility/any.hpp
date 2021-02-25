@@ -23,7 +23,7 @@ namespace dcool::utility {
 			DCOOL_UTILITY_ANY_BASIC_OPERATIONS
 		};
 
-		template <typename ConfigT_> class AnyConfigAdaptor_ {
+		template <::dcool::core::Complete ConfigT_> class AnyConfigAdaptor_ {
 			private: using Self_ = AnyConfigAdaptor_<ConfigT_>;
 			public: using Config = ConfigT_;
 

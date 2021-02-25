@@ -1,15 +1,16 @@
-# Class template `dcool::utility::Function`
+# Class template `dcool::utility::OverloadedFunction`
 
 Include `<dcool/utility.hpp>` to use.
 
 ```cpp
-template <typename PrototypeT_, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
 template <
-	typename ConfigT, typename ReturnT, typename... ParameterTs
-> struct dcool::utility::Function<auto(ParameterTs...) -> ReturnT, ConfigT>;
+	dcool::core::TypeList PrototypesT_, typename ConfigT = /* unspecified type */
+> struct dcool::utility::OverloadedFunction;
 ```
 
-An alternative to `std::function` with configurable small object optimization limit and customizable operations.
+An alternative to `dcool::utility::function` that can be 'overloaded'.
+
+The 'overload resolution' works a bit different with the C++ overloade resolution. It attempts to invoke the overloaded versions from left to right until it finds the arguments a match. This makes all 'overload's impossible to be ambiguous, and the earlier listed overloaded version enjoys a higher 'priority'. Such behavior is experimental and is discouraged to be relied on for now.
 
 ## Configuration `ConfigT`
 
@@ -34,11 +35,11 @@ Its member shall customize the list as decribed:
 ## Constructors
 
 ```cpp
-constexpr Function() noexcept;
-constexpr Function(Function const& other);
-constexpr Function(Function&& other) noexcept(/* unspecified expression */);
-template <typename ValueT> constexpr Function(ValueT&& value) noexcept(/* unspecified expression */);
-template <typename ValueT, typename... ArgumentTs> constexpr Function(
+constexpr OverloadedFunction() noexcept;
+constexpr OverloadedFunction(Function const& other);
+constexpr OverloadedFunction(Function&& other) noexcept(/* unspecified expression */);
+template <typename ValueT> constexpr OverloadedFunction(ValueT&& value) noexcept(/* unspecified expression */);
+template <typename ValueT, typename... ArgumentTs> constexpr OverloadedFunction(
 	dcool::core::InPlaceTag, ArgumentTs&&... parameters
 ) noexcept(/* unspecified expression */);
 ```
@@ -51,8 +52,8 @@ template <typename ValueT, typename... ArgumentTs> constexpr Function(
 ## Assignments
 
 ```cpp
-constexpr auto operator =(Function const& other) noexcept(/* unspecified expression */) -> Function&;
-constexpr auto operator =(Function&& other) noexcept(/* unspecified expression */) -> Function&;
+constexpr auto operator =(OverloadedFunction const& other) noexcept(/* unspecified expression */) -> OverloadedFunction&;
+constexpr auto operator =(OverloadedFunction&& other) noexcept(/* unspecified expression */) -> OverloadedFunction&;
 ```
 
 Assign as a copy of `other` (as-if).
@@ -62,7 +63,7 @@ Assign as a copy of `other` (as-if).
 ### `swapWith`
 
 ```cpp
-constexpr void swapWith(Function& other) noexcept(/* unspecified expression */);
+constexpr void swapWith(OverloadedFunction& other) noexcept(/* unspecified expression */);
 ```
 
 Swap with `other`.
@@ -78,10 +79,10 @@ Returns true if the function holds an object, otherwise returns false.
 ### `immutablyInvocable`
 
 ```cpp
-constexpr auto immutablyInvocable() const noexcept -> dcool::core::Boolean;
+template <dcool::core::Index indexC> constexpr auto immutablyInvocable() const noexcept -> dcool::core::Boolean;
 ```
 
-Returns true if the function can be invoked with a constant reference to this function without directly throwing a `dcool::utility::BadFunctionCall`, otherwise returns false.
+Returns true if the function's overload version at `indexC` can be invoked with a constant reference to this function without directly throwing a `dcool::utility::BadFunctionCall`, otherwise returns false.
 
 Note that `dcool::utility::BadFunctionCall` indirectly thrown when invoking the holded object does not count.
 
@@ -132,26 +133,26 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
-constexpr auto invokeSelf(ParameterTs... parameters) const -> Return;
-constexpr auto invokeSelf(ParameterTs... parameters) -> Return;
+template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) const;
+template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters);
 ```
 
-Equivalent to `dcool::core::invoke(this->access<ValueT>, dcool::core::forward<ParameterTs>(parameters)...)` (where `ValueT` is the type of the object holded by function) if the function holds an object, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
+Invoke the holded object with forwarded `parameters`.
 
 For overload 1, if the const reference to the holded object is not invocable as above, throws a `dcool::utility::BadFunctionCall`.
 
 ### `operator ()`
 
 ```cpp
-constexpr auto operator ()(ParameterTs... parameters) const -> Return;
-constexpr auto operator ()(ParameterTs... parameters) -> Return;
+template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) const;
+template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters);
 ```
 
-Equivalent to `this->invokeSelf(dcool::core::forward<ParameterTs>(parameters)...)`.
+Equivalent to `this->invokeSelf(dcool::core::forward<ArgumentTs>(parameters)...)`.
 
 ## Customized extended operations
 
-Customizing extended operations is almost exactly the same as extending `dcool::utility::Any`, except that you should change all `dcool::utility::Any` to a proper `dcool::utility::Function` type.
+Customizing extended operations is almost exactly the same as extending `dcool::utility::Function`, except that you should change all `dcool::utility::Function` to a proper `dcool::utility::OverloadedFunction` type.
 
 ## Notes
 
