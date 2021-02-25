@@ -10,6 +10,10 @@
 namespace dcool::core {
 	template <auto valueC_> using RequiresConsteval = void;
 
+	template <typename T_> concept Complete = requires {
+		sizeof(T_);
+	};
+
 	template <typename... Ts_> constexpr ::dcool::core::Boolean isSame = true;
 
 	template <

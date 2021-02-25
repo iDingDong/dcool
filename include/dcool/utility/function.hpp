@@ -11,65 +11,67 @@ namespace dcool::utility {
 	using BadFunctionCall = ::std::bad_function_call;
 
 	namespace detail_ {
-		enum class DefaultFunctionOpcode_ {
-			DCOOL_UTILITY_FUNCTION_BASIC_OPERATIONS
-		};
-
 		template <typename PrototypeT_, typename ConfigT_> struct FunctionChassis_;
 
-		template <typename ConfigT_, typename PrototypeT_> class FunctionConfigAdaptor_;
-
 		template <
-			typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-		> class FunctionConfigAdaptor_<ConfigT_, ReturnT_(ParameterTs_...)> {
-			private: using Self_ = AnyConfigAdaptor_<ConfigT_>;
-			public: using Config = ConfigT_;
+			::dcool::core::Complete ConfigT_, typename PrototypeT_
+		> struct FunctionConfigAdaptor_;
 
-			public: using Prototype = ReturnT_(ParameterTs_...);
-			public: using Return = ReturnT_;
-			public: using Pool = ::dcool::resource::PoolType<Config>;
-			public: using DynamicHandle = ::dcool::resource::UnifiedHandleType<Pool>;
-			public: using ExtendedInformation = ::dcool::utility::detail_::ExtractedExtendedInformationType_<
-				Config, ::dcool::core::Pit
-			>;
-			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage =
-				::dcool::utility::detail_::extractedSqueezedTankage_<Config>(::dcool::core::storageRequirementFor<DynamicHandle>)
-			;
-			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-				::dcool::core::exceptionSafetyStrategyOf<Config>
-			;
-
-			private: struct DefaultEngine_ {
-				private: using Self_ = DefaultEngine_;
-
-				public: [[no_unique_address]] Pool partPool;
-
-				public: constexpr auto pool() noexcept -> Pool& {
-					return this->partPool;
-				}
-
-				public: friend auto operator ==(Self_ const&, Self_ const&) -> ::dcool::core::Boolean = default;
-				public: friend auto operator !=(Self_ const&, Self_ const&) -> ::dcool::core::Boolean = default;
-			};
-
-			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
-			static_assert(
-				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
-				"User-defined 'Pool' does not match return value of 'Engine::pool'"
-			);
-
-			static_assert(sizeof(DynamicHandle) > 0);
+		template <typename ConfigT_, typename ReturnT_, typename... ParameterTs_> struct FunctionConfigAdaptor_<
+			ConfigT_, auto(ParameterTs_...) -> ReturnT_
+		>: public ::dcool::utility::AnyConfigAdaptor<ConfigT_> {
 		};
 
 		template <
+			typename CallableT_, typename... ParameterTs_
+		> consteval auto isImmutablyInvocableHelper_() -> ::dcool::core::Boolean {
+			if constexpr (::dcool::core::NonVoid<CallableT_>) {
+				return ::dcool::core::Invocable<CallableT_ const&, ParameterTs_...>;
+			}
+			return false;
+		}
+
+		template <
+			typename CallableT_, typename... ParameterTs_
+		> constexpr ::dcool::core::Boolean isImmutablyInvocable_ = ::dcool::core::Invocable<CallableT_ const&, ParameterTs_...>;
+
+		template <typename... ParameterTs_> constexpr ::dcool::core::Boolean isImmutablyInvocable_<void, ParameterTs_...> = false;
+
+		template <
+			typename FunctionChassisT_, typename CallableT_, typename ReturnT_, typename... ParameterTs_
+		> constexpr auto immutablyInvokeFunctionChassis_(
+			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_ const& functionChassis_, ParameterTs_... parameters_
+		) -> ReturnT_ {
+			if constexpr (::dcool::utility::detail_::isImmutablyInvocable_<CallableT_, ParameterTs_...>) {
+				return ::dcool::core::invoke(
+					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
+				);
+			}
+			throw ::dcool::utility::BadFunctionCall();
+		}
+
+		template <
+			typename FunctionChassisT_, typename CallableT_, typename ReturnT_, typename... ParameterTs_
+		> constexpr auto invokeFunctionChassis_(
+			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_& functionChassis_, ParameterTs_... parameters_
+		) -> ReturnT_ {
+			if constexpr (::dcool::core::NonVoid<CallableT_>) {
+				return ::dcool::core::invoke(
+					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
+				);
+			}
+			throw ::dcool::utility::BadFunctionCall();
+		}
+
+		template <
 			typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-		> struct FunctionChassis_<ReturnT_(ParameterTs_...), ConfigT_> {
-			private: using Self_ = FunctionChassis_<ReturnT_(ParameterTs_...), ConfigT_>;
+		> struct FunctionChassis_<auto(ParameterTs_...) -> ReturnT_, ConfigT_> {
+			private: using Self_ = FunctionChassis_<auto(ParameterTs_...) -> ReturnT_, ConfigT_>;
+			public: using Prototype = auto(ParameterTs_...) -> ReturnT_;
 			public: using Config = ConfigT_;
 
-			private: using ConfigAdaptor_ = ::dcool::utility::detail_::FunctionConfigAdaptor_<ConfigT_, ReturnT_(ParameterTs_...)>;
-			public: using Prototype = ConfigAdaptor_::Prototype;
-			public: using Return = ConfigAdaptor_::Return;
+			private: using ConfigAdaptor_ = ::dcool::utility::detail_::FunctionConfigAdaptor_<Config, Prototype>;
+			public: using Return = ReturnT_;
 			public: using Pool = ConfigAdaptor_::Pool;
 			public: using Engine = ConfigAdaptor_::Engine;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
@@ -88,9 +90,11 @@ namespace dcool::utility {
 				ExtendedInformation extendedInformation_;
 
 				template <typename ValueT__> constexpr AnyExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
-					immutableInvoker_(immutablyInvoke_<ValueT__>),
-					invoker_(invoke_<ValueT__>),
-					immutablyInvocable_(isImmutablyInvocable_<ValueT__>()),
+					immutableInvoker_(
+						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<Self_, ValueT__, Return, ParameterTs_...>
+					),
+					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<Self_, ValueT__, Return, ParameterTs_...>),
+					immutablyInvocable_(::dcool::utility::detail_::isImmutablyInvocable_<ValueT__, ParameterTs_...>),
 					extendedInformation_(typed_)
 				{
 				}
@@ -107,31 +111,6 @@ namespace dcool::utility {
 			private: using Underlying_ = ::dcool::utility::AnyChassis<AnyConfig_>;
 
 			private: Underlying_ m_underlying_;
-
-			private: template <typename ValueT__> static constexpr auto immutablyInvoke_(
-				Engine& engine_, Self_ const& self_, ParameterTs_... parameters_
-			) -> Return {
-				if constexpr (isImmutablyInvocable_<ValueT__>()) {
-					return ::dcool::core::invoke(self_.access<ValueT__>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...);
-				}
-				throw ::dcool::utility::BadFunctionCall();
-			}
-
-			private: template <typename ValueT__> static constexpr auto invoke_(
-				Engine& engine_, Self_& self_, ParameterTs_... parameters_
-			) -> Return {
-				if constexpr (::dcool::core::NonVoid<ValueT__>) {
-					return ::dcool::core::invoke(self_.access<ValueT__>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...);
-				}
-				throw ::dcool::utility::BadFunctionCall();
-			}
-
-			private: template <typename ValueT__> static consteval auto isImmutablyInvocable_() -> ::dcool::core::Boolean {
-				if constexpr (::dcool::core::NonVoid<ValueT__>) {
-					return ::dcool::core::Invocable<ValueT__ const&, ParameterTs_...>;
-				}
-				return false;
-			}
 
 			public: void initialize(Engine& engine_) noexcept {
 				this->m_underlying_.initialize(engine_);
@@ -226,15 +205,13 @@ namespace dcool::utility {
 		};
 	}
 
-	template <typename T_, typename PrototypeT_> concept FunctionConfig = requires {
-		typename ::dcool::utility::detail_::FunctionConfigAdaptor_<T_, PrototypeT_>;
-	};
+	template <typename T_, typename PrototypeT_> concept FunctionConfig = ::dcool::core::Complete<
+		::dcool::utility::detail_::FunctionConfigAdaptor_<T_, PrototypeT_>
+	>;
 
-	template <
-		typename ConfigT_, typename PrototypeT_
-	> requires ::dcool::utility::FunctionConfig<ConfigT_, PrototypeT_> using FunctionConfigAdaptor =
-		::dcool::utility::detail_::FunctionConfigAdaptor_<ConfigT_, PrototypeT_>
-	;
+	template <typename ConfigT_, typename PrototypeT_> requires ::dcool::utility::FunctionConfig<
+		ConfigT_, PrototypeT_
+	> using FunctionConfigAdaptor = ::dcool::utility::detail_::FunctionConfigAdaptor_<ConfigT_, PrototypeT_>;
 
 	template <
 		typename PrototypeT_, ::dcool::utility::FunctionConfig<PrototypeT_> ConfigT_ = ::dcool::core::Empty<>
@@ -246,19 +223,18 @@ namespace dcool::utility {
 
 	template <
 		typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-	> struct Function<ReturnT_(ParameterTs_...), ConfigT_> {
-		private: using Self_ = Function<ReturnT_(ParameterTs_...), ConfigT_>;
-		public: using Return = ReturnT_;
+	> struct Function<auto(ParameterTs_...) -> ReturnT_, ConfigT_> {
+		private: using Self_ = Function<auto(ParameterTs_...) -> ReturnT_, ConfigT_>;
+		public: using Prototype = auto(ParameterTs_...) -> ReturnT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::utility::FunctionConfigAdaptor<ConfigT_, ReturnT_(ParameterTs_...)>;
-		public: using Prototype = ConfigAdaptor_::Prototype;
 		public: using Chassis = ::dcool::utility::FunctionChassis<Prototype, Config>;
-		public: using Engine = ConfigAdaptor_::Engine;
-		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
-		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
+		public: using Return = Chassis::Return;
+		public: using Engine = Chassis::Engine;
+		public: using ExtendedInformation = Chassis::ExtendedInformation;
+		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = Chassis::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-			ConfigAdaptor_::exceptionSafetyStrategy
+			Chassis::exceptionSafetyStrategy
 		;
 
 		private: Chassis m_chassis_;

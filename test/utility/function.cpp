@@ -3,7 +3,7 @@
 #include <dcool/utility.hpp>
 
 DCOOL_TEST_CASE(dcoolUtility, functionBasics) {
-	dcool::utility::Function<int(int, int)> function1 = [](int a, int b) {
+	dcool::utility::Function<auto(int, int) -> int> function1 = [](int a, int b) {
 		return a + b;
 	};
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1(3, 17) == 3 + 17));
@@ -29,7 +29,7 @@ DCOOL_TEST_CASE(dcoolUtility, nonImmutablyInvocableFunction) {
 		}
 	};
 
-	dcool::utility::Function<int(int, int)> function1 = [](int a, int b) {
+	dcool::utility::Function<auto(int, int) -> int> function1 = [](int a, int b) {
 		return a + b;
 	};
 	DCOOL_TEST_EXPECT(function1.immutablyInvocable());
