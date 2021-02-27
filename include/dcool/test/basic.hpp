@@ -10,6 +10,7 @@
 namespace dcool::test {
 	using Count = ::dcool::core::Length;
 	using Name = ::std::string_view;
+	using Message = ::std::string;
 	using FileName = ::dcool::test::Name;
 	using LineNumber = ::dcool::core::UnsignedMaxInteger;
 	using Clock = ::std::chrono::steady_clock;

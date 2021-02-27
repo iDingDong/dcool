@@ -22,6 +22,7 @@
 #	include <dcool/core/range_operation.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/raw_pointer_operation.hpp>
+#	include <dcool/core/select.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>
 #	include <dcool/core/tuple.hpp>
