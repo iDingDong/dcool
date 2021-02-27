@@ -21,4 +21,6 @@
 
 #	define DCOOL_TEST_SEQUENCE(...) ::std::initializer_list{ __VA_ARGS__ }
 
+#	define DCOOL_TEST_SEQUENCE_OF(Type, ...) ::std::initializer_list<Type>{ __VA_ARGS__ }
+
 #endif
