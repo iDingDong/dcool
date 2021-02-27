@@ -6,8 +6,7 @@
 #	include <dcool/container.hpp>
 
 #	include <algorithm>
-#	include <stdexcept>
-#	include <initializer_list>
+#	include <iterator>
 
 namespace dcool::test {
 	class Case {
@@ -54,7 +53,7 @@ namespace dcool::test {
 			::dcool::test::Case::Record& record_
 		);
 
-		template <::std::ranges::input_range LeftRangeT_, ::std::ranges::input_range RightRangeT_> void checkRangeEquality_(
+		template <typename LeftRangeT_, typename RightRangeT_> void checkRangeEquality_(
 			::dcool::test::FileName fileName_,
 			::dcool::test::LineNumber lineNumber_,
 			::dcool::test::Case::Failure::Level level_,
@@ -62,11 +61,12 @@ namespace dcool::test {
 			RightRangeT_&& right_,
 			::dcool::test::Case::Record& record_
 		) {
+			// GCC 10.2.0 introduced an ICE if 'std::ranges::equal' is used.
 			::dcool::test::detail_::check_(
 				fileName_,
 				lineNumber_,
 				level_,
-				::std::ranges::equal(::dcool::core::forward<LeftRangeT_>(left_), ::dcool::core::forward<RightRangeT_>(right_)),
+				::std::equal(::std::begin(left_), ::std::end(left_), ::std::begin(right_), ::std::end(right_)),
 				record_
 			);
 		}

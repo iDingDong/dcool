@@ -514,7 +514,7 @@ namespace dcool::container {
 				::dcool::container::detail_::extractedSqueezedCapacityValue_<Config>(::dcool::core::Length(0))
 			;
 
-			public: using BasicStorage = ::dcool::resource::ArraySqueezer<Value, Handle, squeezedCapacity>;
+			public: using BasicStorage = ::dcool::resource::ArraySqueezer<::dcool::core::StorageFor<Value>, Handle, squeezedCapacity>;
 		};
 
 		template <
@@ -1076,6 +1076,13 @@ namespace dcool::container {
 			return true;
 		}
 
+		private: static consteval auto noThrowDefaultInitializable_() noexcept -> ::dcool::core::Boolean {
+			if constexpr (squeezedOnly) {
+				return noThrowFillableByDefault_();
+			}
+			return true;
+		}
+
 		private: constexpr void fillByDefault_() noexcept(noThrowFillableByDefault_()) {
 			if constexpr (stuffed) {
 				Value* begin_ = this->m_storage_.data();
@@ -1105,7 +1112,7 @@ namespace dcool::container {
 		}
 
 		private: constexpr void initializeWithoutFill_(Engine& engine_) noexcept {
-			this->initialize_(engine_);
+			this->m_storage_.initialize(engine_);
 		}
 
 		private: constexpr void initializeWithoutFill_(Engine& engine_, Length capacity_) {
@@ -1113,18 +1120,18 @@ namespace dcool::container {
 			this->m_storage_.initialize(engine_, capacity_);
 		}
 
-		public: constexpr void initialize(Engine& engine_) noexcept(
-			noexcept(::dcool::core::declval<Self_&>().fillByDefault_(engine_))
-		) {
+		public: constexpr void initialize(Engine& engine_) noexcept(noexcept(noThrowDefaultInitializable_())) {
 			this->initializeWithoutFill_(engine_);
-			if constexpr (noexcept(this->fillByDefault_(engine_))) {
-				this->fillByDefault_(engine_);
-			} else {
-				try {
+			if constexpr (stuffed && squeezedOnly) {
+				if constexpr (noThrowDefaultInitializable_()) {
 					this->fillByDefault_(engine_);
-				} catch (...) {
-					this->uninitializeWithoutFilled_(engine_);
-					throw;
+				} else {
+					try {
+						this->fillByDefault_(engine_);
+					} catch (...) {
+						this->uninitializeWithoutFilled_(engine_);
+						throw;
+					}
 				}
 			}
 		}
@@ -1222,7 +1229,7 @@ namespace dcool::container {
 				other_.initializeWithoutFill_(otherEngine_, this->length(engine_));
 			}
 			try {
-				::dcool::core::batchCopy(this->begin(engine_), this->end(engine_), other_.begin(otherEngine_));
+				::dcool::core::batchCopyConstruct(this->begin(engine_), this->end(engine_), other_.begin(otherEngine_));
 				other_.m_storage_.setLength(otherEngine_, this->length(engine_));
 			} catch (...) {
 				other_.uninitializeWithoutFilled_(otherEngine_);
@@ -1964,10 +1971,6 @@ namespace dcool::container {
 			if (this->squeezed(engine_)) {
 				return this->inPlaceErase_<strategyC__>(engine_, position_);
 			}
-			if (position_ == this->end(engine_) - 1) {
-				this->popBack(engine_);
-				return position_;
-			}
 			Self_ backupChassis_;
 			this->unsqueezedRelocateTo_(engine_, engine_, backupChassis_);
 			if constexpr (circular) {
@@ -1999,7 +2002,7 @@ namespace dcool::container {
 				backupChassis_.unsqueezedRelocateTo_(engine_, engine_, *this);
 				throw;
 			}
-			::dcool::core::batchDestruct(backupChassis_.begin(engine_), position_);
+			::dcool::core::batchDestruct(backupChassis_.begin(engine_), position_ + 1);
 			this->m_storage_.setLength(engine_, newLength_);
 			backupChassis_.uninitializeWithoutFilled_(engine_);
 			return newPosition_;
