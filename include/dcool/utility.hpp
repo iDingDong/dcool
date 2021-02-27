@@ -3,5 +3,6 @@
 
 #	include <dcool/utility/any.hpp>
 #	include <dcool/utility/function.hpp>
+#	include <dcool/utility/overloaded_function.hpp>
 
 #endif

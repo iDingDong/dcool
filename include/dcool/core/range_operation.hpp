@@ -5,30 +5,36 @@
 #	include <dcool/core/contamination.hpp>
 #	include <dcool/core/destruct.hpp>
 #	include <dcool/core/exception.hpp>
+#	include <dcool/core/optional.hpp>
 #	include <dcool/core/range.hpp>
 
 #	include <algorithm>
 #	include <cstring>
 
 namespace dcool::core {
-	namespace detail_ {
-		template <
-			::dcool::core::ForwardIterator BeginIteratorT_, ::dcool::core::ForwardIterator EndIteratorT_
-		> constexpr void batchDestruct_(BeginIteratorT_ begin_, EndIteratorT_ end_) noexcept {
-			using Value_ = ::dcool::core::IteratorValueType<BeginIteratorT_>;
-			if constexpr (!::dcool::core::isTriviallyDestructible<Value_>) {
-				while (!::dcool::core::iteratorsToSame(begin_, end_)) {
-					::dcool::core::destruct(::dcool::core::dereference(begin_));
-					++begin_;
-				}
+	template <
+		::dcool::core::ForwardIterator IteratorT_
+	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
+		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
+		if constexpr (!::dcool::core::isTriviallyDestructible<Value_>) {
+			while (begin_ != end_) {
+				::dcool::core::destruct(::dcool::core::dereference(begin_));
+				++begin_;
 			}
 		}
 	}
 
 	template <
 		::dcool::core::ForwardIterator IteratorT_
-	> constexpr void batchDestruct(IteratorT_ begin_, IteratorT_ end_) noexcept {
-		::dcool::core::detail_::batchDestruct_(begin_, end_);
+	> constexpr void batchDestructN(IteratorT_ begin_, ::dcool::core::Length count_) noexcept {
+		using Value_ = ::dcool::core::IteratorValueType<IteratorT_>;
+		if constexpr (!::dcool::core::isTriviallyDestructible<Value_>) {
+			while (count_ > 0) {
+				::dcool::core::destruct(::dcool::core::dereference(begin_));
+				++begin_;
+				--count_;
+			}
+		}
 	}
 
 	template <::dcool::core::ForwardIterator IteratorT_> constexpr void batchDefaultInitialize(
@@ -49,7 +55,7 @@ namespace dcool::core {
 	}
 
 	template <::dcool::core::ForwardIterator IteratorT_> struct BatchMoveConstructOverlappedResult {
-		::dcool::core::Boolean overlapped;
+		::dcool::core::Optional<::dcool::core::Length> countBeforeOverlap;
 		IteratorT_ destinationEnd;
 	};
 
@@ -104,6 +110,25 @@ namespace dcool::core {
 		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
 	) -> DestinationIteratorT_ {
 		return ::dcool::core::batchCopy<::dcool::core::defaultExceptionSafetyStrategy>(begin_, end_, destination_);
+	}
+
+	template <
+		::dcool::core::ExceptionSafetyStrategy strategyC_,
+		::dcool::core::ForwardIterator SourceIteratorT_,
+		::dcool::core::ForwardIterator DestinationIteratorT_
+	> constexpr auto batchCopyConstruct(
+		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
+	) -> DestinationIteratorT_ {
+		return ::std::uninitialized_copy(begin_, end_, destination_);
+	}
+
+	template <
+		::dcool::core::ForwardIterator SourceIteratorT_,
+		::dcool::core::ForwardIterator DestinationIteratorT_
+	> constexpr auto batchCopyConstruct(
+		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
+	) -> DestinationIteratorT_ {
+		return ::dcool::core::batchCopyConstruct<::dcool::core::defaultExceptionSafetyStrategy>(begin_, end_, destination_);
 	}
 
 	template <
@@ -303,18 +328,25 @@ namespace dcool::core {
 					::dcool::core::ContiguousIterator<SourceIteratorT_> && ::dcool::core::ContiguousIterator<DestinationIteratorT_>
 				) {
 					DestinationIteratorT_ result_ = ::dcool::core::batchMoveForward<strategyC_>(begin_, end_, destination_);
-					return { ::dcool::core::rawPointerOf(result_) > ::dcool::core::rawPointerOf(begin_), result_ };
+					Value_ const* destinationAddress_ = ::dcool::core::rawPointerOf(destination_);
+					Value_ const* resultAddress_ = ::dcool::core::rawPointerOf(result_);
+					Value_ const* beginAddress_ = ::dcool::core::rawPointerOf(begin_);
+					return { resultAddress_ > beginAddress_ ? beginAddress_ - destinationAddress_ : ::dcool::core::nullOptional, result_ };
 				}
 				if constexpr (
 					::dcool::core::ReversedContiguousIterator<SourceIteratorT_> &&
 					::dcool::core::ReversedContiguousIterator<DestinationIteratorT_>
 				) {
 					DestinationIteratorT_ result_ = ::dcool::core::batchMoveForward<strategyC_>(begin_, end_, destination_);
-					return { ::dcool::core::rawPointerOf(result_) < ::dcool::core::rawPointerOf(begin_), result_ };
+					Value_ const* destinationAddress_ = ::dcool::core::rawPointerOf(destination_);
+					Value_ const* resultAddress_ = ::dcool::core::rawPointerOf(result_);
+					Value_ const* beginAddress_ = ::dcool::core::rawPointerOf(begin_);
+					return { resultAddress_ < beginAddress_ ? destinationAddress_ - beginAddress_ : ::dcool::core::nullOptional, result_ };
 				}
 			}
 			SourceIteratorT_ sourceCurrent_ = begin_;
 			DestinationIteratorT_ destinationCurrent_ = destination_;
+			::dcool::core::Length countBeforeOverlap_ = 0;
 			while (sourceCurrent_ != end_) {
 				if (::dcool::core::iteratorsToSame(destinationCurrent_, begin_)) {
 					while (sourceCurrent_ != end_) {
@@ -326,13 +358,13 @@ namespace dcool::core {
 							} catch (...) {
 								::dcool::core::goWeak<strategyC_>();
 							}
-							::dcool::core::detail_::batchDestruct_(destination_, begin_);
+							::dcool::core::batchDestructN(destination_, countBeforeOverlap_);
 							throw;
 						}
 						++sourceCurrent_;
 						++destinationCurrent_;
 					}
-					return { true, destinationCurrent_ };
+					return { countBeforeOverlap_, destinationCurrent_ };
 				}
 				try {
 					new (::dcool::core::rawPointerOf(destinationCurrent_)) Value_(
@@ -349,10 +381,13 @@ namespace dcool::core {
 				}
 				++sourceCurrent_;
 				++destinationCurrent_;
+				++countBeforeOverlap_;
 			}
-			return { false, destinationCurrent_ };
+			return { ::dcool::core::nullOptional, destinationCurrent_ };
 		}
-		return { false, ::dcool::core::batchMoveConstruct<strategyC_>(begin_, end_, destination_) };
+		return {
+			::dcool::core::nullOptional, ::dcool::core::batchMoveConstruct<strategyC_>(begin_, end_, destination_)
+		};
 	}
 
 	template <
@@ -360,7 +395,7 @@ namespace dcool::core {
 		::dcool::core::ForwardIterator DestinationIteratorT_
 	> constexpr auto batchMoveConstructForward(
 		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
-	) -> DestinationIteratorT_ {
+	) -> ::dcool::core::BatchMoveConstructOverlappedResult<DestinationIteratorT_> {
 		return ::dcool::core::batchMoveConstructForward<::dcool::core::defaultExceptionSafetyStrategy>(begin_, end_, destination_);
 	}
 
@@ -374,8 +409,8 @@ namespace dcool::core {
 		SourceIteratorT_ begin_, SourceIteratorT_ end_, DestinationIteratorT_ destination_
 	) -> DestinationIteratorT_ {
 		auto moveConstructResult_ = ::dcool::core::batchMoveConstructForward<strategyC_>(begin_, end_, destination_);
-		if (moveConstructResult_.overlapped) {
-			::dcool::core::detail_::batchDestruct_(moveConstructResult_.destinationEnd, end_);
+		if (moveConstructResult_.countBeforeOverlap.valid()) {
+			::dcool::core::batchDestructN(moveConstructResult_.destinationEnd, moveConstructResult_.countBeforeOverlap.access());
 		} else {
 			::dcool::core::batchDestruct(begin_, end_);
 		}

@@ -16,6 +16,7 @@ namespace dcool::core {
 	using Difference = decltype(::dcool::core::declval<char*>() - ::dcool::core::declval<char*>());
 	using Alignment = decltype(alignof(char));
 	using Length = ::dcool::core::Size;
+	using Index = ::dcool::core::Length;
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
 	using NullPointer = decltype(nullptr);

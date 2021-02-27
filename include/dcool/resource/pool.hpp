@@ -1080,7 +1080,7 @@ namespace dcool::resource {
 		public: using Length = StandardTraits_::size_type;
 		public: using Difference = StandardTraits_::difference_type;
 
-		public: StandardAllocator standardAllocator;
+		public: [[no_unique_address]] StandardAllocator standardAllocator;
 
 		template <
 			::dcool::core::StorageRequirement storageRequirementC__
