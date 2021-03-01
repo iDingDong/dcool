@@ -124,6 +124,14 @@ namespace dcool::core {
 
 	template <typename T_> concept Integer = ::std::is_integral_v<T_>;
 
+	template <typename T_> constexpr ::dcool::core::Boolean isFinal = ::std::is_final_v<T_>;
+
+	template <typename T_> concept Final = ::dcool::core::isFinal<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isPolymorphic = ::std::is_polymorphic_v<T_>;
+
+	template <typename T_> concept Polymorphic = ::dcool::core::isPolymorphic<T_>;
+
 	template <typename T_, typename... Ts_> constexpr ::dcool::core::Boolean isOneOf = false;
 
 	template <
