@@ -305,7 +305,9 @@ namespace dcool::container {
 			public: using iterator_category = ::dcool::core::RandomAccessIteratorTag;
 
 			private: RangeChassis* m_range_ = ::dcool::core::nullPointer;
-			private: ::dcool::core::StaticOptional<Engine*, !squeezedOnly> m_engine_ = { .value = ::dcool::core::nullPointer };
+			private: [[no_unique_address]] ::dcool::core::StaticOptional<Engine*, !squeezedOnly> m_engine_ = {
+				.value = ::dcool::core::nullPointer
+			};
 
 			public: constexpr ListChassisIterator_() noexcept = default;
 
@@ -505,7 +507,7 @@ namespace dcool::container {
 			);
 
 			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
-			public: using Handle = PoolAdaptor::Handle;
+			public: using Handle = PoolAdaptor::ArrayHandle;
 			public: using Length = PoolAdaptor::Length;
 
 			public: static constexpr Length storageMaxCapacity = ::std::numeric_limits<::dcool::core::Difference>::max();
