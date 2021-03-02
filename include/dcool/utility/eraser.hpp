@@ -15,10 +15,13 @@ namespace dcool::utility {
 			public: using Config = ConfigT_;
 
 			public: using Pool = ::dcool::resource::PoolType<Config>;
+			public: using Handle = ::dcool::resource::UnifiedHandleType<Pool>;
 			public: using Interface = ::dcool::utility::detail_::ExtractedInterfaceTypeForEraser_<
 				Config, ::dcool::core::Empty<Config>
 			>;
 			public: static constexpr ::dcool::core::Boolean extended = ::dcool::core::isPolymorphic<Interface>;
+
+			static_assert(sizeof(Handle) > 0);
 		};
 
 		template <typename T_> concept ExtendedEraserConfig_ = ::dcool::utility::detail_::EraserConfigAdaptor_<T_>::extended;
@@ -39,15 +42,13 @@ namespace dcool::utility {
 
 		private: using ConfigAdaptor_ = ::dcool::utility::EraserConfigAdaptor<ConfigT_>;
 		public: using Pool = ConfigAdaptor_::Pool;
+		public: using Handle = ConfigAdaptor_::Handle;
 
 		public: virtual ~EraserHolderBase() noexcept = default;
 		public: virtual auto valueTypeInfo() const noexcept -> ::dcool::core::TypeInfo const& = 0;
 		public: virtual auto valueAddress() const noexcept -> void const* = 0;
 		public: virtual auto valueAddress() noexcept -> void* = 0;
-		public: virtual auto allocateForClone(Pool& pool_) -> void* = 0;
-		public: virtual void inPlaceCopyConstructTo(void* position_) = 0;
-		public: virtual void inPlaceMoveConstructTo(void* position_) = 0;
-		public: virtual void destructSelf() noexcept = 0;
+		public: virtual auto clone(Pool& pool_) -> Handle;
 		public: virtual void destroySelf(Pool& pool_) noexcept = 0;
 	};
 
@@ -60,6 +61,7 @@ namespace dcool::utility {
 		public: using Config = ConfigT_;
 
 		public: using typename Super_::Pool;
+		public: using typename Super_::Handle;
 
 		public: Value value;
 
@@ -75,20 +77,8 @@ namespace dcool::utility {
 			return ::dcool::core::addressOf(this->value);
 		}
 
-		public: auto allocateForClone(Pool& pool_) -> void* {
-			return ::dcool::resource::adaptedAllocatePointerFor<Self_>(pool_);
-		}
-
-		public: void inPlaceCopyConstructTo(void* position_) override {
-			new (static_cast<Self_*>(position_)) Self_(*this);
-		}
-
-		public: void inPlaceMoveConstructTo(void* position_) override {
-			new (static_cast<Self_*>(position_)) Self_(::dcool::core::move(*this));
-		}
-
-		public: void destructSelf() noexcept override {
-			::dcool::core::destruct(*this);
+		public: auto clone(Pool& pool_) -> Handle override {
+			return ::dcool::resource::createHandleByPoolFor<Self_>(pool_, *this);
 		}
 
 		public: void destroySelf(Pool& pool_) noexcept override {
