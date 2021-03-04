@@ -55,7 +55,7 @@ namespace dcool::core {
 	};
 
 	template <typename ValueT_, ::dcool::core::Boolean validC_> struct StaticOptional {
-		::dcool::core::Pit value;
+		[[no_unique_address]] ::dcool::core::Pit value;
 	};
 
 	template <typename ValueT_> struct StaticOptional<ValueT_, true> {

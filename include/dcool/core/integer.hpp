@@ -72,7 +72,7 @@ namespace dcool::core {
 		};
 
 		template <auto maxC_, auto minC_> struct IntegerType_<maxC_, minC_, false> {
-			static_assert(maxC_ >= minC_);
+			static_assert((maxC_ >= 0 && minC_ <= 0) || maxC_ >= minC_);
 			using Result_ = ::dcool::core::detail_::TrySignedInteger_<
 				maxC_, minC_, char, short, int, long, long long, SignedMaxInteger
 			>::Result_;

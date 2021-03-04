@@ -1,6 +1,8 @@
 #ifndef DCOOL_CONTAINER_LIST_HPP_INCLUDED_
 #	define DCOOL_CONTAINER_LIST_HPP_INCLUDED_ 1
 
+#	include <dcool/container/indexable_iterator.hpp>
+
 #	include <dcool/core.hpp>
 #	include <dcool/resource.hpp>
 
@@ -25,438 +27,6 @@ namespace dcool::container {
 	using OutOfRange = ::std::out_of_range;
 
 	namespace detail_ {
-		template <
-			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
-			typename DistinguisherT_ = void
-		> struct RandomAccessRangeLightIteratorBase_ {
-			private: using Self_ = RandomAccessRangeLightIteratorBase_<maxIndexC_, DistinguisherT_>;
-			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
-
-			public: using Length = ::dcool::core::IntegerType<maxIndex_>;
-			public: using Index = Length;
-			public: using Difference = ::dcool::core::IntegerType<maxIndex_, -maxIndex_>;
-			public: static constexpr Index maxIndex = static_cast<Index>(maxIndex_);
-
-			private: Index m_index_;
-
-			public: constexpr RandomAccessRangeLightIteratorBase_() noexcept: Self_(::std::numeric_limits<Index>::max()) {
-			}
-
-			public: constexpr explicit RandomAccessRangeLightIteratorBase_(Index index_) noexcept: m_index_(index_) {
-			}
-
-			public: constexpr auto index() const noexcept -> Index {
-				return this->m_index_;
-			}
-
-			public: constexpr void advance(Difference step_ = 1) noexcept {
-				this->m_index_ += step_;
-			}
-
-			public: constexpr void retreat(Difference step_ = 1) noexcept {
-				this->advance(-step_);
-			}
-
-			public: constexpr auto next(Difference step_ = 1) const noexcept -> Self_ {
-				return Self_(static_cast<Difference>(this->index()) + step_);
-			}
-
-			public: constexpr auto previous(Difference step_ = 1) const noexcept -> Self_ {
-				return this->next(-step_);
-			}
-
-			public: constexpr auto distanceTo(Self_ const& other_) const noexcept -> Difference {
-				return static_cast<Difference>(other_.index()) - static_cast<Difference>(this->index());
-			}
-
-			public: friend constexpr auto operator <=>(
-				Self_ const&, Self_ const&
-			) noexcept -> ::dcool::core::StrongOrdering = default;
-
-			public: friend constexpr auto operator == (
-				Self_ const&, Self_ const&
-			) noexcept -> ::dcool::core::Boolean = default;
-
-			public: constexpr auto operator ++() noexcept -> Self_& {
-				this->advance();
-				return *this;
-			}
-
-			public: constexpr auto operator ++(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->advance();
-				return result_;
-			}
-
-			public: constexpr auto operator --() noexcept -> Self_& {
-				this->retreat();
-				return *this;
-			}
-
-			public: constexpr auto operator --(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->retreat();
-				return result_;
-			}
-
-			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
-				this->advance(step_);
-				return *this;
-			}
-
-			public: friend constexpr auto operator +(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.next(step_);
-			}
-
-			public: friend constexpr auto operator +(Difference step_, Self_ const& iterator_) noexcept -> Self_ {
-				return iterator_ + step_;
-			}
-
-			public: constexpr auto operator -=(Difference step_) noexcept -> Self_& {
-				this->retreat(step_);
-				return *this;
-			}
-
-			public: friend constexpr auto operator -(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.previous(step_);
-			}
-
-			public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
-				return right_.distanceTo(left_);
-			}
-		};
-
-		template <
-			typename RangeChassisT_,
-			::dcool::core::Boolean squeezedOnlyC_,
-			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
-			typename DistinguisherT_ = void
-		> struct ListChassisLightIterator_: private ::dcool::container::detail_::RandomAccessRangeLightIteratorBase_<
-			maxIndexC_, DistinguisherT_
-		> {
-			private: using Self_ = ListChassisLightIterator_<RangeChassisT_, squeezedOnlyC_, maxIndexC_, DistinguisherT_>;
-			private: using Super_ = ::dcool::container::detail_::RandomAccessRangeLightIteratorBase_<maxIndexC_, DistinguisherT_>;
-			public: using RangeChassis = RangeChassisT_;
-			public: static constexpr ::dcool::core::Boolean squeezedOnly = squeezedOnlyC_;
-			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
-
-			public: using typename Super_::Length;
-			public: using typename Super_::Index;
-			public: using typename Super_::Difference;
-			public: using Super_::maxIndex;
-			public: using Super_::Super_;
-			public: using Super_::index;
-			public: using Super_::advance;
-			public: using Super_::retreat;
-			public: using Value = ::dcool::core::IdenticallyConstType<::dcool::core::ValueType<RangeChassis>, RangeChassis>;
-			public: using Engine = typename RangeChassis::Engine;
-
-			public: constexpr ListChassisLightIterator_() noexcept = default;
-
-			public: constexpr ListChassisLightIterator_(
-				::dcool::container::detail_::ListChassisLightIterator_<
-					::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnlyC_, maxIndexC_, DistinguisherT_
-				> const& other_
-			) noexcept: Self_(other_.index()) {
-			}
-
-			public: constexpr explicit ListChassisLightIterator_(Index index_) noexcept: Super_(index_) {
-			}
-
-			public: constexpr auto operator =(
-				::dcool::container::detail_::ListChassisLightIterator_<
-					::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnly, maxIndexC_, DistinguisherT_
-				> const& other_
-			) noexcept -> Self_& {
-				static_cast<Super_&>(*this) = static_cast<
-					::dcool::container::detail_::ListChassisLightIterator_<
-						::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnly, maxIndexC_, DistinguisherT_
-					>::Super_ const&
-				>(other_);
-				return *this;
-			}
-
-			public: constexpr auto next(Difference step_ = 1) const noexcept -> Self_ {
-				return Self_(static_cast<Difference>(this->index()) + step_);
-			}
-
-			public: constexpr auto previous(Difference step_ = 1) const noexcept -> Self_ {
-				return this->next(-step_);
-			}
-
-			public: template <
-				::dcool::core::FormOfSame<RangeChassis> RangeChassisT__
-			> constexpr auto dereferenceSelfWith(RangeChassisT__&& rangeChassis_) const noexcept -> Value& {
-				static_assert(squeezedOnly);
-				return rangeChassis_.access(this->index());
-			}
-
-			public: template <
-				::dcool::core::FormOfSame<RangeChassis> RangeChassisT__
-			> constexpr auto dereferenceSelfWith(RangeChassisT__&& rangeChassis_, Engine& engine_) const noexcept -> Value& {
-				return rangeChassis_.access(engine_, this->index());
-			}
-
-			public: template <
-				::dcool::core::FormOfSame<RangeChassis> RangeChassisT__
-			> constexpr auto rawPointerWith(RangeChassisT__&& rangeChassis_) const noexcept -> Value* {
-				static_assert(squeezedOnly);
-				return rangeChassis_.rawPointerAt(this->index());
-			}
-
-			public: template <
-				::dcool::core::FormOfSame<RangeChassis> RangeChassisT__
-			> constexpr auto rawPointerWith(RangeChassisT__&& rangeChassis_, Engine& engine_) const noexcept -> Value* {
-				return rangeChassis_.rawPointerAt(engine_, this->index());
-			}
-
-			public: constexpr auto distanceTo(Self_ const& other_) const noexcept -> Difference {
-				return this->Super_::distanceTo(other_);
-			}
-
-			public: friend constexpr auto operator <=>(
-				Self_ const&, Self_ const&
-			) noexcept -> ::dcool::core::StrongOrdering = default;
-
-			public: friend constexpr auto operator == (
-				Self_ const&, Self_ const&
-			) noexcept -> ::dcool::core::Boolean = default;
-
-			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
-				this->advance(step_);
-				return *this;
-			}
-
-			public: constexpr auto operator ++() noexcept -> Self_& {
-				this->advance();
-				return *this;
-			}
-
-			public: constexpr auto operator ++(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->advance();
-				return result_;
-			}
-
-			public: constexpr auto operator --() noexcept -> Self_& {
-				this->retreat();
-				return *this;
-			}
-
-			public: constexpr auto operator --(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->retreat();
-				return result_;
-			}
-
-			public: friend constexpr auto operator +(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.next(step_);
-			}
-
-			public: friend constexpr auto operator +(Difference step_, Self_ const& iterator_) noexcept -> Self_ {
-				return iterator_ + step_;
-			}
-
-			public: constexpr auto operator -=(Difference step_) noexcept -> Self_& {
-				this->retreat(step_);
-				return *this;
-			}
-
-			public: friend constexpr auto operator -(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.previous(step_);
-			}
-
-			public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
-				return right_.distanceTo(left_);
-			}
-		};
-
-		template <
-			typename RangeChassisT_,
-			::dcool::core::Boolean squeezedOnly_,
-			::dcool::core::SignedMaxInteger maxIndexC_ = ::std::numeric_limits<::dcool::core::Difference>::max(),
-			typename DistinguisherT_ = void
-		> struct ListChassisIterator_: private ::dcool::container::detail_::ListChassisLightIterator_<
-			RangeChassisT_, squeezedOnly_, maxIndexC_, DistinguisherT_
-		> {
-			private: using Self_ = ListChassisIterator_<RangeChassisT_, squeezedOnly_, maxIndexC_, DistinguisherT_>;
-			private: using Super_ = ::dcool::container::detail_::ListChassisLightIterator_<
-				RangeChassisT_, squeezedOnly_, maxIndexC_, DistinguisherT_
-			>;
-			public: using RangeChassis = RangeChassisT_;
-			private: static constexpr ::dcool::core::SignedMaxInteger maxIndex_ = maxIndexC_;
-
-			public: using typename Super_::Length;
-			public: using typename Super_::Index;
-			public: using typename Super_::Difference;
-			public: using typename Super_::Value;
-			public: using typename Super_::Engine;
-			public: using Super_::squeezedOnly;
-			public: using Super_::maxIndex;
-			public: using Super_::Super_;
-			public: using Super_::index;
-			public: using Super_::advance;
-			public: using Super_::retreat;
-
-			public: using value_type = Value;
-			public: using difference_type = Difference;
-			public: using pointer = Value*;
-			public: using reference = Value&;
-			public: using iterator_category = ::dcool::core::RandomAccessIteratorTag;
-
-			private: RangeChassis* m_range_ = ::dcool::core::nullPointer;
-			private: ::dcool::core::StaticOptional<Engine*, !squeezedOnly> m_engine_ = { .value = ::dcool::core::nullPointer };
-
-			public: constexpr ListChassisIterator_() noexcept = default;
-
-			public: constexpr ListChassisIterator_(
-				::dcool::container::detail_::ListChassisIterator_<
-					::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnly_, maxIndexC_, DistinguisherT_
-				> const& other_
-			) noexcept: Super_(other_.index()), m_range_(other_.m_range_), m_engine_{ .value = other_.m_engine_ } {
-			}
-
-			public: constexpr ListChassisIterator_(
-				RangeChassis& range_, Index index_
-			) noexcept: Super_(index_), m_range_(::dcool::core::addressOf(range_)) {
-				static_assert(squeezedOnly);
-			}
-
-			public: constexpr ListChassisIterator_(
-				RangeChassis& range_, Engine& engine_, Index index_
-			) noexcept:
-				Super_(index_), m_range_(::dcool::core::addressOf(range_)), m_engine_{ .value = ::dcool::core::addressOf(engine_) }
-			{
-			}
-
-			public: constexpr auto operator =(
-				::dcool::container::detail_::ListChassisIterator_<
-					::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnly_, maxIndexC_, DistinguisherT_
-				> const& other_
-			) noexcept -> Self_& {
-				this->Super_::operator =(
-					static_cast<
-						::dcool::container::detail_::ListChassisIterator_<
-							::dcool::core::ConstRemovedType<RangeChassis>, squeezedOnly_, maxIndexC_, DistinguisherT_
-						>::Super_ const&
-					>(other_)
-				);
-				this->m_range_ = other_.m_range_;
-				this->m_engine_ = other_.m_engine_;
-				return *this;
-			}
-
-			public: constexpr auto next(Difference step_ = 1) const noexcept -> Self_ {
-				Self_ result_;
-				if constexpr (squeezedOnly) {
-					result_ = Self_(*(this->m_range_), static_cast<Difference>(this->index()) + step_);
-				} else {
-					result_ = Self_(*(this->m_range_), *(this->m_engine_.value), static_cast<Difference>(this->index()) + step_);
-				}
-				return result_;
-			}
-
-			public: constexpr auto previous(Difference step_ = 1) const noexcept -> Self_ {
-				return this->next(-step_);
-			}
-
-			public: constexpr auto dereferenceSelf() const noexcept -> Value& {
-				Value* pointer_;
-				if constexpr (squeezedOnly) {
-					pointer_ = ::dcool::core::addressOf(this->dereferenceSelfWith(*(this->m_range_)));
-				} else {
-					pointer_ = ::dcool::core::addressOf(this->dereferenceSelfWith(*(this->m_range_), *(this->m_engine_.value)));
-				}
-				return *pointer_;
-			}
-
-			public: constexpr auto rawPointer() const noexcept -> Value* {
-				Value* result_;
-				if constexpr (squeezedOnly) {
-					result_ = this->rawPointerWith(*(this->m_range_));
-				} else {
-					result_ = this->rawPointerWith(*(this->m_range_), *(this->m_engine_.value));
-				}
-				return result_;
-			}
-
-			public: constexpr auto operator *() const noexcept -> Value& {
-				return this->dereferenceSelf();
-			}
-
-			public: constexpr auto operator ->() const noexcept -> Value* {
-				return ::dcool::core::addressOf(this->dereferenceSelf());
-			}
-
-			public: constexpr auto distanceTo(Self_ const& other_) const noexcept -> Difference {
-				return this->Super_::distanceTo(other_);
-			}
-
-			public: friend constexpr auto operator <=>(
-				Self_ const& left_, Self_ const& right_
-			) noexcept -> ::dcool::core::StrongOrdering {
-				return static_cast<Super_ const&>(left_) <=> static_cast<Super_ const&>(right_);
-			}
-
-			public: friend constexpr auto operator == (
-				Self_ const& left_, Self_ const& right_
-			) noexcept -> ::dcool::core::Boolean {
-				return static_cast<Super_ const&>(left_) == static_cast<Super_ const&>(right_);
-			}
-
-			public: constexpr auto operator ++() noexcept -> Self_& {
-				this->advance();
-				return *this;
-			}
-
-			public: constexpr auto operator ++(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->advance();
-				return result_;
-			}
-
-			public: constexpr auto operator --() noexcept -> Self_& {
-				this->retreat();
-				return *this;
-			}
-
-			public: constexpr auto operator --(::dcool::core::PostDisambiguator) noexcept -> Self_ {
-				Self_ result_ = *this;
-				this->retreat();
-				return result_;
-			}
-
-			public: constexpr auto operator +=(Difference step_) noexcept -> Self_& {
-				this->advance(step_);
-				return *this;
-			}
-
-			public: friend constexpr auto operator +(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.next(step_);
-			}
-
-			public: friend constexpr auto operator +(Difference step_, Self_ const& iterator_) noexcept -> Self_ {
-				return iterator_ + step_;
-			}
-
-			public: constexpr auto operator -=(Difference step_) noexcept -> Self_& {
-				this->retreat(step_);
-				return *this;
-			}
-
-			public: friend constexpr auto operator -(Self_ const& iterator_, Difference step_) noexcept -> Self_ {
-				return iterator_.previous(step_);
-			}
-
-			public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
-				return right_.distanceTo(left_);
-			}
-		};
-	}
-
-	template <typename ValueT_, typename ConfigT_> struct ListChassis;
-
-	namespace detail_ {
 		template <::dcool::core::Boolean squeezedOnlyC_, typename ConfigT_, typename ValueT_> struct ListConfigAdaptorBase_ {
 			private: using Self_ = ListConfigAdaptorBase_<squeezedOnlyC_, ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
@@ -467,6 +37,9 @@ namespace dcool::container {
 			;
 
 			public: using Length = ::dcool::core::IntegerType<squeezedCapacity_>;
+			public: using Difference = ::dcool::core::IntegerType<
+				squeezedCapacity_, -static_cast<::dcool::core::SignedMaxInteger>(squeezedCapacity_)
+			>;
 
 			public:	static constexpr ::dcool::core::Boolean squeezedOnly = true;
 			public: static constexpr Length squeezedCapacity = squeezedCapacity_;
@@ -505,8 +78,9 @@ namespace dcool::container {
 			);
 
 			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
-			public: using Handle = PoolAdaptor::Handle;
+			public: using Handle = PoolAdaptor::ArrayHandle;
 			public: using Length = PoolAdaptor::Length;
+			public: using Difference = PoolAdaptor::Difference;
 
 			public: static constexpr Length storageMaxCapacity = ::std::numeric_limits<::dcool::core::Difference>::max();
 
@@ -547,23 +121,6 @@ namespace dcool::container {
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 				::dcool::core::exceptionSafetyStrategyOf<Config>
 			;
-
-			public: using Iterator = ::dcool::core::ConditionalType<
-				circular,
-				::dcool::container::detail_::ListChassisIterator_<
-					::dcool::container::ListChassis<Value, Config>, squeezedOnly, storageMaxCapacity
-				>,
-				::dcool::core::ContaminatedPointer<Value>
-			>;
-			public: using ConstIterator = ::dcool::core::ConditionalType<
-				circular,
-				::dcool::container::detail_::ListChassisIterator_<
-					::dcool::container::ListChassis<Value, Config> const, squeezedOnly, storageMaxCapacity
-				>,
-				::dcool::core::ContaminatedPointer<Value const>
-			>;
-			public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
-			public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
 		};
 	}
 
@@ -1045,11 +602,8 @@ namespace dcool::container {
 		private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Config, Value>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Length = ConfigAdaptor_::Length;
+		public: using Difference = ConfigAdaptor_::Difference;
 		public: using Index = ConfigAdaptor_::Index;
-		public: using Iterator = ConfigAdaptor_::Iterator;
-		public: using ConstIterator = ConfigAdaptor_::ConstIterator;
-		public: using ReverseIterator = ConfigAdaptor_::ReverseIterator;
-		public: using ReverseConstIterator = ConfigAdaptor_::ReverseConstIterator;
 		public: static constexpr ::dcool::core::Boolean squeezedOnly = ConfigAdaptor_::squeezedOnly;
 		public: static constexpr Length squeezedCapacity = ConfigAdaptor_::squeezedCapacity;
 		public: static constexpr ::dcool::core::Boolean stuffed = ConfigAdaptor_::stuffed;
@@ -1057,6 +611,15 @@ namespace dcool::container {
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			ConfigAdaptor_::exceptionSafetyStrategy
 		;
+
+		public: using Iterator = ::dcool::core::ConditionalType<
+			circular, ::dcool::container::IndexableChassisIterator<Self_>, ::dcool::core::ContaminatedPointer<Value>
+		>;
+		public: using ConstIterator = ::dcool::core::ConditionalType<
+			circular, ::dcool::container::IndexableChassisIterator<Self_ const>, ::dcool::core::ContaminatedPointer<Value const>
+		>;
+		public: using ReverseIterator = ::dcool::core::ReverseIterator<Iterator>;
+		public: using ReverseConstIterator = ::dcool::core::ReverseIterator<ConstIterator>;
 		private: using StorageType_ = ::dcool::container::detail_::ListChassisStorage_<ValueT_, ConfigT_>;
 
 		private: StorageType_ m_storage_;
@@ -1370,13 +933,11 @@ namespace dcool::container {
 			return this->capacity(engine_) - this->length(engine_);
 		}
 
-		private: constexpr auto data() const noexcept -> Value const* {
-			static_assert(squeezedOnly);
+		private: constexpr auto data() const noexcept -> Value const* requires (squeezedOnly) {
 			return this->m_storage_.data();
 		}
 
-		private: constexpr auto data() noexcept -> Value* {
-			static_assert(squeezedOnly);
+		private: constexpr auto data() noexcept -> Value* requires (squeezedOnly) {
 			return this->m_storage_.data();
 		}
 
@@ -1478,7 +1039,7 @@ namespace dcool::container {
 			return index_ - lengthOfFrontPart_;
 		}
 
-		public: constexpr auto rawPointerAt(Index index_) const noexcept -> Value const* {
+		public: constexpr auto rawPointerAt(Index index_) const noexcept -> Value const* requires (squeezedOnly) {
 			Value const* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1488,7 +1049,7 @@ namespace dcool::container {
 			return result_;
 		}
 
-		public: constexpr auto rawPointerAt(Index index_) noexcept -> Value* {
+		public: constexpr auto rawPointerAt(Index index_) noexcept -> Value* requires (squeezedOnly) {
 			Value* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1518,8 +1079,7 @@ namespace dcool::container {
 			return result_;
 		}
 
-		public: constexpr auto access(Index index_) const noexcept -> Value const& {
-			static_assert(squeezedOnly);
+		public: constexpr auto access(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value const> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data() + this->itemOffset_(index_));
@@ -1529,8 +1089,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Index index_) noexcept -> Value& {
-			static_assert(squeezedOnly);
+		public: constexpr auto access(Index index_) noexcept -> Value& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data() + this->itemOffset_(index_));
@@ -2026,19 +1585,17 @@ namespace dcool::container {
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::container::ListConfigAdaptor<Config, Value>;
 		public: using Chassis = ::dcool::container::ListChassis<Value, Config>;
-		public: using Engine = ConfigAdaptor_::Engine;
-		public: using Length = ConfigAdaptor_::Length;
-		public: using Index = ConfigAdaptor_::Index;
-		public: using Iterator = ConfigAdaptor_::Iterator;
-		public: using ConstIterator = ConfigAdaptor_::ConstIterator;
-		public: using ReverseIterator = ConfigAdaptor_::ReverseIterator;
-		public: using ReverseConstIterator = ConfigAdaptor_::ReverseConstIterator;
-		public: static constexpr ::dcool::core::Boolean squeezedOnly = ConfigAdaptor_::squeezedOnly;
-		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-			ConfigAdaptor_::exceptionSafetyStrategy
-		;
+		public: using Engine = Chassis::Engine;
+		public: using Length = Chassis::Length;
+		public: using Difference = Chassis::Difference;
+		public: using Index = Chassis::Index;
+		public: using Iterator = Chassis::Iterator;
+		public: using ConstIterator = Chassis::ConstIterator;
+		public: using ReverseIterator = Chassis::ReverseIterator;
+		public: using ReverseConstIterator = Chassis::ReverseConstIterator;
+		public: static constexpr ::dcool::core::Boolean squeezedOnly = Chassis::squeezedOnly;
+		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy = Chassis::exceptionSafetyStrategy;
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
