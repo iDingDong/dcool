@@ -700,7 +700,13 @@ namespace dcool::container {
 		}
 
 		public: template <::dcool::core::InputIterator IteratorT__> constexpr void initialize(
-			Engine& engine_, IteratorT__ iterator_, Length count_
+			Engine& engine_, ::dcool::core::RangeInputTag tag_, IteratorT__ begin_, IteratorT__ end_
+		) {
+			this->initialize(engine_, tag_, begin_, ::dcool::core::rangeLength(begin_, end_));
+		}
+
+		public: template <::dcool::core::InputIterator IteratorT__> constexpr void initialize(
+			Engine& engine_, ::dcool::core::RangeInputTag tag_, IteratorT__ iterator_, Length count_
 		) {
 			this->initializeWithoutFill_(engine_, count_);
 			try {
@@ -1618,14 +1624,15 @@ namespace dcool::container {
 		}
 
 		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
-			::dcool::core::RangeInputTag, IteratorT_ otherBegin_, Length count_
+			::dcool::core::RangeInputTag tag_, IteratorT_ otherBegin_, Length count_
 		) {
-			this->chassis().initialize(this->engine_(), otherBegin_, count_);
+			this->chassis().initialize(this->engine_(), tag_, otherBegin_, count_);
 		}
 
 		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
 			::dcool::core::RangeInputTag tag_, IteratorT_ otherBegin_, IteratorT_ otherEnd_
-		): Self_(tag_, otherBegin_, ::dcool::core::rangeLength(otherBegin_, otherEnd_)) {
+		) {
+			this->chassis().initialize(this->engine_(), tag_, otherBegin_, otherEnd_);
 		}
 
 		public: constexpr ~List() noexcept {
