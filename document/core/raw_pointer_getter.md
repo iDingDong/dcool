@@ -18,4 +18,4 @@ Returns a raw pointer type representing the same reference as `pointer`.
 ## Notes
 
 - `rawPointerToLivingOf` expects to always return a pointer ready for dereferencing, i.e. properly laundered if necessary. `rawPointerOf` never expects to get the pointer returned dereferenced other than for placement new.
-- When comparing the result of calls to `rawPointerOf`, if any of the argument `pointer` does not point to a valid object, it is possible that the result of equality comparison is `true`, which means only comparing two `rawPointerOf(pointer)` to valid objects makes sense.
+- When comparing the result of calls to `rawPointerOf`, if any of the argument `pointer` does not point to a valid object, it is possible that the result of equality comparison is `true` even if the `pointer`s are not equivalent, which means only comparing two `rawPointerOf(pointer)` to valid objects makes sense.
