@@ -45,9 +45,9 @@ In addition, names defined in namespace `*::detail_`, or names followed by taili
 
 Unless otherwise specified, there could be major differences as follows:
 
-- `public` access specifiers are omitted in the document and you are safe to assume all documented members are public unless otherwise specified.
+- `public` access specifiers are omitted in the document and users are safe to assume all documented members are public unless otherwise specified.
 - Parameter names may be different.
 - Additional constraints might be applied for better diagnostics.
 - Type names might be aliases even if specified as `struct`, `union`, etc.
 - Dependent names might be disambiguated.
-- Function prototypes behaves as-if how it can be called. For example, a function documented `void Foo()` might be implemented as `int Foo()`. This means you are discouraged to take a function pointer even if the function is documented here unless otherwise specified.
+- Function prototypes behaves as-if how it can be called. For example, a function documented `void Foo()` might be implemented as `int Foo()`. This means users are discouraged to take a function pointer even if the function is documented here unless otherwise specified.
