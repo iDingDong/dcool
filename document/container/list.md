@@ -21,10 +21,12 @@ Its member shall customize the list as decribed:
 | Member | Default | Behavior |
 | - | - | - |
 | `static constexpr dcool::core::Boolean squeezedOnly` | `false` | All items will only be stored inside a size-fixed storage (prefers static allocation) if it takes value `true`; otherwise items will be stored in an dynamically allocated storage if capacity exceeds `squeezedCapacity`. |
-| `static constexpr dcool::core::Length squeezedCapacity` | 0 | The capacity provided by a size-fixed storage shall be equal to `squeezedCapacity`. Behavior is undefined if `squeezedOnly` takes value true and `squeezedCapacity` takes value 0. which means `squeezedCapacity` is always expected to be user-defined if `squeezedOnly`. |
+| `static constexpr dcool::core::Length squeezedCapacity` | *See below* | The capacity provided by a size-fixed storage shall be equal to `squeezedCapacity`. Behavior is undefined if `squeezedOnly` takes value true and `squeezedCapacity` takes value 0. which means `squeezedCapacity` is always expected to be user-defined if `squeezedOnly`. |
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
 | `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
+
+`squeezedCapacity` takes unspecified value by default if the value type of list can move construct and assign without throw and `squeezedOnly` is false, otherwise it takes value 0 by default.
 
 ### Note
 
@@ -67,7 +69,7 @@ Given constant `dcool::core::Length N` (assumes `N > 0` is true):
 constexpr List() noexcept(/* unspecified expression */); // 1
 constexpr List(List const& other) noexcept(/* unspecified expression */); // 2
 constexpr List(List&& other) noexcept(/* unspecified expression */); // 3
-constexpr List(Length capacity) noexcept(/* unspecified expression */); // 4
+constexpr explicit List(Length capacity) noexcept(/* unspecified expression */); // 4
 template <dcool::core::InputIterator IteratorT> constexpr List(
 	dcool::core::RangeInputTag, IteratorT otherBegin, Length count
 ) noexcept(/* unspecified expression */); // 5

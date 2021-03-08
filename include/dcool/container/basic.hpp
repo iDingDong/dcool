@@ -3,19 +3,41 @@
 
 #	include <dcool/core.hpp>
 
-DCOOL_CORE_DEFINE_MEMBER_CALLER(
-	dcool::container::detail_,
-	DirectlyBackPushable_,
-	generalPushBackTo_,
-	pushBack,
-	[](auto& container_, auto&& value_) {
-		container_.push_back(::dcool::core::forward<decltype(value_)>(value_));
-	}
-)
+DCOOL_CORE_DEFINE_MEMBER_CALLER(dcool::container::detail_, DirectlyBackPushable_, pushBackToOr_, pushBack)
 
 namespace dcool::container {
+	namespace detail_ {
+		template <typename ValueT_, typename ContainerT_> constexpr void generalPushBackTo_(
+			ContainerT_& container_, ValueT_&& value_
+		) noexcept(
+			noexcept(
+				::dcool::container::detail_::pushBackToOr_(
+					[](auto& container_, auto&& value_) {
+						container_.push_back(::dcool::core::forward<decltype(value_)>(value_));
+					},
+					container_,
+					::dcool::core::forward<ValueT_>(value_)
+				)
+			)
+		) {
+			::dcool::container::detail_::pushBackToOr_(
+				[](auto& container_, auto&& value_) {
+					container_.push_back(::dcool::core::forward<decltype(value_)>(value_));
+				},
+				container_,
+				::dcool::core::forward<ValueT_>(value_)
+			);
+		}
+	}
+
 	template <typename T_, typename ValueT_> concept CompatibleBackPushable = requires (T_ container_, ValueT_&& value_) {
-		::dcool::container::detail_::generalPushBackTo_(container_, ::dcool::core::forward<ValueT_>(value_));
+		::dcool::container::detail_::generalPushBackTo_(
+			[](auto& container_, auto&& value_) {
+				container_.push_back(::dcool::core::forward<decltype(value_)>(value_));
+			},
+			container_,
+			::dcool::core::forward<ValueT_>(value_)
+		);
 	};
 
 	template <
@@ -27,17 +49,29 @@ namespace dcool::container {
 	}
 }
 
-DCOOL_CORE_DEFINE_MEMBER_CALLER(
-	dcool::container::detail_,
-	DirectlyFrontPoppable_,
-	generalPopFrontOf_,
-	popFront,
-	[](auto& container_) {
-		container_.pop_front();
-	}
-)
+DCOOL_CORE_DEFINE_MEMBER_CALLER(dcool::container::detail_, DirectlyFrontPoppable_, popFrontOfOr_, popFront)
 
 namespace dcool::container {
+	namespace detail_ {
+		template <typename ContainerT_> constexpr void generalPopFrontOf_(ContainerT_& container_) noexcept(
+			noexcept(
+				::dcool::container::detail_::popFrontOfOr_(
+					[](auto& container_) {
+						container_.pop_front();
+					},
+					container_
+				)
+			)
+		) {
+			::dcool::container::detail_::popFrontOfOr_(
+				[](auto& container_) {
+					container_.pop_front();
+				},
+				container_
+			);
+		}
+	}
+
 	template <typename T_> concept CompatibleFrontPoppable = requires (T_ container_) {
 		::dcool::container::detail_::generalPopFrontOf_(container_);
 	};

@@ -135,9 +135,7 @@ namespace dcool::container {
 			return *::dcool::core::launder(this->rawPointerWith(engine_, rangeChassis_));
 		}
 
-		public: friend constexpr auto operator <=>(
-			Self_ const&, Self_ const&
-		) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept = default;
 
 		public: friend constexpr auto operator == (
 			Self_ const&, Self_ const&
@@ -300,7 +298,7 @@ namespace dcool::container {
 
 		public: friend constexpr auto operator <=>(
 			Self_ const& left_, Self_ const& right_
-		) noexcept -> ::dcool::core::StrongOrdering {
+		) noexcept {
 			return static_cast<Super_ const&>(left_) <=> static_cast<Super_ const&>(right_);
 		}
 
