@@ -5,5 +5,6 @@
 #	include <dcool/container/indexable_iterator.hpp>
 #	include <dcool/container/linked.hpp>
 #	include <dcool/container/list.hpp>
+#	include <dcool/container/string.hpp>
 
 #endif
