@@ -117,6 +117,10 @@ namespace dcool::core {
 			return *::dcool::core::launder(this->m_pointer_);
 		}
 
+		public: constexpr auto operator [](Difference difference_) const noexcept -> Reference {
+			return *(this->next(difference_));
+		}
+
 		public: constexpr auto operator ->() const noexcept -> Pointer {
 			return ::dcool::core::launder(this->m_pointer_);
 		}
@@ -129,7 +133,7 @@ namespace dcool::core {
 			::dcool::core::launder(this->m_pointer_)->~Value();
 		}
 
-		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept = default;
 		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;

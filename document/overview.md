@@ -10,9 +10,9 @@ This library is a work-in-progress and is not expected to be fully stablized unt
 
 The type template parameter configuration provides its nested members to customize the behavior. A required member is optional if marked with a default value or type.
 
-If a user-provided configuration type have any member name that is not required, the behavior is undefined unless the name contains an underscore.
+If a user-provided configuration type have any public(or accessible by corresponding adaptor in any other ways) member name that is not required, the behavior is undefined unless the name contains an underscore.
 
-If a user-provided configuration type have the member name occupied with a definition that does not suite the requirement, the behavior is undefined.
+If a user-provided configuration type have the public(or accessible by corresponding adaptor in any other ways) member name occupied with a definition that does not suite the requirement, the behavior is undefined.
 
 ## Reserved names
 

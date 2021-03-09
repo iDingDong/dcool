@@ -45,7 +45,6 @@ namespace dcool::container {
 			public: static constexpr Length squeezedCapacity = squeezedCapacity_;
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, ::dcool::core::ComparableEmpty<Self_>>;
-			public: static constexpr Length storageMaxCapacity = squeezedCapacity_;
 		};
 
 		template <
@@ -74,19 +73,19 @@ namespace dcool::container {
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
 			static_assert(
 				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
-				"User-defined 'Pool' does not match return value of 'Engine::listPool'"
+				"User-defined 'Pool' does not match return value of 'Engine::pool'"
 			);
 
 			public: using PoolAdaptor = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
 			public: using Handle = PoolAdaptor::ArrayHandle;
 			public: using Length = PoolAdaptor::Length;
 			public: using Difference = PoolAdaptor::Difference;
-
-			public: static constexpr Length storageMaxCapacity = ::std::numeric_limits<::dcool::core::Difference>::max();
-
-			public: static constexpr Length squeezedCapacity =
-				::dcool::container::detail_::extractedSqueezedCapacityValue_<Config>(::dcool::core::Length(0))
-			;
+			private: static constexpr Length recommendedSqueezedCapacity_ = ::dcool::resource::defaultSqueezedCapacityFor<
+				Value, Handle
+			>;
+			public: static constexpr Length squeezedCapacity = ::dcool::container::detail_::extractedSqueezedCapacityValue_<Config>(
+				::dcool::core::isNoThrowMovable<Value> ? recommendedSqueezedCapacity_ : 0
+			);
 
 			public: using BasicStorage = ::dcool::resource::ArraySqueezer<::dcool::core::StorageFor<Value>, Handle, squeezedCapacity>;
 		};
@@ -109,7 +108,6 @@ namespace dcool::container {
 
 			public: using typename Super_::Length;
 			public: using Super_::squeezedOnly;
-			public: using Super_::storageMaxCapacity;
 
 			public: using Index = Length;
 			public: static constexpr ::dcool::core::Boolean stuffed = ::dcool::container::detail_::extractedStuffedValue_<Config>(
@@ -771,22 +769,6 @@ namespace dcool::container {
 			this->m_storage_.relocateTo(other_.m_storage_);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-			if constexpr (squeezedOnly) {
-				this->squeezedRelocateTo_(engine_, otherEngine_, other_);
-			} else {
-				if constexpr (squeezedCapacity > 0) {
-					if (this->squeezed(engine_) || engine_ != otherEngine_) {
-						this->squeezedRelocateTo_(engine_, otherEngine_, other_);
-						return;
-					}
-				}
-				this->unsqueezedRelocateTo_(engine_, otherEngine_, other_);
-			}
-		}
-
 		public: template <typename ValueT__, typename ConfigT__> constexpr void cloneTo(
 			Engine& engine_,
 			::dcool::container::ListChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
@@ -803,6 +785,22 @@ namespace dcool::container {
 			} catch (...) {
 				other_.uninitializeWithoutFilled_(otherEngine_);
 				throw;
+			}
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			if constexpr (squeezedOnly) {
+				this->squeezedRelocateTo_(engine_, otherEngine_, other_);
+			} else {
+				if constexpr (squeezedCapacity > 0) {
+					if (this->squeezed(engine_) || engine_ != otherEngine_) {
+						this->squeezedRelocateTo_(engine_, otherEngine_, other_);
+						return;
+					}
+				}
+				this->unsqueezedRelocateTo_(engine_, otherEngine_, other_);
 			}
 		}
 
@@ -1619,18 +1617,18 @@ namespace dcool::container {
 			other_.chassis().initialize(other_.engine_());
 		}
 
-		public: constexpr List(Length capacity_) noexcept {
+		public: constexpr explicit List(Length capacity_) {
 			this->chassis().initialize(this->engine_(), capacity_);
 		}
 
-		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
-			::dcool::core::RangeInputTag tag_, IteratorT_ otherBegin_, Length count_
+		public: template <::dcool::core::InputIterator IteratorT__> constexpr List(
+			::dcool::core::RangeInputTag tag_, IteratorT__ otherBegin_, Length count_
 		) {
 			this->chassis().initialize(this->engine_(), tag_, otherBegin_, count_);
 		}
 
-		public: template <::dcool::core::InputIterator IteratorT_> constexpr List(
-			::dcool::core::RangeInputTag tag_, IteratorT_ otherBegin_, IteratorT_ otherEnd_
+		public: template <::dcool::core::InputIterator IteratorT__> constexpr List(
+			::dcool::core::RangeInputTag tag_, IteratorT__ otherBegin_, IteratorT__ otherEnd_
 		) {
 			this->chassis().initialize(this->engine_(), tag_, otherBegin_, otherEnd_);
 		}
@@ -1685,7 +1683,7 @@ namespace dcool::container {
 			return this->m_engine_;
 		}
 
-		public: constexpr auto engine_() const noexcept -> Engine& {
+		private: constexpr auto engine_() const noexcept -> Engine& {
 			return this->m_engine_;
 		}
 
