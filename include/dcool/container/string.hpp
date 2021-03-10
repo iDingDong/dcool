@@ -6,6 +6,7 @@
 #	include <dcool/core.hpp>
 
 #	include <string>
+#	include <iostream>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::container::detail_, HasTypeCharacter_, ExtractedCharacterType_, Character)
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
@@ -111,20 +112,40 @@ namespace dcool::container {
 				);
 			}
 
-			private: static constexpr ::dcool::core::Boolean standardCharacterTraitUncustomized_ =
-				(!::dcool::container::detail_::HasCallableCStringLengthOf_<Config, Character const*>) &&
-				(!::dcool::container::detail_::HasCallableCharacterCompare_<Config, Character, Character>) &&
-				(!::dcool::container::detail_::HasCallableCharacterSequenceCompare_<Config, Character const*, Character const*, Length>)
+			private: static constexpr ::dcool::core::Boolean characterTraitCustomized_ =
+				::dcool::container::detail_::HasCallableCStringLengthOf_<Config, Character const*> ||
+				::dcool::container::detail_::HasCallableCharacterCompare_<Config, Character, Character> ||
+				::dcool::container::detail_::HasCallableCharacterSequenceCompare_<Config, Character const*, Character const*, Length>
 			;
 
 			private: struct StandardCharacterTrait_: public BaseStandardCharacterTrait {
 				static constexpr auto length(Character const* cString_) noexcept -> ::dcool::core::Length {
 					return cStringLengthOf(cString_);
 				}
+
+				static constexpr auto eq(Character left_, Character right_) noexcept -> ::dcool::core::Boolean {
+					return ::dcool::core::equalOrEquivalent(characterCompare(left_, right_));
+				}
+
+				static constexpr auto lt(Character left_, Character right_) noexcept -> ::dcool::core::Boolean {
+					return characterCompare(left_, right_) == ComparisonCategory::less;
+				}
+
+				static constexpr auto compare(
+					Character const* left_, Character const* right_, ::dcool::core::Length length_
+				) noexcept -> int {
+					auto result_ = characterSequenceCompare(left_, right_, length_);
+					if (result_ == ComparisonCategory::less) {
+						return -1;
+					} else if (result_ == ComparisonCategory::greater) {
+						return 1;
+					}
+					return 0;
+				}
 			};
 
 			public: using StandardCharacterTrait = ::dcool::core::ConditionalType<
-				standardCharacterTraitUncustomized_, BaseStandardCharacterTrait, StandardCharacterTrait_
+				characterTraitCustomized_, StandardCharacterTrait_, BaseStandardCharacterTrait
 			>;
 
 			static_assert(::dcool::core::isTrivial<Character>);
@@ -143,13 +164,13 @@ namespace dcool::container {
 
 		private: using ConfigAdaptor_ = ::dcool::container::StringConfigAdaptor<Config>;
 		public: using Character = ConfigAdaptor_::Character;
-		private: using StandardCharacterTrait_ = ConfigAdaptor_::StandardCharacterTrait;
+		public: using StandardCharacterTrait = ConfigAdaptor_::StandardCharacterTrait;
 		public: using Pool = ConfigAdaptor_::Pool;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: template <
 			typename AllocatorT__ = ::std::allocator<Character>
-		> using StandardString = ::std::basic_string<Character, StandardCharacterTrait_, AllocatorT__>;
-		public: using StandardView = ::std::basic_string_view<Character, StandardCharacterTrait_>;
+		> using StandardString = ::std::basic_string<Character, StandardCharacterTrait, AllocatorT__>;
+		public: using StandardView = ::std::basic_string_view<Character, StandardCharacterTrait>;
 		public: using Length = ConfigAdaptor_::Length;
 		public: using ComparisonCategory = ConfigAdaptor_::ComparisonCategory;
 		public: static constexpr ::dcool::core::Boolean squeezedOnly = ConfigAdaptor_::squeezedOnly;
@@ -332,19 +353,31 @@ namespace dcool::container {
 			return StandardView(this->begin(engine_), this->end(engine_));
 		}
 
+		public: static constexpr auto compare(
+			Engine& leftEngine_, Self_ const& left_, Engine& rightEngine_, Self_ const& right_
+		) noexcept -> ComparisonCategory {
+			Length commonLength = ::dcool::core::min(left_.length(leftEngine_), right_.length(rightEngine_));
+			auto compareResult_ = ConfigAdaptor_::characterSequenceCompare(
+				left_.data(leftEngine_), right_.data(rightEngine_), commonLength
+			);
+			if (::dcool::core::equalOrEquivalent(compareResult_)) {
+				if (left_.length(leftEngine_) < right_.length(rightEngine_)) {
+					return ComparisonCategory::less;
+				} else if (right_.length(rightEngine_) < left_.length(leftEngine_)) {
+					return ComparisonCategory::greater;
+				}
+			}
+			return compareResult_;
+		}
+
 		public: static constexpr auto equivalent(
 			Engine& leftEngine_, Self_ const& left_, Engine& rightEngine_, Self_ const& right_
-		) noexcept {
+		) noexcept -> ::dcool::core::Boolean {
 			if (left_.length(leftEngine_) != right_.length(rightEngine_)) {
 				return false;
 			}
-			if (left_.length(leftEngine_) == 0) {
-				return true;
-			}
 			auto compareResult_ = ConfigAdaptor_::characterSequenceCompare(
-				::dcool::core::launder(left_.data(leftEngine_)),
-				::dcool::core::launder(right_.data(rightEngine_)),
-				left_.length(leftEngine_)
+				left_.data(leftEngine_), right_.data(rightEngine_), left_.length(leftEngine_)
 			);
 			return ::dcool::core::equalOrEquivalent(compareResult_);
 		}
@@ -357,6 +390,8 @@ namespace dcool::container {
 		public: using Chassis = ::dcool::container::StringChassis<Config>;
 		public: using Value = Chassis::Value;
 		public: using Character = Chassis::Character;
+		public: using StandardCharacterTrait = Chassis::StandardCharacterTrait;
+		public: using ComparisonCategory = Chassis::ComparisonCategory;
 		public: using Length = Chassis::Length;
 		public: using Index = Chassis::Index;
 		public: using Engine = Chassis::Engine;
@@ -379,7 +414,7 @@ namespace dcool::container {
 			other_.chassis().cloneTo(other_.engine_(), this->engine_(), this->chassis());
 		}
 
-		public: constexpr String(Self_&& other_): m_engine_(other_.engine_()) {
+		public: constexpr String(Self_&& other_) noexcept: m_engine_(other_.engine_()) {
 			other_.chassis().relocateTo(other_.engine_(), this->engine_(), this->chassis());
 			other_.chassis().initialize(other_.engine_());
 		}
@@ -408,7 +443,7 @@ namespace dcool::container {
 			this->chassis().initialize(this->engine_(), tag_, otherBegin_, otherEnd_);
 		}
 
-		public: template <typename AllocatorT__> constexpr String(StandardString<AllocatorT__> const& standardString_) {
+		public: template <typename AllocatorT__> constexpr explicit String(StandardString<AllocatorT__> const& standardString_) {
 			this->chassis().initialize(this->engine_(), standardString_);
 		}
 
@@ -422,14 +457,14 @@ namespace dcool::container {
 			return *this;
 		}
 
-		public: constexpr auto operator =(Self_&& other_) -> Self_& {
+		public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& {
 			this->swapWith(other_);
 			return *this;
 		}
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void swapWith(Self_& other_) {
+		> constexpr void swapWith(Self_& other_) noexcept {
 			this->chassis().template swapWith<strategyC__, true>(this->engine_(), other_.engine_(), other_.chassis());
 			::dcool::core::intelliSwap(this->engine_(), other_.engine_());
 		}
@@ -536,12 +571,28 @@ namespace dcool::container {
 
 		public: template <
 			typename AllocatorT__ = ::std::allocator<Character>
-		> constexpr auto toStandard() const noexcept -> StandardString<AllocatorT__> {
+		> constexpr auto toStandard() const -> StandardString<AllocatorT__> {
 			return this->chassis().template toStandard<AllocatorT__>(this->engine_());
+		}
+
+		public: constexpr explicit operator StandardString<>() const noexcept {
+			return this->toStandard();
 		}
 
 		public: constexpr auto toStandardView() const noexcept -> StandardView {
 			return this->chassis().toStandardView(this->engine_());
+		}
+
+		public: constexpr explicit operator StandardView() const noexcept {
+			return this->toStandardView();
+		}
+
+		public: static constexpr auto compareValue(Self_ const& left_, Self_ const& right_) noexcept -> ComparisonCategory {
+			return Chassis::compare(left_.engine_(), left_.chassis(), right_.engine_(), right_.chassis());
+		}
+
+		public: friend constexpr auto operator <=>(Self_ const& left_, Self_ const& right_) noexcept -> ComparisonCategory {
+			return compareValue(left_, right_);
 		}
 
 		public: static constexpr auto valueEquivalent(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::Boolean {
@@ -550,6 +601,21 @@ namespace dcool::container {
 
 		public: friend constexpr auto operator ==(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::Boolean {
 			return valueEquivalent(left_, right_);
+		}
+
+		public: friend constexpr auto operator <<(
+			::std::basic_ostream<Character, StandardCharacterTrait>& left_, Self_ const& right_
+		) -> ::std::ostream& {
+			return left_ << right_.toStandardView();
+		}
+
+		public: friend constexpr auto operator >>(
+			::std::basic_istream<Character, StandardCharacterTrait>& left_, Self_& right_
+		) -> ::std::ostream& {
+			StandardString<> middleMan_;
+			left_ >> middleMan_;
+			right_ = fromStandard(middleMan_);
+			return left_;
 		}
 	};
 }
