@@ -9,6 +9,7 @@ namespace dcool::core {
 	template <typename T_> concept TotallyOrdered = ::std::totally_ordered<T_>;
 
 	using PartialOrdering = ::std::partial_ordering;
+	using WeakOrdering = ::std::weak_ordering;
 	using StrongOrdering = ::std::strong_ordering;
 
 	template <typename OrderingT_> constexpr auto equalOrEquivalent(OrderingT_ result_) noexcept -> ::dcool::core::Boolean {
