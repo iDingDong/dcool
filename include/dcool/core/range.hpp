@@ -210,9 +210,10 @@ namespace dcool::core {
 	}
 
 	struct RangeInputTag {
+		constexpr explicit RangeInputTag() noexcept = default;
 	};
 
-	constexpr RangeInputTag rangeInput;
+	constexpr ::dcool::core::RangeInputTag rangeInput = ::dcool::core::RangeInputTag();
 
 	template <::dcool::core::BidirectionalIterator IteratorT_> constexpr auto previousOf(IteratorT_ iterator_) -> IteratorT_ {
 		--iterator_;
