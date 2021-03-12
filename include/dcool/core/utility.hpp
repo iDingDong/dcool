@@ -41,9 +41,11 @@ namespace dcool::core {
 
 	template <typename T_> struct TypedTag {
 		using Type = T_;
+
+		constexpr explicit TypedTag() noexcept = default;
 	};
 
-	template <typename T_> constexpr ::dcool::core::TypedTag<T_> typed;
+	template <typename T_> constexpr ::dcool::core::TypedTag<T_> typed = ::dcool::core::TypedTag<T_>();
 }
 
 #endif
