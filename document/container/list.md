@@ -50,6 +50,8 @@ Given constant `dcool::core::Length N` (assumes `N > 0` is true):
 | `Config` | Defined by `using Config = ConfigT;`. |
 | `Iterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. |
 | `ConstIterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. No write through it permitted. |
+| `ReverseIterator` | Reverse contiguous iterator (random access if `circular`) that can iterate through this list reversely. |
+| `ReverseConstIterator` | Reverse contiguous iterator (random access if `circular`) that can iterate through this list reversely. No write through it permitted. |
 | `Length` | An integer type that can represent the length or capacity of the list. |
 | `Index` | An integer type that can represent the index of an item in the list. |
 
@@ -176,6 +178,32 @@ constexpr auto end() noexcept -> Iterator;
 ```
 
 Returns an iterator to the one-past-last item of the list.
+
+#### Complexity
+
+Constant.
+
+### `reverseBegin`
+
+```cpp
+constexpr auto reverseBegin() const noexcept -> ReverseConstIterator;
+constexpr auto reverseBegin() noexcept -> ReverseIterator;
+```
+
+Returns an reverse iterator to the first item of the 'reversed' list.
+
+#### Complexity
+
+Constant.
+
+### `reverseEnd`
+
+```cpp
+constexpr auto reverseEnd() const noexcept -> ReverseConstIterator;
+constexpr auto reverseEnd() noexcept -> ReverseIterator;
+```
+
+Returns an reverse iterator to the one-past-last item of the 'reversed' list.
 
 #### Complexity
 
