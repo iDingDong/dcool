@@ -27,6 +27,9 @@ DCOOL_CORE_DEFINE_STATIC_MEMBER_CALLER(
 DCOOL_CORE_DEFINE_STATIC_MEMBER_CALLER(
 	dcool::container::detail_, HasCallableCharacterSequenceCompare_, characterSequenceCompareOr_, characterSequenceCompare
 )
+DCOOL_CORE_DEFINE_STATIC_MEMBER_CALLER(
+	dcool::container::detail_, HasCallableCharacterWidthInBytes_, characterWidthInBytesOr_, characterWidthInBytes
+)
 
 namespace dcool::container {
 	namespace detail_ {
@@ -108,6 +111,50 @@ namespace dcool::container {
 					},
 					left_,
 					right_,
+					length_
+				);
+			}
+
+			// If this returns a value greater than 'length_', the caller should consider the character corrupted.
+			public: static constexpr auto characterWidthInBytes(Character const* begin_, Length length_) noexcept -> Length {
+				return ::dcool::container::detail_::characterSequenceCompareOr_<Config>(
+					[](Character const* begin_, Length length_) noexcept -> Length {
+						if constexpr (::dcool::core::isSame<Character, char>) {
+							int result_ = std::mblen(begin_, length_);
+							if (result_ < 0) {
+								return length_ + 1;
+							}
+							return static_cast<Length>(result_);
+						}
+						if constexpr (::dcool::core::isSame<Character, char8_t>) {
+							char8_t head_ = *begin_;
+							if (head_ & 0b10000000 == 0) {
+								return 1;
+							}
+							if (head_ & 0b11110000 == 0b11110000) {
+								return 4;
+							}
+							if (head_ & 0b11100000 == 0b11100000) {
+								return 3;
+							}
+							if (head_ & 0b11000000 == 0b11000000) {
+								return 2;
+							}
+							return length_ + 1;
+						}
+						if constexpr (::dcool::core::isSame<Character, char16_t>) {
+							char16_t head_ = *begin_;
+							if (head_ & 0b10000000'00000000 == 0) {
+								return 1;
+							}
+							if (head_ & 0b11111100'00000000 == 0b11011000'00000000) {
+								return 2;
+							}
+							return length_ + 1;
+						}
+						return 1;
+					},
+					begin_,
 					length_
 				);
 			}
@@ -406,7 +453,7 @@ namespace dcool::container {
 		private: Chassis m_chassis_;
 		private: mutable Engine m_engine_;
 
-		public: constexpr String() noexcept(noexcept(::dcool::core::declval<Self_&>().chassis().initialize(this->engine_()))) {
+		public: constexpr String() noexcept(noexcept(this->chassis().initialize(this->engine_()))) {
 			this->chassis().initialize(this->engine_());
 		}
 

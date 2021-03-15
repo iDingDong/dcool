@@ -63,6 +63,9 @@ DCOOL_TEST_CASE(dcoolContainer, listBasics) {
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
+		list1.erase(list1.begin() + 1, list1.end() - 1);
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE_OF(Traced, -1, 3));
+		DCOOL_TEST_EXPECT(Traced::livingCount() == 2);
 	}
 	DCOOL_TEST_EXPECT(Traced::livingCount() == 0);
 }
@@ -141,6 +144,10 @@ DCOOL_TEST_CASE(dcoolContainer, stuffedlistBasics) {
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
+		list1.erase(list1.begin() + 1, list1.end() - 1);
+		DCOOL_TEST_EXPECT(list1.length() == list1.capacity());
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE_OF(Traced, -1, 3));
+		DCOOL_TEST_EXPECT(Traced::livingCount() == 2);
 	}
 	DCOOL_TEST_EXPECT(Traced::livingCount() == 0);
 }
@@ -207,6 +214,9 @@ DCOOL_TEST_CASE(dcoolContainer, circularlistBasics) {
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
+		list1.erase(list1.begin() + 1, list1.end() - 1);
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE_OF(Traced, -1, 3));
+		DCOOL_TEST_EXPECT(Traced::livingCount() == 2);
 	}
 	DCOOL_TEST_EXPECT(Traced::livingCount() == 0);
 }
@@ -273,6 +283,9 @@ DCOOL_TEST_CASE(dcoolContainer, smallListBasics) {
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
+		list1.erase(list1.begin() + 1, list1.end() - 1);
+		DCOOL_TEST_EXPECT_RANGE_EQUALITY(list1, DCOOL_TEST_SEQUENCE_OF(Traced, -1, 3));
+		DCOOL_TEST_EXPECT(Traced::livingCount() == 2);
 	}
 	DCOOL_TEST_EXPECT(Traced::livingCount() == 0);
 }

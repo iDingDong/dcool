@@ -97,7 +97,7 @@ namespace dcool::core {
 			this->underlying.unlock_shared();
 		}
 
-		public: constexpr void lock_shared() noexcept(::dcool::core::declval<Self_&>().lockShared()) {
+		public: constexpr void lock_shared() noexcept(this->lockShared()) {
 			this->lockShared();
 		}
 
@@ -105,7 +105,7 @@ namespace dcool::core {
 			return this->tryLockShared();
 		}
 
-		public: constexpr void unlock_shared() noexcept(::dcool::core::declval<Self_&>().unlockShared()) {
+		public: constexpr void unlock_shared() noexcept(this->unlockShared()) {
 			this->unlockShared();
 		}
 	};
@@ -368,7 +368,7 @@ namespace dcool::core {
 			return this->tryLock();
 		}
 
-		public: constexpr void lock_shared() noexcept(::dcool::core::declval<Self_&>().lockShared()) {
+		public: constexpr void lock_shared() noexcept(this->lockShared()) {
 			this->lockShared();
 		}
 
