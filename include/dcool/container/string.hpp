@@ -453,7 +453,7 @@ namespace dcool::container {
 		private: Chassis m_chassis_;
 		private: mutable Engine m_engine_;
 
-		public: constexpr String() noexcept(noexcept(::dcool::core::declval<Self_&>().chassis().initialize(this->engine_()))) {
+		public: constexpr String() noexcept(noexcept(this->chassis().initialize(this->engine_()))) {
 			this->chassis().initialize(this->engine_());
 		}
 
