@@ -86,6 +86,10 @@ namespace dcool::core {
 
 	template <typename T_> concept NoThrowMoveConstructible = ::dcool::core::isNoThrowMoveConstructible<T_>;
 
+	template <typename T_> constexpr ::dcool::core::Boolean isTrivial = ::std::is_trivial_v<T_>;
+
+	template <typename T_> concept Trivial = ::dcool::core::isTrivial<T_>;
+
 	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowMoveAssignable = ::std::is_nothrow_move_assignable_v<T_>;
 
 	template <typename T_> concept NoThrowMoveAssignable = ::dcool::core::isNoThrowMoveAssignable<T_>;

@@ -3,6 +3,7 @@
 
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/destruct.hpp>
 #	include <dcool/core/range.hpp>
 
 #	include <new>
@@ -38,7 +39,7 @@ namespace dcool::core {
 		) noexcept: m_pointer_(other_.m_pointer_) {
 		}
 
-		public: constexpr explicit ContaminatedPointer(Value* rawPointer_) noexcept: m_pointer_(rawPointer_) {
+		public: constexpr explicit ContaminatedPointer(Pointer rawPointer_) noexcept: m_pointer_(rawPointer_) {
 		}
 
 		public: constexpr explicit ContaminatedPointer(
@@ -58,8 +59,32 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto rawPointer() noexcept -> Value* {
+		public: constexpr auto rawPointer() const noexcept -> Pointer {
 			return this->m_pointer_;
+		}
+
+		public: constexpr auto dereferenceSelf() const noexcept -> Reference {
+			return *::dcool::core::launder(this->m_pointer_);
+		}
+
+		public: constexpr auto operator *() const noexcept -> Reference {
+			return this->dereferenceSelf();
+		}
+
+		public: constexpr auto operator [](Difference difference_) const noexcept -> Reference {
+			return this->next(difference_)->dereferenceSelf();
+		}
+
+		public: constexpr auto operator ->() const noexcept -> Pointer {
+			return ::dcool::core::addressOf(this->dereferenceSelf());
+		}
+
+		public: template <typename... ArgumentTs__> constexpr void constructTarget(ArgumentTs__&&... parameters_) const noexcept {
+			new (this->rawPointer()) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: constexpr void destructTarget() const noexcept {
+			::dcool::core::destruct(this->dereferenceSelf())->~Value();
 		}
 
 		public: constexpr auto operator ++() noexcept -> Self_& {
@@ -113,23 +138,7 @@ namespace dcool::core {
 			return left_.m_pointer_ - right_.m_pointer_;
 		}
 
-		public: constexpr auto operator *() const noexcept -> Reference {
-			return *::dcool::core::launder(this->m_pointer_);
-		}
-
-		public: constexpr auto operator ->() const noexcept -> Pointer {
-			return ::dcool::core::launder(this->m_pointer_);
-		}
-
-		public: template <typename... ArgumentTs__> constexpr void constructTarget(ArgumentTs__&&... parameters_) const noexcept {
-			new (this->m_pointer_) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
-		}
-
-		public: constexpr void destructTarget() const noexcept {
-			::dcool::core::launder(this->m_pointer_)->~Value();
-		}
-
-		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend constexpr auto operator <=>(Self_ const&, Self_ const&) noexcept = default;
 		public: friend constexpr auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;

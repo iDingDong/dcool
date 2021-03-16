@@ -21,10 +21,12 @@ Its member shall customize the list as decribed:
 | Member | Default | Behavior |
 | - | - | - |
 | `static constexpr dcool::core::Boolean squeezedOnly` | `false` | All items will only be stored inside a size-fixed storage (prefers static allocation) if it takes value `true`; otherwise items will be stored in an dynamically allocated storage if capacity exceeds `squeezedCapacity`. |
-| `static constexpr dcool::core::Length squeezedCapacity` | 0 | The capacity provided by a size-fixed storage shall be equal to `squeezedCapacity`. Behavior is undefined if `squeezedOnly` takes value true and `squeezedCapacity` takes value 0. which means `squeezedCapacity` is always expected to be user-defined if `squeezedOnly`. |
+| `static constexpr dcool::core::Length squeezedCapacity` | *See below* | The capacity provided by a size-fixed storage shall be equal to `squeezedCapacity`. Behavior is undefined if `squeezedOnly` takes value true and `squeezedCapacity` takes value 0. which means `squeezedCapacity` is always expected to be user-defined if `squeezedOnly`. |
 | `static constexpr dcool::core::Boolean stuffed` | `false` | The length of list shall be equal to capacity (always full) if it takes value `true`; otherwise the length will be seperately recorded during runtime with performance penalty. |
 | `static constexpr dcool::core::Boolean circular` | `false` | The list will behave as a ring buffer, reducing the runtime cost to insert or erase near the front of the list (if not `stuffed`) at the cost of perfomance penalty on other list operations if it takes value `true`; otherwise the list items will always be stored contiguously. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
+
+`squeezedCapacity` takes unspecified value by default if the value type of list can move construct and assign without throw and `squeezedOnly` is false, otherwise it takes value 0 by default.
 
 ### Note
 
@@ -48,6 +50,8 @@ Given constant `dcool::core::Length N` (assumes `N > 0` is true):
 | `Config` | Defined by `using Config = ConfigT;`. |
 | `Iterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. |
 | `ConstIterator` | Contiguous iterator (random access if `circular`) that can iterate through this list. No write through it permitted. |
+| `ReverseIterator` | Reverse contiguous iterator (random access if `circular`) that can iterate through this list reversely. |
+| `ReverseConstIterator` | Reverse contiguous iterator (random access if `circular`) that can iterate through this list reversely. No write through it permitted. |
 | `Length` | An integer type that can represent the length or capacity of the list. |
 | `Index` | An integer type that can represent the index of an item in the list. |
 
@@ -67,7 +71,7 @@ Given constant `dcool::core::Length N` (assumes `N > 0` is true):
 constexpr List() noexcept(/* unspecified expression */); // 1
 constexpr List(List const& other) noexcept(/* unspecified expression */); // 2
 constexpr List(List&& other) noexcept(/* unspecified expression */); // 3
-constexpr List(Length capacity) noexcept(/* unspecified expression */); // 4
+constexpr explicit List(Length capacity) noexcept(/* unspecified expression */); // 4
 template <dcool::core::InputIterator IteratorT> constexpr List(
 	dcool::core::RangeInputTag, IteratorT otherBegin, Length count
 ) noexcept(/* unspecified expression */); // 5
@@ -79,8 +83,8 @@ template <dcool::core::InputIterator IteratorT> constexpr List(
 - Overload 1: If `squeezedOnly`, initialize the list with 0 capacity; Otherwise if `stuffed`, default-initialize `squeezedCapacity` count of items.
 - Overload 2, 3: Construct as a copy of `other` (as-if).
 - Overload 4: Construct with capacity no less than argument `capacity`. If `stuffed`, the capacity of the constructed list would be exactly `capacity`, and `capacity` number of items will be default-initialized. This overload is unavailable if `squeezedOnly`.
-- Overload 5: Construct by copy all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `squeezedOnly` and `stuffed`.
-- Overload 6: Construct by copy all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `squeezedOnly` and `stuffed`.
+- Overload 5: Construct by copying all items from range [`otherBegin`, `otherEnd`) where `otherEnd` is `count` step ahead of `otherBegin`. This overload is unavailable if `squeezedOnly` and `stuffed`.
+- Overload 6: Construct by copying all items from range [`otherBegin`, `otherEnd`). This overload is unavailable if `squeezedOnly` and `stuffed`.
 
 ## Assignments
 
@@ -179,6 +183,32 @@ Returns an iterator to the one-past-last item of the list.
 
 Constant.
 
+### `reverseBegin`
+
+```cpp
+constexpr auto reverseBegin() const noexcept -> ReverseConstIterator;
+constexpr auto reverseBegin() noexcept -> ReverseIterator;
+```
+
+Returns an reverse iterator to the first item of the 'reversed' list.
+
+#### Complexity
+
+Constant.
+
+### `reverseEnd`
+
+```cpp
+constexpr auto reverseEnd() const noexcept -> ReverseConstIterator;
+constexpr auto reverseEnd() noexcept -> ReverseIterator;
+```
+
+Returns an reverse iterator to the one-past-last item of the 'reversed' list.
+
+#### Complexity
+
+Constant.
+
 ### `operator []`
 
 ```cpp
@@ -186,7 +216,7 @@ constexpr auto operator [](Index index) const noexcept -> Value const&;
 constexpr auto operator [](Index index) noexcept -> Value&;
 ```
 
-Returns a reference to the item at index `index`.
+Returns a reference to the item at index `index`. Behavior is undefined if `index` is not in range [0, `this->length()`).
 
 #### Complexity
 
@@ -205,7 +235,7 @@ template <typename... ArgumentTs> constexpr auto emplace(
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Insert a new item at `position` in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+Insert a new item at `position` in-place constructed with `parameters`. Behavior is undefined if list is `stuffed` and full, or if `position` is not in range [`this->begin()`, `this->end()`]. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
 Invalidates all previously obtained iterators.
 
@@ -226,7 +256,7 @@ template <typename... ArgumentTs> constexpr void emplaceFront(
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Insert a new item at the beginning of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+Insert a new item at the beginning of list in-place constructed with `parameters`. Behavior is undefined if list is `stuffed` and full. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
 Invalidates all previously obtained iterators.
 
@@ -247,7 +277,7 @@ template <typename... ArgumentTs> constexpr void emplaceBack(
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Insert a new item at the end of list in-place constructed with `parameters`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+Insert a new item at the end of list in-place constructed with `parameters`. Behavior is undefined if list is `stuffed` and full. Overload 1 will use `strategyC` instead of the default exception safety strategy.
 
 Invalidates all previously obtained iterators.
 
@@ -268,7 +298,7 @@ template <
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Insert a new item at the beginning of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+Insert a new item at the beginning of list in-place constructed with `value`. Use `strategyC` instead of the default exception safety strategy.  Behavior is undefined if list is `stuffed` and full.
 
 Invalidates all previously obtained iterators.
 
@@ -289,7 +319,7 @@ template <
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Insert a new item at the end of list in-place constructed with `value`. Overload 1 will use `strategyC` instead of the default exception safety strategy.
+Insert a new item at the end of list in-place constructed with `value`. Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if list is `stuffed` and full.
 
 Invalidates all previously obtained iterators.
 
@@ -303,11 +333,15 @@ Linear if full and cannot in-place expand, otherwise constant.
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
 > constexpr auto erase(Iterator position) noexcept(/* unspecified expression */) -> Iterator;
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
+> constexpr auto erase(Iterator begin, Iterator end) noexcept(/* unspecified expression */) -> Iterator;
 ```
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Erase an item at `position`. Use `strategyC` instead of the default exception safety strategy.
+- Overload 1: Erase an item at `position`. Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if `position` is not in range [`this->begin()`, `this->end()`).
+- Overload 2: Erase items in range [`begin`, `end`). Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if [`begin`, `end`) is not a sub range of [`this->begin()`, `this->end()`).
 
 Invalidates all previously obtained iterators.
 
@@ -321,11 +355,15 @@ Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
 > constexpr void popFront() noexcept(/* unspecified expression */);
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
+> constexpr void popFront(Iterator newBegin) noexcept(/* unspecified expression */);
 ```
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Erase the first item of the list. Use `strategyC` instead of the default exception safety strategy.
+- Overload 1: Erase the first item of the list. Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if list is empty.
+- Overload 2: Erase items in range [`this->begin()`, `newBegin`). Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if `newBegin` is not in range [`this->begin()`, `this->end()`].
 
 Invalidates all previously obtained iterators.
 
@@ -339,11 +377,15 @@ Linear if `stuffed`, otherwise linear if `dcool::core::atAnyCost(strategyC)` and
 template <
 	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
 > constexpr void popBack() noexcept(/* unspecified expression */);
+template <
+	::dcool::core::ExceptionSafetyStrategy strategyC = exceptionSafetyStrategy
+> constexpr void popBack(Iterator newEnd) noexcept(/* unspecified expression */);
 ```
 
 If `stuffed` and `squeezedOnly`, this member is not available.
 
-Erase the last item of the list. Use `strategyC` instead of the default exception safety strategy.
+- Overload 1: Erase the last item of the list. Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if list is empty.
+- Overload 2: Erase items in range [`newEnd`, `this->end()`). Use `strategyC` instead of the default exception safety strategy. Behavior is undefined if `newEnd` is not in range [`this->begin()`, `this->end()`].
 
 Invalidates all previously obtained iterators.
 

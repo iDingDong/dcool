@@ -178,7 +178,7 @@ namespace dcool::utility {
 
 			public: template <typename ValueT__> constexpr void initialize(Engine& engine_, ValueT__&& value_) noexcept(
 				noexcept(
-					::dcool::core::declval<Self_&>().template initialize<::dcool::core::DecayedType<ValueT__>>(
+					this->template initialize<::dcool::core::DecayedType<ValueT__>>(
 						engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
 					)
 				)

@@ -54,7 +54,7 @@
 			}; \
 		}
 
-#	define DCOOL_CORE_DEFINE_MEMBER_CALLER(namespaceName_, ConceptName_, callerName_, expectedMemberName_, alternativeHandler_) \
+#	define DCOOL_CORE_DEFINE_MEMBER_CALLER(namespaceName_, ConceptName_, callerName_, expectedMemberName_) \
 		namespace namespaceName_ { \
 			template < \
 				typename T_, typename... ArgumentTs_ \
@@ -62,16 +62,37 @@
 				::dcool::core::forward<T_>(object_).expectedMemberName_(::dcool::core::forward<ArgumentTs_>(parameters_)...); \
 			}; \
 			\
-			template <typename T_, typename... ArgumentTs_> constexpr auto callerName_(T_&& object_, ArgumentTs_&&... parameters_) { \
-				return (alternativeHandler_)( \
-					::dcool::core::forward<T_>(object_), ::dcool::core::forward<ArgumentTs_>(parameters_)... \
-				); \
+			template < \
+				typename AlternativeHandlerT_, typename T_, typename... ArgumentTs_ \
+			> constexpr auto callerName_(AlternativeHandlerT_&& alternativeHandler_, T_&& object_, ArgumentTs_&&... parameters_) { \
+				if constexpr (::namespaceName_::ConceptName_<T_, ArgumentTs_...>) { \
+					return ::dcool::core::forward<T_>(object_).expectedMemberName_(::dcool::core::forward<ArgumentTs_>(parameters_)...); \
+				} else { \
+					return ::dcool::core::forward<AlternativeHandlerT_>(alternativeHandler_)( \
+						::dcool::core::forward<T_>(object_), ::dcool::core::forward<ArgumentTs_>(parameters_)... \
+					); \
+				} \
 			} \
+		}
+
+#	define DCOOL_CORE_DEFINE_STATIC_MEMBER_CALLER(namespaceName_, ConceptName_, callerName_, expectedMemberName_) \
+		namespace namespaceName_ { \
+			template < \
+				typename T_, typename... ArgumentTs_ \
+			> concept ConceptName_ = requires (ArgumentTs_&&... parameters_) { \
+				T_::expectedMemberName_(::dcool::core::forward<ArgumentTs_>(parameters_)...); \
+			}; \
 			\
 			template < \
-				typename... ArgumentTs_, ::namespaceName_::ConceptName_<ArgumentTs_...> T_ \
-			> constexpr auto callerName_(T_&& object_, ArgumentTs_&&... parameters_) { \
-				return ::dcool::core::forward<T_>(object_).expectedMemberName_(::dcool::core::forward<ArgumentTs_>(parameters_)...); \
+				typename T_, typename AlternativeHandlerT_, typename... ArgumentTs_ \
+			> constexpr auto callerName_(AlternativeHandlerT_&& alternativeHandler_, ArgumentTs_&&... parameters_) { \
+				if constexpr (::namespaceName_::ConceptName_<T_, ArgumentTs_...>) { \
+					return T_::expectedMemberName_(::dcool::core::forward<ArgumentTs_>(parameters_)...); \
+				} else { \
+					return ::dcool::core::forward<AlternativeHandlerT_>(alternativeHandler_)( \
+						::dcool::core::forward<ArgumentTs_>(parameters_)... \
+					); \
+				} \
 			} \
 		}
 

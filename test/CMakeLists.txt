@@ -3,6 +3,7 @@ add_executable(
 	"./test.cpp"
 	"./container/linked.cpp"
 	"./container/list.cpp"
+	"./container/string.cpp"
 	"./resource/shared.cpp"
 	"./utility/any.cpp"
 	"./utility/function.cpp"

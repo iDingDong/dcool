@@ -146,7 +146,7 @@ namespace dcool::core {
 			return this->rawPointer();
 		}
 
-		public: friend auto operator <=>(Self_ const&, Self_ const&) noexcept -> ::dcool::core::StrongOrdering = default;
+		public: friend auto operator <=>(Self_ const&, Self_ const&) noexcept = default;
 		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend auto operator <(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
@@ -210,9 +210,10 @@ namespace dcool::core {
 	}
 
 	struct RangeInputTag {
+		constexpr explicit RangeInputTag() noexcept = default;
 	};
 
-	constexpr RangeInputTag rangeInput;
+	constexpr ::dcool::core::RangeInputTag rangeInput = ::dcool::core::RangeInputTag();
 
 	template <::dcool::core::BidirectionalIterator IteratorT_> constexpr auto previousOf(IteratorT_ iterator_) -> IteratorT_ {
 		--iterator_;
