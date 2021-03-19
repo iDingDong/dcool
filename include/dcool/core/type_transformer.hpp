@@ -92,6 +92,8 @@ namespace dcool::core {
 	>::type;
 
 	template <typename T_> using DecayedType = ::std::decay_t<T_>;
+
+	template <typename... T_> using CommonType = ::std::common_type_t<T_...>;
 }
 
 #endif
