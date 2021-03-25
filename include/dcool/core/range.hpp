@@ -6,6 +6,7 @@
 #	include <dcool/core/dereference.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/member_detector.hpp>
+#	include <dcool/core/reverse_iterator.hpp>
 #	include <dcool/core/type_difference_detector.hpp>
 #	include <dcool/core/type_value_detector.hpp>
 #	include <dcool/core/utility.hpp>
@@ -58,8 +59,6 @@ namespace dcool::core {
 			::std::iterator_traits<IteratorT_>, typename ::std::iterator_traits<IteratorT_>::iterator_category
 		>
 	>;
-
-	template <typename IteratorT_> using ReverseIterator = ::std::reverse_iterator<IteratorT_>;
 
 	template <typename IteratorT_> constexpr auto makeReverseIterator(IteratorT_ iterator_) noexcept {
 		return ::std::make_reverse_iterator(iterator_);
