@@ -781,11 +781,11 @@ namespace dcool::container {
 			}
 			try {
 				::dcool::core::batchCopyConstruct(this->begin(engine_), this->end(engine_), other_.begin(otherEngine_));
-				other_.m_storage_.setLength(otherEngine_, this->length(engine_));
 			} catch (...) {
 				other_.uninitializeWithoutFilled_(otherEngine_);
 				throw;
 			}
+			other_.m_storage_.setLength(otherEngine_, this->length(engine_));
 		}
 
 		public: template <
@@ -1048,6 +1048,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Index index_) const noexcept -> Value const* requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.capacity());
 			Value const* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1058,6 +1059,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Index index_) noexcept -> Value* requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.capacity());
 			Value* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1068,6 +1070,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Engine& engine_, Index index_) const noexcept -> Value const* {
+			DCOOL_CORE_ASSERT(index_ < this->capacity(engine_));
 			Value const* result_;
 			if constexpr (circular) {
 				result_ = this->data(engine_) + this->itemOffset_(engine_, index_);
@@ -1078,6 +1081,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Engine& engine_, Index index_) noexcept -> Value* {
+			DCOOL_CORE_ASSERT(index_ < this->capacity(engine_));
 			Value* result_;
 			if constexpr (circular) {
 				result_ = this->data(engine_) + this->itemOffset_(engine_, index_);
@@ -1087,7 +1091,7 @@ namespace dcool::container {
 			return result_;
 		}
 
-		public: constexpr auto access(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
+		private: constexpr auto access_(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value const> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data() + this->itemOffset_(index_));
@@ -1097,7 +1101,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Index index_) noexcept -> Value& requires (squeezedOnly) {
+		private: constexpr auto access_(Index index_) noexcept -> Value& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data() + this->itemOffset_(index_));
@@ -1107,7 +1111,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
+		private: constexpr auto access_(Engine& engine_, Index index_) const noexcept -> Value const& {
 			::dcool::core::ContaminatedPointer<Value const> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data(engine_) + this->itemOffset_(engine_, index_));
@@ -1117,7 +1121,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
+		private: constexpr auto access_(Engine& engine_, Index index_) noexcept -> Value& {
 			::dcool::core::ContaminatedPointer<Value> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data(engine_) + this->itemOffset_(engine_, index_));
@@ -1125,6 +1129,26 @@ namespace dcool::container {
 				pointer_ = this->position(engine_, index_);
 			}
 			return ::dcool::core::dereference(pointer_);
+		}
+
+		public: constexpr auto access(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.length());
+			return this->access_(index_);
+		}
+
+		public: constexpr auto access(Index index_) noexcept -> Value& requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.length());
+			return this->access_(index_);
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
+			DCOOL_CORE_ASSERT(index_ < this->length(engine_));
+			return this->access_(engine_, index_);
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
+			DCOOL_CORE_ASSERT(index_ < this->length(engine_));
+			return this->access_(engine_, index_);
 		}
 
 		public: constexpr auto front(Engine& engine_) const noexcept -> Value const& {
@@ -1239,6 +1263,8 @@ namespace dcool::container {
 		> constexpr void makeRoom_(
 			Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1
 		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= gapBegin_ && gapBegin_ <= this->end(engine_));
+			DCOOL_CORE_ASSERT(gapLength_ <= this->remaining(engine_));
 			Length newLength_ = this->length(engine_) + gapLength_;
 			if constexpr (circular) {
 				if (gapBegin_.index() * 2 < this->length(engine_)) {
@@ -1294,6 +1320,7 @@ namespace dcool::container {
 		> constexpr auto braveBatchInsertN_(
 			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
 		) -> Iterator {
+			DCOOL_CORE_ASSERT(count_ >= 0);
 			this->makeRoom_<strategyC__>(engine_, position_, count_);
 			try {
 				::dcool::core::batchCopyConstructN<strategyC__>(begin_, count_, position_);
@@ -1351,9 +1378,7 @@ namespace dcool::container {
 		> constexpr auto batchInsertN(
 			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
 		) -> Iterator {
-			if (count_ <= 0) [[unlikely]] {
-				return position_;
-			}
+			DCOOL_CORE_ASSERT(count_ >= 0);
 			Length remaining_ = this->remaining(engine_);
 			if (remaining_ < static_cast<Length>(count_)) {
 				if constexpr (!squeezedOnly) {
@@ -1453,6 +1478,7 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ <= this->end(engine_));
 			if (this->full(engine_)) {
 				if constexpr (!squeezedOnly) {
 					Length extraCapacity_ = (((!stuffed) && this->capacity(engine_) > 0) ? this->capacity(engine_) : 1);
@@ -1603,6 +1629,7 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void inPlacePopFront_(Engine& engine_, Iterator newBegin_) noexcept {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= newBegin_ && newBegin_ <= this->end(engine_));
 			Length lengthToPop_ = newBegin_ - this->begin(engine_);
 			Length newBeginOffset_ = this->m_storage_.beginOffset(engine_) + lengthToPop_;
 			if (newBeginOffset_ >= this->capacity(engine_)) {
@@ -1649,6 +1676,7 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void inPlacePopBack_(Engine& engine_, Iterator newEnd_) noexcept {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= newEnd_ && newEnd_ <= this->end(engine_));
 			Length lengthToPop_ = this->end(engine_) - newEnd_;
 			::dcool::core::batchDestruct(newEnd_, this->end(engine_));
 			Length newLength_ = this->length(engine_) - lengthToPop_;
@@ -1699,6 +1727,7 @@ namespace dcool::container {
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto inPlaceErase_(Engine& engine_, Iterator position_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ < this->end(engine_));
 			if constexpr (circular) {
 				if (position_ - this->begin(engine_) < this->end(engine_) - position_ - 1) {
 					::dcool::core::batchMove(
@@ -1718,6 +1747,7 @@ namespace dcool::container {
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto inPlaceErase_(Engine& engine_, Iterator begin_, Iterator end_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= begin_ && begin_ <= end_ && end_ <= this->end(engine_));
 			if constexpr (circular) {
 				if (begin_ - this->begin(engine_) < this->end(engine_) - end_) {
 					::dcool::core::batchMove(
@@ -1738,6 +1768,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto eraseAndShrink(Engine& engine_, Iterator position_) -> Iterator {
 			static_assert(!squeezedOnly);
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ < this->end(engine_));
 			if (this->squeezed(engine_)) {
 				return this->inPlaceErase_<strategyC__>(engine_, position_);
 			}
@@ -1782,6 +1813,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto eraseAndShrink(Engine& engine_, Iterator begin_, Iterator end_) -> Iterator {
 			static_assert(!squeezedOnly);
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= begin_ && begin_ <= end_ && end_ <= this->end(engine_));
 			if (this->squeezed(engine_)) {
 				return this->inPlaceErase_<strategyC__>(engine_, begin_, end_);
 			}
