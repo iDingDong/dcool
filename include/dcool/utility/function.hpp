@@ -322,8 +322,8 @@ namespace dcool::utility {
 		}
 
 		public: constexpr auto immutablyInvocable() const noexcept -> ::dcool::core::Boolean {
-				return this->chassis().immutablyInvocable(this->mutableEngine());
-			}
+			return this->chassis().immutablyInvocable(this->mutableEngine());
+		}
 
 		public: constexpr auto typeInfo() const noexcept -> ::dcool::core::TypeInfo const& {
 			return this->chassis().typeInfo(this->mutableEngine());
