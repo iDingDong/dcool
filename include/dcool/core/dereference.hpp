@@ -5,6 +5,7 @@
 #	include <dcool/core/concept.hpp>
 
 #	include <memory>
+#	include <iterator>
 
 namespace dcool::core {
 	template <::dcool::core::Dereferenceable PointerT_> struct DefaultDereferencerFor {
@@ -38,19 +39,19 @@ namespace dcool::core {
 	}
 
 	namespace detail_ {
-		template <typename T_> concept RawPointerGettableByMember = requires (T_ const& toGetFrom_) {
+		template <typename T_> concept RawPointerGettableByMember_ = requires (T_ const& toGetFrom_) {
 			{ toGetFrom_.rawPointer() } -> ::dcool::core::Pointer;
 		};
 	}
 
 	template <
-		::dcool::core::detail_::RawPointerGettableByMember PointerT_
+		::dcool::core::detail_::RawPointerGettableByMember_ PointerT_
 	> constexpr auto rawPointerOf(const PointerT_& pointer_) noexcept(noexcept(pointer_.rawPointer())) {
 		return pointer_.rawPointer();
 	}
 
 	template <typename PointerT_> constexpr auto rawPointerOf(const PointerT_& pointer_) noexcept(
-		noexcept(::dcool::core::rawPointerToLivingOf(pointer_))
+		noexcept(::std::to_address(pointer_))
 	) {
 		return ::std::to_address(pointer_);
 	}
