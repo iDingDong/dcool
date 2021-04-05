@@ -963,7 +963,7 @@ namespace dcool::resource {
 	template <
 		typename ValueT_, typename PoolT_
 	> constexpr void destroyPointerByPoolFor(PoolT_& pool_, ValueT_* pointer_) noexcept {
-		pointer_->~ValueT_();
+		::dcool::core::destruct(*pointer_);
 		::dcool::resource::adaptedDeallocatePointerFor<ValueT_>(pool_, pointer_);
 	}
 
