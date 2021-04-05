@@ -383,7 +383,7 @@ namespace dcool::container {
 			if (this->m_underlying_.full(engine_)) {
 				this->m_underlying_.forceExpandBack_(engine_, 1);
 			}
-			this->m_underlying_.access(engine_, this->length(engine_)) = Character();
+			new (this->m_underlying_.rawPointerAt(engine_, this->length(engine_))) Character();
 		}
 
 		public: constexpr auto cString(Engine& engine_) const noexcept -> Character const* {
