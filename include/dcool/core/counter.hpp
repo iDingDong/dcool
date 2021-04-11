@@ -4,6 +4,7 @@
 #	include <dcool/core/concept.hpp>
 #	include <dcool/core/functional.hpp>
 #	include <dcool/core/member_detector.hpp>
+#	include <dcool/core/type_transformer.hpp>
 
 #	include <atomic>
 
@@ -37,139 +38,187 @@ namespace dcool::core {
 		::dcool::core::CounterConfig ConfigT_
 	> using CounterConfigAdaptor = ::dcool::core::detail_::CounterConfigAdaptor_<ConfigT_>;
 
-	namespace detail_ {
-		template <::dcool::core::Integer UnderlyingT_, ::dcool::core::CounterScenario scenarioC_> struct Counter_ {
-			private: using Self_ = Counter_<UnderlyingT_, scenarioC_>;
-			public: using Underlying = UnderlyingT_;
-			public: static constexpr ::dcool::core::CounterScenario scenario = scenarioC_;
+	template <::dcool::core::CounterConfig ConfigT_> struct Counter {
+		private: using Self_ = Counter<ConfigT_>;
+		public: using Config = ConfigT_;
 
-			private: static constexpr ::std::memory_order readOrder_ = ((
-				scenario == ::dcool::core::CounterScenario::statisticsOnly
-			) ? ::std::memory_order::relaxed : ::std::memory_order::acquire);
+		private: using ConfigAdator_ = ::dcool::core::CounterConfigAdaptor<Config>;
+		public: using Underlying = ConfigAdator_::Underlying;
+		public: static constexpr ::dcool::core::CounterScenario scenario = ConfigAdator_::scenario;
 
-			private: static constexpr ::std::memory_order writeOrder_ = ((
-				scenario == ::dcool::core::CounterScenario::statisticsOnly
-			) ? ::std::memory_order::relaxed : ::std::memory_order::release);
+		private: static constexpr ::std::memory_order readOrder_ = ((
+			scenario == ::dcool::core::CounterScenario::statisticsOnly
+		) ? ::std::memory_order::relaxed : ::std::memory_order::acquire);
 
-			private: static constexpr ::std::memory_order readWriteOrder_ = ((
-				scenario == ::dcool::core::CounterScenario::statisticsOnly
-			) ? ::std::memory_order::relaxed : ::std::memory_order::acq_rel);
+		private: static constexpr ::std::memory_order writeOrder_ = ((
+			scenario == ::dcool::core::CounterScenario::statisticsOnly
+		) ? ::std::memory_order::relaxed : ::std::memory_order::release);
 
-			private: ::std::atomic<Underlying> m_value_;
+		private: static constexpr ::std::memory_order readWriteOrder_ = ((
+			scenario == ::dcool::core::CounterScenario::statisticsOnly
+		) ? ::std::memory_order::relaxed : ::std::memory_order::acq_rel);
 
-			public: constexpr explicit Counter_(Underlying initialCount_ = 0) noexcept: m_value_(initialCount_) {
-			}
+		private: ::dcool::core::ConditionalType<
+			scenario == ::dcool::core::CounterScenario::synchronized, Underlying, ::std::atomic<Underlying>
+		> m_value_;
 
-			public: constexpr auto increment(Underlying difference_ = 1) noexcept -> Underlying {
-				return this->m_value_.fetch_add(difference_, readWriteOrder_) + difference_;
-			}
+		public: struct PositiveToken {
+			private: using Self_ = PositiveToken;
+			private: using Refered_ = Counter<Config>;
+			private: friend Refered_;
 
-			public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryIncrementIf(
-				PredicatorT__&& predicator_, Underlying difference_ = 1
-			) noexcept -> ::dcool::core::Boolean {
-				Underlying previousValue_ = this->value();
-				do {
-					::dcool::core::Boolean confirmed = ::dcool::core::invoke(
-						::dcool::core::forward<PredicatorT__>(predicator_), previousValue_
-					);
-					if (!confirmed) {
-						return false;
-					}
-				} while (
-					!(this->m_value_.compare_exchange_weak(previousValue_, previousValue_ + difference_, readWriteOrder_, readOrder_))
-				);
-				return true;
-			}
-
-			public: constexpr auto decrement(Underlying difference_ = 1) noexcept -> Underlying {
-				return this->m_value_.fetch_sub(difference_, readWriteOrder_) - difference_;
-			}
-
-			public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryDecrementIf(
-				PredicatorT__&& predicator_, Underlying difference_ = 1
-			) noexcept -> ::dcool::core::Boolean {
-				Underlying previousValue_ = this->value();
-				do {
-					::dcool::core::Boolean confirmed = ::dcool::core::invoke(
-						::dcool::core::forward<PredicatorT__>(predicator_), previousValue_
-					);
-					if (!confirmed) {
-						return false;
-					}
-				} while (
-					!(this->m_value_.compare_exchange_weak(previousValue_, previousValue_ - difference_, readWriteOrder_, readOrder_))
-				);
-				return true;
-			}
-
-			public: constexpr auto value() const noexcept -> Underlying {
-				return this->m_value_.load(readOrder_);
-			}
-
-			public: constexpr void setValue(Underlying value_) noexcept {
-				this->m_value_.store(value_, writeOrder_);
-			}
-		};
-
-		template <::dcool::core::Integer UnderlyingT_> struct Counter_<UnderlyingT_, ::dcool::core::CounterScenario::synchronized> {
-			private: using Self_ = Counter_<UnderlyingT_, ::dcool::core::CounterScenario::synchronized>;
-			public: using Underlying = UnderlyingT_;
-			public: static constexpr ::dcool::core::CounterScenario scenario =
-				::dcool::core::CounterScenario::synchronized
-			;
-
+			private: Refered_* m_counter_;
 			private: Underlying m_value_;
 
-			public: constexpr explicit Counter_(Underlying initialCount_ = 0) noexcept: m_value_(initialCount_) {
+			private: constexpr PositiveToken(
+				Refered_& counter_, Underlying value_
+			) noexcept: m_counter_(::dcool::core::addressOf(counter_)), m_value_(value_) {
+				counter_.increment(value_);
 			}
 
-			public: constexpr auto increment(Underlying difference_ = 1) noexcept -> Underlying {
-				return this->m_value_ += difference_;
+			public: PositiveToken(Self_ const&) = delete;
+
+			public: constexpr PositiveToken(Self_&& other_) noexcept: m_counter_(other_.m_counter_), m_value_(other_.m_value_) {
+				other_.m_value_ = 0;
 			}
 
-			public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryIncrementIf(
-				PredicatorT__&& predicator_, Underlying difference_ = 1
-			) noexcept -> ::dcool::core::Boolean {
-				::dcool::core::Boolean confirmed = ::dcool::core::invoke(
-					::dcool::core::forward<PredicatorT__>(predicator_), this->value()
-				);
-				if (!confirmed) {
-					return false;
-				}
-				this->increment(difference_);
-				return true;
+			public: constexpr ~PositiveToken() noexcept {
+				this->m_counter_->decrement(this->m_value_);
 			}
 
-			public: constexpr auto decrement(Underlying difference_ = 1) noexcept -> Underlying {
-				return this->m_value_ -= difference_;
-			}
+			public: auto operator =(Self_ const& other_) -> Self_& = delete;
 
-			public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryDecrementIf(
-				PredicatorT__&& predicator_, Underlying difference_ = 1
-			) noexcept -> ::dcool::core::Boolean {
-				::dcool::core::Boolean confirmed = ::dcool::core::invoke(
-					::dcool::core::forward<PredicatorT__>(predicator_), this->value()
-				);
-				if (!confirmed) {
-					return false;
-				}
-				this->decrement(difference_);
-				return true;
-			}
-
-			public: constexpr auto value() const noexcept -> Underlying {
-				return this->m_value_;
-			}
-
-			public: constexpr void setValue(Underlying value_) noexcept {
-				this->m_value_ = value_;
+			public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& {
+				::dcool::core::intelliSwap(this->m_counter_, other_.m_counter_);
+				::dcool::core::intelliSwap(this->m_value_, other_.m_value_);
 			}
 		};
-	}
 
-	template <::dcool::core::CounterConfig ConfigT_ = ::dcool::core::Empty<>> using Counter = ::dcool::core::detail_::Counter_<
-		typename ::dcool::core::CounterConfigAdaptor<ConfigT_>::Underlying, ::dcool::core::CounterConfigAdaptor<ConfigT_>::scenario
-	>;
+		public: struct NegativeToken {
+			private: using Self_ = NegativeToken;
+			private: using Refered_ = Counter<Config>;
+			private: friend Refered_;
+
+			private: Refered_* m_counter_;
+			private: Underlying m_value_;
+
+			private: constexpr NegativeToken(
+				Refered_& counter_, Underlying value_
+			) noexcept: m_counter_(::dcool::core::addressOf(counter_)), m_value_(value_) {
+				counter_.decrement(value_);
+			}
+
+			public: NegativeToken(Self_ const&) = delete;
+
+			public: constexpr NegativeToken(Self_&& other_) noexcept: m_counter_(other_.m_counter_), m_value_(other_.m_value_) {
+				other_.m_value_ = 0;
+			}
+
+			public: constexpr ~NegativeToken() noexcept {
+				this->m_counter_->increment(this->m_value_);
+			}
+
+			public: auto operator =(Self_ const& other_) -> Self_& = delete;
+
+			public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& {
+				::dcool::core::intelliSwap(this->m_counter_, other_.m_counter_);
+				::dcool::core::intelliSwap(this->m_value_, other_.m_value_);
+			}
+		};
+
+		public: constexpr explicit Counter(Underlying initialCount_ = 0) noexcept: m_value_(initialCount_) {
+		}
+
+		public: constexpr auto increment(Underlying difference_ = 1) noexcept -> Underlying {
+			Underlying result_;
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				this->m_value_ += difference_;
+				result_ = this->m_value_;
+			} else {
+				result_ = this->m_value_.fetch_add(difference_, readWriteOrder_) + difference_;
+			}
+			return result_;
+		}
+
+		public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryIncrementIf(
+			PredicatorT__&& predicator_, Underlying difference_ = 1
+		) noexcept -> ::dcool::core::Boolean {
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				if (::dcool::core::invoke(::dcool::core::forward<PredicatorT__>(predicator_), this->m_value_)) {
+					this->increment(difference_);
+					return true;
+				}
+			} else {
+				Underlying previousValue_ = this->value();
+				while (::dcool::core::invoke(predicator_, previousValue_)) {
+					if (
+						this->m_value_.compare_exchange_weak(previousValue_, previousValue_ + difference_, readWriteOrder_, readOrder_)
+					) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		public: constexpr auto positiveBorrow(Underlying difference_ = 1) noexcept -> PositiveToken {
+			return PositiveToken(*this, difference_);
+		}
+
+		public: constexpr auto decrement(Underlying difference_ = 1) noexcept -> Underlying {
+			Underlying result_;
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				this->m_value_ -= difference_;
+				result_ = this->m_value_;
+			} else {
+				result_ = this->m_value_.fetch_sub(difference_, readWriteOrder_) - difference_;
+			}
+			return result_;
+		}
+
+		public: template <::dcool::core::Predicator<Underlying> PredicatorT__> constexpr auto tryDecrementIf(
+			PredicatorT__&& predicator_, Underlying difference_ = 1
+		) noexcept -> ::dcool::core::Boolean {
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				if (::dcool::core::invoke(::dcool::core::forward<PredicatorT__>(predicator_), this->m_value_)) {
+					this->decrement(difference_);
+					return true;
+				}
+			} else {
+				Underlying previousValue_ = this->value();
+				while (::dcool::core::invoke(predicator_, previousValue_)) {
+					if (
+						this->m_value_.compare_exchange_weak(previousValue_, previousValue_ - difference_, readWriteOrder_, readOrder_)
+					) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		public: constexpr auto negativeBorrow(Underlying difference_ = 1) noexcept -> NegativeToken {
+			return NegativeToken(*this, difference_);
+		}
+
+		public: constexpr auto value() const noexcept -> Underlying {
+			Underlying result_;
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				result_ = this->m_value_;
+			} else {
+				result_ = this->m_value_.load(readOrder_);
+			}
+			return result_;
+		}
+
+		public: constexpr void setValue(Underlying value_) noexcept {
+			if constexpr (scenario == ::dcool::core::CounterScenario::synchronized) {
+				this->m_value_ = value_;
+			} else {
+				this->m_value_.store(value_, writeOrder_);
+			}
+		}
+	};
 }
 
 #endif
