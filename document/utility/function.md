@@ -5,8 +5,8 @@ Include `<dcool/utility.hpp>` to use.
 ```cpp
 template <typename PrototypeT_, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
 template <
-	typename ConfigT, typename ReturnT, typename... ParameterTs
-> struct dcool::utility::Function<auto(ParameterTs...) -> ReturnT, ConfigT>;
+	typename ConfigT, dcool::core::Boolean noexceptInvocableC, typename ReturnT, typename... ParameterTs
+> struct dcool::utility::Function<auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT, ConfigT>;
 ```
 
 An alternative to `std::function` with configurable small object optimization limit and customizable operations.
@@ -30,6 +30,12 @@ Its member shall customize the list as decribed:
 | `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
 | `Prototype` | Defined by `using Prototype = auto(ParameterTs...) -> ReturnT;`. |
 | `Return` | Defined by `using Return = ReturnT;`. |
+
+## Member constant
+
+| Member | Definition |
+| - | - |
+| `static constexpr dcool::core::Boolean noexceptInvocable` | Equals to `noexceptInvocableC` |
 
 ## Constructors
 
@@ -132,19 +138,19 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
-constexpr auto invokeSelf(ParameterTs... parameters) const -> Return;
-constexpr auto invokeSelf(ParameterTs... parameters) -> Return;
+constexpr auto invokeSelf(ParameterTs... parameters) const noexcept(noexceptInvocable) -> Return;
+constexpr auto invokeSelf(ParameterTs... parameters) noexcept(noexceptInvocable) -> Return;
 ```
 
-Equivalent to `dcool::core::invoke(this->access<ValueT>, dcool::core::forward<ParameterTs>(parameters)...)` (where `ValueT` is the type of the object holded by function) if the function holds an object, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
+Equivalent to `dcool::core::invoke(this->access<ValueT>, dcool::core::forward<ParameterTs>(parameters)...)` (where `ValueT` is the type of the object holded by function) if the function holds an object, otherwise terminate execution if `noexceptInvocable`, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
 
-For overload 1, if the const reference to the holded object is not invocable as above, throws a `dcool::utility::BadFunctionCall`.
+For overload 1, if the const reference to the holded object is not invocable as above, terminate execution if `noexceptInvocable`, otherwise throws a `dcool::utility::BadFunctionCall`.
 
 ### `operator ()`
 
 ```cpp
-constexpr auto operator ()(ParameterTs... parameters) const -> Return;
-constexpr auto operator ()(ParameterTs... parameters) -> Return;
+constexpr auto operator ()(ParameterTs... parameters) const noexcept(noexceptInvocable) -> Return;
+constexpr auto operator ()(ParameterTs... parameters) noexcept(noexceptInvocable) -> Return;
 ```
 
 Equivalent to `this->invokeSelf(dcool::core::forward<ParameterTs>(parameters)...)`.
