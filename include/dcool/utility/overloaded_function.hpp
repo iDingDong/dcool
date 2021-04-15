@@ -9,244 +9,66 @@
 namespace dcool::utility {
 	namespace detail_ {
 		template <
-			::dcool::core::Complete ConfigT_, ::dcool::core::TypeList PrototypeT_
+			::dcool::core::Complete ConfigT_, ::dcool::core::TypeList PrototypesT_
 		> struct OverloadedFunctionConfigAdaptor_: public ::dcool::utility::AnyConfigAdaptor<ConfigT_> {
 		};
 
-		template <::dcool::core::TypeList PrototypesT_, typename ConfigT_> struct OverloadedFunctionChassis_;
+		template <typename PrototypeT_> struct OverloadedFunctionChassisBase_;
 
 		template <
-			typename ConfigT_, typename PrototypeT_
-		> requires (!::dcool::core::TypeList<PrototypeT_>) struct OverloadedFunctionChassis_<
-			::dcool::core::Types<PrototypeT_>, ConfigT_
-		>: private ::dcool::utility::FunctionChassis<PrototypeT_, ConfigT_> {
-			private: using Self_ = OverloadedFunctionChassis_<::dcool::core::Types<PrototypeT_>, ConfigT_>;
-			private: using Super_ = ::dcool::utility::FunctionChassis<PrototypeT_, ConfigT_>;
-			public: using Prototypes = ::dcool::core::Types<PrototypeT_>;
-			public: using Config = ConfigT_;
+			::dcool::core::Boolean noexceptC_, typename ReturnT_, typename... ParameterTs_
+		> struct OverloadedFunctionChassisBase_<auto (ParameterTs_...) noexcept(noexceptC_) -> ReturnT_> {
+			private: using Self_ = OverloadedFunctionChassisBase_<auto (ParameterTs_...) -> ReturnT_>;
+			private: using Return_ = ReturnT_;
 
-			public: using typename Super_::Engine;
-			public: using typename Super_::ExtendedInformation;
-			public: using Super_::exceptionSafetyStrategy;
-			public: using Super_::initialize;
-			public: using Super_::uninitialize;
-			public: using Super_::valid;
-			public: using Super_::storageRequirement;
-			public: using Super_::typeInfo;
-			public: using Super_::extendedInformation;
-			public: using Super_::access;
-			public: using Super_::value;
-			public: using Super_::invokeSelf;
+			private: template <typename ChassisT__> using ImmutableInvoker_ = auto (*)(
+				typename ChassisT__::Engine& engine_, ChassisT__ const& self_, ParameterTs_... parameters_
+			) -> Return_;
+			private: template <typename ChassisT__> using Invoker_ = auto (*)(
+				typename ChassisT__::Engine& engine_, ChassisT__& self_, ParameterTs_... parameters_
+			) -> Return_;
 
-			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
-				this->Super_::cloneTo(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::Boolean engineWillBeUniformedC__ = false
-			> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
-				::dcool::core::Boolean engineWillBeSwappedC__ = false
-			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template swapWith<strategyC__, engineWillBeSwappedC__>(
-					engine_, otherEngine_, static_cast<Super_&>(other_)
-				);
-			}
-
-			public: template <
-				::dcool::core::Index indexC__
-			> constexpr auto immutablyInvocable(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
-				static_assert(
-					indexC__ == 0, "'dcool::utility::OverloadedFunctionChassis::immutablyInvocable' found index out of range."
-				);
-				return this->Super_::immutablyInvocable(engine_);
-			}
-		};
-
-		template <
-			typename PrototypeT_, ::dcool::core::TypeList OtherPrototypesT_, typename ConfigT_
-		> struct OverloadedFunctionChassisBase_;
-
-		template <
-			typename BaseT_, typename ConfigT_, typename OtherPrototypesT_, typename ReturnT_, typename... ParameterTs_
-		> struct OverloadedFunctionChassisBaseUnderlyingConfig_ {
-			public: using Config = ConfigT_;
-
-			private: using ConfigAdaptor_ = ::dcool::utility::detail_::OverloadedFunctionConfigAdaptor_<Config, OtherPrototypesT_>;
-			private: using Engine = ConfigAdaptor_::Engine;
-			private: using ImmutableInvoker_ = auto (*)(
-				Engine& engine_, BaseT_ const& self_, ParameterTs_... parameters_
-			) -> ReturnT_;
-			private: using Invoker_ = auto (*)(Engine& engine_, BaseT_& self_, ParameterTs_... parameters_) -> ReturnT_;
-
-			private: struct UnderlyingExtendedInformation_ {
-				ImmutableInvoker_ immutableInvoker_;
-				Invoker_ invoker_;
+			public: template <typename ChassisT__> struct ExtendedInformation_ {
+				ImmutableInvoker_<ChassisT__> immutableInvoker_;
+				Invoker_<ChassisT__> invoker_;
 				::dcool::core::Boolean immutablyInvocable_;
-				ConfigAdaptor_::ExtendedInformation extendedInformation_;
 
-				template <typename ValueT__> constexpr UnderlyingExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
+				template <typename ValueT__> constexpr ExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
 					immutableInvoker_(
-						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<BaseT_, ValueT__, ReturnT_, ParameterTs_...>
+						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<
+							ChassisT__, ValueT__, noexceptC_, Return_, ParameterTs_...
+						>
 					),
-					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<BaseT_, ValueT__, ReturnT_, ParameterTs_...>),
-					immutablyInvocable_(::dcool::utility::detail_::isImmutablyInvocable_<ValueT__, ParameterTs_...>),
-					extendedInformation_(typed_)
+					invoker_(
+						::dcool::utility::detail_::invokeFunctionChassis_<ChassisT__, ValueT__, noexceptC_, Return_, ParameterTs_...>
+					),
+					immutablyInvocable_(::dcool::utility::detail_::isImmutablyInvocable_<ValueT__, ParameterTs_...>)
 				{
 				}
 			};
 
-			public: struct Result_ {
-				using Pool = ConfigAdaptor_::Pool;
-				using ExtendedInformation = UnderlyingExtendedInformation_;
-				using Engine = Engine;
-				static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
-				static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
-					ConfigAdaptor_::exceptionSafetyStrategy
-				;
-			};
-		};
-
-		template <
-			typename OtherPrototypesT_, typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-		> struct OverloadedFunctionChassisBase_<auto(ParameterTs_...) -> ReturnT_, OtherPrototypesT_, ConfigT_>:
-			private ::dcool::utility::detail_::OverloadedFunctionChassis_<
-				OtherPrototypesT_,
-				typename ::dcool::utility::detail_::OverloadedFunctionChassisBaseUnderlyingConfig_<
-					OverloadedFunctionChassisBase_<auto(ParameterTs_...) -> ReturnT_, OtherPrototypesT_, ConfigT_>,
-					ConfigT_,
-					OtherPrototypesT_,
-					ReturnT_,
-					ParameterTs_...
-				>::Result_
-			>
-		{
-			private: using Self_ = OverloadedFunctionChassisBase_<auto(ParameterTs_...) -> ReturnT_, OtherPrototypesT_, ConfigT_>;
-			private: using Super_ = ::dcool::utility::detail_::OverloadedFunctionChassis_<
-				OtherPrototypesT_,
-				typename ::dcool::utility::detail_::OverloadedFunctionChassisBaseUnderlyingConfig_<
-					OverloadedFunctionChassisBase_<auto(ParameterTs_...) -> ReturnT_, OtherPrototypesT_, ConfigT_>,
-					ConfigT_,
-					OtherPrototypesT_,
-					ReturnT_,
-					ParameterTs_...
-				>::Result_
-			>;
-			private: using Config = ConfigT_;
-
-			public: using typename Super_::Engine;
-			public: using Super_::exceptionSafetyStrategy;
-			public: using Super_::initialize;
-			public: using Super_::uninitialize;
-			public: using Super_::valid;
-			public: using Super_::storageRequirement;
-			public: using Super_::immutablyInvocable;
-			public: using Super_::typeInfo;
-			public: using Super_::access;
-			public: using Super_::value;
-			public: using Super_::invokeSelf;
-
-			private: using ConfigAdaptor_ = ::dcool::utility::detail_::OverloadedFunctionConfigAdaptor_<
-				Config, typename OtherPrototypesT_::template PushFront<auto(ParameterTs_...) -> ReturnT_>
-			>;
-			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
-
-			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
-				this->Super_::cloneTo(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::Boolean engineWillBeUniformedC__ = false
-			> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
-				::dcool::core::Boolean engineWillBeSwappedC__ = false
-			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template swapWith<strategyC__, engineWillBeSwappedC__>(
-					engine_, otherEngine_, static_cast<Super_&>(other_)
+			public: template <typename ChassisT__> static constexpr auto invoke_(
+				ChassisT__ const& self_, typename ChassisT__::Engine& engine_, ParameterTs_... parameters_
+			) noexcept(noexceptC_) -> Return_ {
+				return ::dcool::core::get<ExtendedInformation_<ChassisT__>>(self_.baseExtendedInformations_(engine_)).immutableInvoker_(
+					engine_, self_, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
 
-			public: template <
-				::dcool::core::Index indexC__
-			> constexpr auto immutablyInvocable(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
-				if constexpr (indexC__ > 0) {
-					return this->Super_::template immutablyInvocable<indexC__ - 1>(engine_);
-				}
-				return this->Super_::extendedInformation(engine_).immutablyInvocable_;
-			}
-
-			public: constexpr auto extendedInformation(Engine& engine_) const noexcept -> ExtendedInformation {
-				return this->Super_::extendedInformation(engine_).extendedInformation_;
-			}
-
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) const -> ReturnT_ {
-				return this->Super_::extendedInformation(engine_).immutableInvoker_(
-					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
+			public: template <typename ChassisT__> static constexpr auto invoke_(
+				ChassisT__& self_, typename ChassisT__::Engine& engine_, ParameterTs_... parameters_
+			) noexcept(noexceptC_) -> Return_ {
+				return ::dcool::core::get<ExtendedInformation_<ChassisT__>>(self_.baseExtendedInformations_(engine_)).invoker_(
+					engine_, self_, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
 
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) -> ReturnT_ {
-				return this->Super_::extendedInformation(engine_).invoker_(
-					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
-				);
-			}
-		};
-
-		template <
-			typename ConfigT_, typename PrototypeT_, typename... OtherPrototypeTs_
-		> struct OverloadedFunctionChassis_<
-			::dcool::core::Types<PrototypeT_, OtherPrototypeTs_...>, ConfigT_
-		>: private ::dcool::utility::detail_::OverloadedFunctionChassisBase_<
-			PrototypeT_, ::dcool::core::Types<OtherPrototypeTs_...>, ConfigT_
-		> {
-			private: using Self_ = OverloadedFunctionChassis_<
-				::dcool::core::Types<PrototypeT_, OtherPrototypeTs_...>, ConfigT_
-			>;
-			private: using Super_ = ::dcool::utility::detail_::OverloadedFunctionChassisBase_<
-				PrototypeT_, ::dcool::core::Types<OtherPrototypeTs_...>, ConfigT_
-			>;
-			public: using Prototypes = ::dcool::core::Types<PrototypeT_>;
-			public: using Config = ConfigT_;
-
-			public: using typename Super_::Engine;
-			public: using typename Super_::ExtendedInformation;
-			public: using Super_::exceptionSafetyStrategy;
-			public: using Super_::initialize;
-			public: using Super_::uninitialize;
-			public: using Super_::valid;
-			public: using Super_::storageRequirement;
-			public: using Super_::immutablyInvocable;
-			public: using Super_::typeInfo;
-			public: using Super_::extendedInformation;
-			public: using Super_::access;
-			public: using Super_::value;
-			public: using Super_::invokeSelf;
-
-			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
-				this->Super_::cloneTo(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::Boolean engineWillBeUniformedC__ = false
-			> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, static_cast<Super_&>(other_));
-			}
-
-			public: template <
-				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
-				::dcool::core::Boolean engineWillBeSwappedC__ = false
-			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
-				this->Super_::template swapWith<strategyC__, engineWillBeSwappedC__>(
-					engine_, otherEngine_, static_cast<Super_&>(other_)
-				);
+			public: template <typename ChassisT__> static constexpr auto immutablyInvocable_(
+				ChassisT__ const& self_, typename ChassisT__::Engine& engine_
+			) noexcept -> ::dcool::core::Boolean {
+				return ::dcool::core::get<ExtendedInformation_<ChassisT__>>(
+					self_.baseExtendedInformations_(engine_)
+				).immutablyInvocable_;
 			}
 		};
 	}
@@ -262,7 +84,160 @@ namespace dcool::utility {
 	template <
 		::dcool::core::TypeList PrototypesT_,
 		::dcool::utility::OverloadedFunctionConfig<PrototypesT_> ConfigT_ = ::dcool::core::Empty<>
-	> using OverloadedFunctionChassis = ::dcool::utility::detail_::OverloadedFunctionChassis_<PrototypesT_, ConfigT_>;
+	> struct OverloadedFunctionChassis;
+
+	template <
+		typename ConfigT_, typename... PrototypeTs_
+	> struct OverloadedFunctionChassis<
+		::dcool::core::Types<PrototypeTs_...>, ConfigT_
+	>: private ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>... {
+		private: using Self_ = OverloadedFunctionChassis<::dcool::core::Types<PrototypeTs_...>, ConfigT_>;
+		public: using Prototypes = ::dcool::core::Types<PrototypeTs_...>;
+		public: using Config = ConfigT_;
+		public: template <typename PrototypeT__> friend struct ::dcool::utility::detail_::OverloadedFunctionChassisBase_;
+
+		private: using ConfigAdaptor_ = ::dcool::utility::OverloadedFunctionConfigAdaptor<Config, Prototypes>;
+		public: using Engine = ConfigAdaptor_::Engine;
+		private: using BaseExtendedInformations_ = ::dcool::core::Tuple<
+			typename ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>::template ExtendedInformation_<Self_>...
+		>;
+		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
+		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
+		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
+			ConfigAdaptor_::exceptionSafetyStrategy
+		;
+
+		private: struct UnderlyingExtendedInformation_ {
+			BaseExtendedInformations_ baseExtendedInformations_;
+			ExtendedInformation userExtendedInformation_;
+
+			template <typename ValueT__> constexpr UnderlyingExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
+				baseExtendedInformations_(::dcool::core::useRightValue<PrototypeTs_, typed_>...), userExtendedInformation_(typed_)
+			{
+			}
+		};
+
+		private: struct UnderlyingConfig_ {
+			using Pool = ConfigAdaptor_::Pool;
+			using ExtendedInformation = UnderlyingExtendedInformation_;
+			using Engine = Engine;
+			static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
+			static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy = exceptionSafetyStrategy;
+		};
+
+		private: using Underlying_ = ::dcool::utility::AnyChassis<UnderlyingConfig_>;
+
+		private: Underlying_ m_underlying_;
+
+		public: constexpr void initialize(Engine& engine_) noexcept {
+			this->m_underlying_.initialize(engine_);
+		}
+
+		public: template <typename ValueT__> constexpr void initialize(Engine& engine_, ValueT__&& value_) noexcept(
+			noexcept(
+				noexcept(
+					this->template initialize<::dcool::core::DecayedType<ValueT__>>(
+						engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
+					)
+				)
+			)
+		) {
+			this->initialize<::dcool::core::DecayedType<ValueT__>>(
+				engine_, ::dcool::core::inPlace, ::dcool::core::forward<ValueT__>(value_)
+			);
+		}
+
+		public: template <typename ValueT__, typename... ArgumentTs__> constexpr void initialize(
+			Engine& engine_, ::dcool::core::InPlaceTag tag_, ArgumentTs__&&... parameters_
+		) noexcept(
+			noexcept(
+				::dcool::core::declval<Self_&>().m_underlying_.template initialize<ValueT__>(
+					engine_, tag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+				)
+			)
+		) {
+			this->m_underlying_.template initialize<ValueT__>(engine_, tag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: constexpr void uninitialize(Engine& engine_) noexcept {
+			this->m_underlying_.uninitialize(engine_);
+		}
+
+		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+			this->m_underlying_.cloneTo(engine_, otherEngine_, other_.underlying_);
+		}
+
+		public: template <
+			::dcool::core::Boolean engineWillBeUniformedC__ = false
+		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			this->m_underlying_.template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, other_.m_underlying_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
+			::dcool::core::Boolean engineWillBeSwappedC__ = false
+		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			this->m_underlying_.template swapWith<strategyC__, engineWillBeSwappedC__>(engine_, otherEngine_, other_.m_underlying_);
+		}
+
+		public: constexpr auto valid(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return this->m_underlying_(engine_).valid(engine_);
+		}
+
+		public: constexpr auto storageRequirement(Engine& engine_) const noexcept -> ::dcool::core::StorageRequirement {
+			return this->m_underlying_(engine_).storageRequirement(engine_);
+		}
+
+		public: constexpr auto typeInfo(Engine& engine_) const noexcept -> ::dcool::core::TypeInfo const& {
+			return this->m_underlying_(engine_).typeInfo(engine_);
+		}
+
+		private: constexpr auto baseExtendedInformations_(Engine& engine_) const noexcept -> BaseExtendedInformations_ const& {
+			return this->m_underlying_.extendedInformation(engine_).baseExtendedInformations_;
+		}
+
+		public: constexpr auto extendedInformation(Engine& engine_) const noexcept -> ExtendedInformation const& {
+			return this->m_underlying_.extendedInformation(engine_).userExtendedInformation_;
+		}
+
+		public: template <typename ValueT__> constexpr auto access(Engine& engine_) const noexcept -> ValueT__ const& {
+			return this->m_underlying_.template access<ValueT__>(engine_);
+		}
+
+		public: template <typename ValueT__> constexpr auto access(Engine& engine_) noexcept -> ValueT__& {
+			return this->m_underlying_.template access<ValueT__>(engine_);
+		}
+
+		private: using ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>::invoke_...;
+
+		public: template <typename... ArgumentTs__> constexpr decltype(auto) invokeSelf(
+			Engine& engine_, ArgumentTs__&&... parameters_
+		) const noexcept(
+			noexcept(
+				invoke_(::dcool::core::declval<Self_ const&>(), engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+			)
+		) {
+			return invoke_(*this, engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr decltype(auto) invokeSelf(
+			Engine& engine_, ArgumentTs__&&... parameters_
+		) noexcept(
+			noexcept(
+				invoke_(::dcool::core::declval<Self_&>(), engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+			)
+		) {
+			return invoke_(*this, engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <
+			::dcool::core::Index indexC__
+		> constexpr auto immutablyInvocable(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return ::dcool::utility::detail_::OverloadedFunctionChassisBase_<
+				::dcool::core::VariadicElementType<indexC__, PrototypeTs_...>
+			>::immutablyInvocable_(*this, engine_);
+		}
+	};
 
 	template <
 		::dcool::core::TypeList PrototypesT_,
@@ -394,29 +369,51 @@ namespace dcool::utility {
 			return this->chassis().template value<ValueT__>(this->mutableEngine());
 		}
 
-		public: template <typename... ArgumentTs_> constexpr decltype(auto) invokeSelf(ArgumentTs_&&... parameters_) const {
+		public: template <typename... ArgumentTs_> constexpr decltype(auto) invokeSelf(ArgumentTs_&&... parameters_) const noexcept(
+			noexcept(
+				::dcool::core::declval<Self_ const&>().chassis().invokeSelf(
+					this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...
+				)
+			)
+		) {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		}
 
-		public: template <typename... ArgumentTs_> constexpr decltype(auto) invokeSelf(ArgumentTs_&&... parameters_) {
+		public: template <typename... ArgumentTs_> constexpr decltype(auto) invokeSelf(ArgumentTs_&&... parameters_) noexcept(
+			noexcept(
+				::dcool::core::declval<Self_&>().chassis().invokeSelf(
+					this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...
+				)
+			)
+		) {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		}
 
-		public: template <typename... ArgumentTs_> constexpr decltype(auto) operator ()(ArgumentTs_&&... parameters_) const {
-			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...);
+		public: template <typename... ArgumentTs_> constexpr decltype(auto) operator ()(
+			ArgumentTs_&&... parameters_
+		) const noexcept(
+			noexcept(
+				::dcool::core::declval<Self_ const&>().invokeSelf(::dcool::core::forward<ArgumentTs_>(parameters_)...)
+			)
+		) {
+			return this->invokeSelf(::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		}
 
-		public: template <typename... ArgumentTs_> constexpr decltype(auto) operator ()(ArgumentTs_&&... parameters_) {
-			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ArgumentTs_>(parameters_)...);
+		public: template <typename... ArgumentTs_> constexpr decltype(auto) operator ()(ArgumentTs_&&... parameters_) noexcept(
+			noexcept(
+				::dcool::core::declval<Self_&>().invokeSelf(::dcool::core::forward<ArgumentTs_>(parameters_)...)
+			)
+		) {
+			return this->invokeSelf(::dcool::core::forward<ArgumentTs_>(parameters_)...);
 		}
 	};
 
-	template <typename... PrototypesT_> using DefaultOverloadedFunctionChassis = ::dcool::utility::OverloadedFunctionChassis<
-		::dcool::core::Types<PrototypesT_...>
+	template <typename... PrototypeTs_> using DefaultOverloadedFunctionChassis = ::dcool::utility::OverloadedFunctionChassis<
+		::dcool::core::Types<PrototypeTs_...>
 	>;
 
-	template <typename... PrototypesT_> using DefaultOverloadedFunction = ::dcool::utility::OverloadedFunction<
-		::dcool::core::Types<PrototypesT_...>
+	template <typename... PrototypeTs_> using DefaultOverloadedFunction = ::dcool::utility::OverloadedFunction<
+		::dcool::core::Types<PrototypeTs_...>
 	>;
 }
 
