@@ -134,9 +134,29 @@ namespace dcool::core {
 		auto keyC_, typename DefaultT_, ::dcool::core::detail_::SelectionCaseOf_<decltype(keyC_)>... CaseTs_
 	> using SelectType = ::dcool::core::detail_::Select_<keyC_, DefaultT_, CaseTs_...>::Result_;
 
+	namespace detail_ {
+		template <::dcool::core::Index indexC_, typename... Ts_> struct VariadicElement_;
+
+		template <::dcool::core::Index indexC_, typename T_, typename... Ts_> struct VariadicElement_<indexC_, T_, Ts_...> {
+			using Result_ = ::dcool::core::detail_::VariadicElement_<indexC_ - 1, Ts_...>::Result_;
+		};
+
+		template <typename T_, typename... Ts_> struct VariadicElement_<0, T_, Ts_...> {
+			using Result_ = T_;
+		};
+	}
+
+	template <::dcool::core::Index indexC_, typename... Ts_> requires (indexC_ < sizeof...(Ts_)) using VariadicElementType =
+		::dcool::core::detail_::VariadicElement_<indexC_, Ts_...>::Result_
+	;
+
 	template <typename T_> using DecayedType = ::std::decay_t<T_>;
 
 	template <typename... T_> using CommonType = ::std::common_type_t<T_...>;
+
+	template <typename LeftT_, typename RightT_> using UseRightType = RightT_;
+
+	template <typename LeftT_, auto rightC_> constexpr decltype(rightC_) useRightValue = rightC_;
 }
 
 #endif

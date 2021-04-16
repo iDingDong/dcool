@@ -19,7 +19,7 @@
 
 #	ifdef DCOOLER_CORE_ENABLE_BINARY_BREAKING_DEBUG
 #		if DCOOLER_CORE_ENABLE_BINARY_BREAKING_DEBUG
-#			define DCOOL_CORE_BINARY_BREAKING_DEBUG_ENABLED 1
+#			define DCOOL_CORE_BINARY_BREAKING_DEBUG_ENABLED DCOOLER_CORE_ENABLE_DEBUG
 #		else
 #			define DCOOL_CORE_BINARY_BREAKING_DEBUG_ENABLED 0
 #		endif
@@ -28,9 +28,9 @@
 #	endif
 
 #	if DCOOL_CORE_DEBUG_ENABLED
-#		define DCOOL_CORE_ASSERT(...) assert(__VA_ARGS__)
+#		define DCOOL_CORE_ASSERT(...) (assert(bool(__VA_ARGS__)))
 #	else
-#		define DCOOL_CORE_ASSERT(...) static_cast<void>(0)
+#		define DCOOL_CORE_ASSERT(...) (static_cast<void>(0))
 #	endif
 
 #endif
