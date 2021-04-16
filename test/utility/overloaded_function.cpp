@@ -25,11 +25,11 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 	DCOOL_TEST_EXPECT(function1.immutablyInvocable<2>());
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1(3, 17) == 3 + 17));
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(dcool::core::constantize(function1)(3, 17) == 3 + 17));
-	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1() == 0));
+	DCOOL_TEST_EXPECT(function1() == 0);
 	function1(4);
-	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1() == 4));
+	DCOOL_TEST_EXPECT(function1() == 4);
 	function1(27);
-	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1() == 4 + 27));
+	DCOOL_TEST_EXPECT(function1() == 4 + 27);
 	{
 		dcool::core::Boolean thrown = false;
 		try {
@@ -39,4 +39,23 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 		}
 		DCOOL_TEST_EXPECT(thrown);
 	}
+}
+
+DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionOverloading) {
+	struct OverloadedTypeInfo {
+		auto operator ()(int) noexcept -> dcool::core::TypeInfo const& {
+			return typeid(int);
+		}
+
+		auto operator ()(double) noexcept -> dcool::core::TypeInfo const& {
+			return typeid(double);
+		}
+	};
+
+	dcool::utility::DefaultOverloadedFunction<
+		auto(int) noexcept -> dcool::core::TypeInfo const&, auto(double) noexcept -> dcool::core::TypeInfo const&
+	> function1 = OverloadedTypeInfo();
+
+	DCOOL_TEST_EXPECT(function1(1) == typeid(int));
+	DCOOL_TEST_EXPECT(function1(1.0) == typeid(double));
 }
