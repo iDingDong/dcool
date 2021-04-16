@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(dcool VERSION 0.7.0 LANGUAGES "CXX")
+project(dcool VERSION 0.8.0 LANGUAGES "CXX")
 
 set(DCOOL_ROOT_DIRECTORY "${PROJECT_SOURCE_DIR}")
 set(DCOOL_INCLUDE_DIRECTORY "${DCOOL_ROOT_DIRECTORY}/include")
