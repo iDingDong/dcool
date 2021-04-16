@@ -190,8 +190,9 @@ namespace dcool::utility {
 
 			public: template <typename ValueT__, typename... ArgumentTs__> constexpr void initialize(
 				Engine& engine_, ::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
-			) noexcept(squeezable_<ValueT__> && noexcept(ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...))) {
-				static_assert(!::dcool::core::Const<ValueT__>);
+			) noexcept(
+				squeezable_<ValueT__> && noexcept(ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...))
+			) requires ::dcool::core::SameAs<ValueT__, ::dcool::core::DecayedType<ValueT__>> {
 				if constexpr (squeezable_<ValueT__>) {
 					this->m_storage_.activateItem();
 					new (this->rawPointer_<ValueT__>(engine_)) ValueT__(::dcool::core::forward<ArgumentTs__>(parameters_)...);
@@ -289,8 +290,11 @@ namespace dcool::utility {
 				return this->m_informationTable_->extendedInformation_;
 			}
 
-			private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) const noexcept -> ValueT__ const* {
-				static_assert(!::dcool::core::Const<ValueT__>);
+			private: template <
+				typename ValueT__
+			> constexpr auto rawPointer_(Engine& engine_) const noexcept -> ValueT__ const* requires ::dcool::core::SameAs<
+				ValueT__, ::dcool::core::DecayedType<ValueT__>
+			> {
 				if constexpr (squeezable_<ValueT__>) {
 					return reinterpret_cast<ValueT__ const*>(::dcool::core::addressOf(this->m_storage_.item()));
 				}
@@ -299,8 +303,11 @@ namespace dcool::utility {
 				);
 			}
 
-			private: template <typename ValueT__> constexpr auto rawPointer_(Engine& engine_) noexcept -> ValueT__* {
-				static_assert(!::dcool::core::Const<ValueT__>);
+			private: template <
+				typename ValueT__
+			> constexpr auto rawPointer_(Engine& engine_) noexcept -> ValueT__* requires ::dcool::core::SameAs<
+				ValueT__, ::dcool::core::DecayedType<ValueT__>
+			> {
 				if constexpr (squeezable_<ValueT__>) {
 					return reinterpret_cast<ValueT__*>(::dcool::core::addressOf(this->m_storage_.item()));
 				}
@@ -310,10 +317,12 @@ namespace dcool::utility {
 			}
 
 			public: template <typename ValueT__> constexpr auto access(Engine& engine_) const noexcept -> ValueT__ const& {
+				DCOOL_CORE_ASSERT(typeid(ValueT__) == this->typeInfo(engine_));
 				return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
 			}
 
 			public: template <typename ValueT__> constexpr auto access(Engine& engine_) noexcept -> ValueT__& {
+				DCOOL_CORE_ASSERT(typeid(ValueT__) == this->typeInfo(engine_));
 				return *::dcool::core::launder(this->rawPointer_<ValueT__>(engine_));
 			}
 

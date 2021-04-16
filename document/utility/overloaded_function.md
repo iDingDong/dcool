@@ -10,8 +10,6 @@ template <
 
 An alternative to `dcool::utility::function` that can be 'overloaded'.
 
-The 'overload resolution' works a bit different with the C++ overloade resolution. It attempts to invoke the overloaded versions from left to right until it finds the arguments a match. This makes all 'overload's impossible to be ambiguous, and the earlier listed overloaded version enjoys a higher 'priority'. Such behavior is experimental and is discouraged to be relied on for now.
-
 ## Configuration `ConfigT`
 
 Its member shall customize the list as decribed:
@@ -29,8 +27,7 @@ Its member shall customize the list as decribed:
 | Name | Definition |
 | - | - |
 | `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
-| `Prototype` | Defined by `using Prototype = auto(ParameterTs...) -> ReturnT;`. |
-| `Return` | Defined by `using Return = ReturnT;`. |
+| `Prototypes` | Defined by `using Prototypes = PrototypesT_;`. |
 
 ## Constructors
 
@@ -133,27 +130,56 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
-template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) const;
-template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters);
+template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) const noexcept(/* unspecified expression */);
+template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) noexcept(/* unspecified expression */);
 ```
 
-Invoke the holded object with forwarded `parameters`.
+Invoke the holded object with forwarded `parameters` if the function holds an object, otherwise terminate execution if corresponding prototype is marked `noexcept`, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
 
-For overload 1, if the const reference to the holded object is not invocable as above, throws a `dcool::utility::BadFunctionCall`.
+For overload 1, if the const reference to the holded object is not invocable as above, terminate execution if corresponding prototype is marked `noexcept`, otherwise throws a `dcool::utility::BadFunctionCall`.
 
 ### `operator ()`
 
 ```cpp
-template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) const;
-template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters);
+template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) const noexcept(/* unspecified expression */);
+template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) noexcept(/* unspecified expression */);
 ```
 
 Equivalent to `this->invokeSelf(dcool::core::forward<ArgumentTs>(parameters)...)`.
 
+## Other helpers
+
+### Type alias template `dcool::utility::DefaultOverloadedFunction`
+
+```cpp
+template <typename... PrototypeTs> using dcool::utility::DefaultOverloadedFunction = ::dcool::utility::OverloadedFunction<
+	::dcool::core::Types<PrototypeTs...>
+>;
+```
+
+## Example
+
+```cpp
+struct IsIntInsteadOfDouble {
+	auto operator ()(int) noexcept -> dcool::core::Boolean {
+		return true;
+	}
+
+	auto operator ()(double) noexcept -> dcool::core::Boolean {
+		return false;
+	}
+};
+
+dcool::utility::DefaultOverloadedFunction<
+	auto(int) noexcept -> dcool::core::Boolean, auto(double) noexcept -> dcool::core::Boolean
+> isIntInsteadOfDouble = IsIntInsteadOfDouble();
+
+dcool::core::Boolean result1 = isIntInsteadOfDouble(1);
+dcool::core::Boolean result2 = isIntInsteadOfDouble(1.0);
+```
+
+You can assume `result1` is `true` and `result2` is `false`;
+
 ## Customized extended operations
 
 Customizing extended operations is almost exactly the same as extending `dcool::utility::Function`, except that you should change all `dcool::utility::Function` to a proper `dcool::utility::OverloadedFunction` type.
-
-## Notes
-
-One of the major differences between `dcool::utility::Function` and `std::function` is that `std::function` acts more like a callable reference with ownership. If the stored object can only be invoked through a non-const reference, `std::function` will still commence the invocation if the `std::function` its self is const-qualified while `dcool::utility::Function` will throw an exception. If you want to emulate the behavior of `std::function` here, you can wrap your callable object in a struct and mark it `mutable`.

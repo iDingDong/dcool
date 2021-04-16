@@ -38,34 +38,48 @@ namespace dcool::utility {
 		template <typename... ParameterTs_> constexpr ::dcool::core::Boolean isImmutablyInvocable_<void, ParameterTs_...> = false;
 
 		template <
-			typename FunctionChassisT_, typename CallableT_, typename ReturnT_, typename... ParameterTs_
+			typename FunctionChassisT_,
+			typename CallableT_,
+			::dcool::core::Boolean noexceptC_,
+			typename ReturnT_,
+			typename... ParameterTs_
 		> constexpr auto immutablyInvokeFunctionChassis_(
 			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_ const& functionChassis_, ParameterTs_... parameters_
-		) -> ReturnT_ {
+		) noexcept(noexceptC_) -> ReturnT_ {
 			if constexpr (::dcool::utility::detail_::isImmutablyInvocable_<CallableT_, ParameterTs_...>) {
 				return ::dcool::core::invoke(
 					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
-			throw ::dcool::utility::BadFunctionCall();
+			if constexpr (!noexceptC_) {
+				throw ::dcool::utility::BadFunctionCall();
+			}
+			::dcool::core::terminate();
 		}
 
 		template <
-			typename FunctionChassisT_, typename CallableT_, typename ReturnT_, typename... ParameterTs_
+			typename FunctionChassisT_,
+			typename CallableT_,
+			::dcool::core::Boolean noexceptC_,
+			typename ReturnT_,
+			typename... ParameterTs_
 		> constexpr auto invokeFunctionChassis_(
 			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_& functionChassis_, ParameterTs_... parameters_
-		) -> ReturnT_ {
+		) noexcept(noexceptC_) -> ReturnT_ {
 			if constexpr (::dcool::core::NonVoid<CallableT_>) {
 				return ::dcool::core::invoke(
 					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
-			throw ::dcool::utility::BadFunctionCall();
+			if constexpr (!noexceptC_) {
+				throw ::dcool::utility::BadFunctionCall();
+			}
+			::dcool::core::terminate();
 		}
 
 		template <
-			typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-		> struct FunctionChassis_<auto(ParameterTs_...) -> ReturnT_, ConfigT_> {
+			typename ConfigT_, ::dcool::core::Boolean noexceptC_, typename ReturnT_, typename... ParameterTs_
+		> struct FunctionChassis_<auto(ParameterTs_...) noexcept(noexceptC_) -> ReturnT_, ConfigT_> {
 			private: using Self_ = FunctionChassis_<auto(ParameterTs_...) -> ReturnT_, ConfigT_>;
 			public: using Prototype = auto(ParameterTs_...) -> ReturnT_;
 			public: using Config = ConfigT_;
@@ -75,6 +89,7 @@ namespace dcool::utility {
 			public: using Pool = ConfigAdaptor_::Pool;
 			public: using Engine = ConfigAdaptor_::Engine;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
+			public: static constexpr ::dcool::core::Boolean noexceptInvocable = noexceptC_;
 			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 				ConfigAdaptor_::exceptionSafetyStrategy
@@ -91,9 +106,9 @@ namespace dcool::utility {
 
 				template <typename ValueT__> constexpr AnyExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
 					immutableInvoker_(
-						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<Self_, ValueT__, Return, ParameterTs_...>
+						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<Self_, ValueT__, noexceptC_, Return, ParameterTs_...>
 					),
-					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<Self_, ValueT__, Return, ParameterTs_...>),
+					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<Self_, ValueT__, noexceptC_, Return, ParameterTs_...>),
 					immutablyInvocable_(::dcool::utility::detail_::isImmutablyInvocable_<ValueT__, ParameterTs_...>),
 					extendedInformation_(typed_)
 				{
@@ -191,13 +206,15 @@ namespace dcool::utility {
 				return this->m_underlying_.template value<ValueT__>(engine_);
 			}
 
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) const -> Return {
+			public: constexpr auto invokeSelf(
+				Engine& engine_, ParameterTs_... parameters_
+			) const noexcept(noexceptInvocable) -> Return {
 				return this->m_underlying_.extendedInformation(engine_).immutableInvoker_(
 					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
 
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) -> Return {
+			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
 				return this->m_underlying_.extendedInformation(engine_).invoker_(
 					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
@@ -232,6 +249,7 @@ namespace dcool::utility {
 		public: using Return = Chassis::Return;
 		public: using Engine = Chassis::Engine;
 		public: using ExtendedInformation = Chassis::ExtendedInformation;
+		public: static constexpr ::dcool::core::Boolean noexceptInvocable = Chassis::noexceptInvocable;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = Chassis::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			Chassis::exceptionSafetyStrategy
@@ -322,8 +340,8 @@ namespace dcool::utility {
 		}
 
 		public: constexpr auto immutablyInvocable() const noexcept -> ::dcool::core::Boolean {
-				return this->chassis().immutablyInvocable(this->mutableEngine());
-			}
+			return this->chassis().immutablyInvocable(this->mutableEngine());
+		}
 
 		public: constexpr auto typeInfo() const noexcept -> ::dcool::core::TypeInfo const& {
 			return this->chassis().typeInfo(this->mutableEngine());
@@ -349,19 +367,19 @@ namespace dcool::utility {
 			return this->chassis().template value<ValueT__>(this->mutableEngine());
 		}
 
-		public: constexpr auto invokeSelf(ParameterTs_... parameters_) const -> Return {
+		public: constexpr auto invokeSelf(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Return {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto invokeSelf(ParameterTs_... parameters_) -> Return {
+		public: constexpr auto invokeSelf(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto operator()(ParameterTs_... parameters_) const -> Return {
+		public: constexpr auto operator()(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Return {
 			return this->invokeSelf(::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto operator()(ParameterTs_... parameters_) -> Return {
+		public: constexpr auto operator()(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
 			return this->invokeSelf(::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 	};

@@ -781,11 +781,11 @@ namespace dcool::container {
 			}
 			try {
 				::dcool::core::batchCopyConstruct(this->begin(engine_), this->end(engine_), other_.begin(otherEngine_));
-				other_.m_storage_.setLength(otherEngine_, this->length(engine_));
 			} catch (...) {
 				other_.uninitializeWithoutFilled_(otherEngine_);
 				throw;
 			}
+			other_.m_storage_.setLength(otherEngine_, this->length(engine_));
 		}
 
 		public: template <
@@ -929,6 +929,10 @@ namespace dcool::container {
 			return this->m_storage_.length(engine_);
 		}
 
+		public: constexpr auto remaining(Engine& engine_) const noexcept -> Length {
+			return this->capacity(engine_) - this->length(engine_);
+		}
+
 		public: constexpr auto capacity(Engine& engine_) const noexcept -> Length {
 			return this->m_storage_.capacity(engine_);
 		}
@@ -1044,6 +1048,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Index index_) const noexcept -> Value const* requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.capacity());
 			Value const* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1054,6 +1059,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Index index_) noexcept -> Value* requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.capacity());
 			Value* result_;
 			if constexpr (circular) {
 				result_ = this->data() + this->itemOffset_(index_);
@@ -1064,6 +1070,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Engine& engine_, Index index_) const noexcept -> Value const* {
+			DCOOL_CORE_ASSERT(index_ < this->capacity(engine_));
 			Value const* result_;
 			if constexpr (circular) {
 				result_ = this->data(engine_) + this->itemOffset_(engine_, index_);
@@ -1074,6 +1081,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto rawPointerAt(Engine& engine_, Index index_) noexcept -> Value* {
+			DCOOL_CORE_ASSERT(index_ < this->capacity(engine_));
 			Value* result_;
 			if constexpr (circular) {
 				result_ = this->data(engine_) + this->itemOffset_(engine_, index_);
@@ -1083,7 +1091,7 @@ namespace dcool::container {
 			return result_;
 		}
 
-		public: constexpr auto access(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
+		private: constexpr auto access_(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value const> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data() + this->itemOffset_(index_));
@@ -1093,7 +1101,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Index index_) noexcept -> Value& requires (squeezedOnly) {
+		private: constexpr auto access_(Index index_) noexcept -> Value& requires (squeezedOnly) {
 			::dcool::core::ContaminatedPointer<Value> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data() + this->itemOffset_(index_));
@@ -1103,7 +1111,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
+		private: constexpr auto access_(Engine& engine_, Index index_) const noexcept -> Value const& {
 			::dcool::core::ContaminatedPointer<Value const> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value const>(this->data(engine_) + this->itemOffset_(engine_, index_));
@@ -1113,7 +1121,7 @@ namespace dcool::container {
 			return ::dcool::core::dereference(pointer_);
 		}
 
-		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
+		private: constexpr auto access_(Engine& engine_, Index index_) noexcept -> Value& {
 			::dcool::core::ContaminatedPointer<Value> pointer_;
 			if constexpr (circular) {
 				pointer_ = ::dcool::core::ContaminatedPointer<Value>(this->data(engine_) + this->itemOffset_(engine_, index_));
@@ -1121,6 +1129,26 @@ namespace dcool::container {
 				pointer_ = this->position(engine_, index_);
 			}
 			return ::dcool::core::dereference(pointer_);
+		}
+
+		public: constexpr auto access(Index index_) const noexcept -> Value const& requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.length());
+			return this->access_(index_);
+		}
+
+		public: constexpr auto access(Index index_) noexcept -> Value& requires (squeezedOnly) {
+			DCOOL_CORE_ASSERT(index_ < this->m_storage_.length());
+			return this->access_(index_);
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) const noexcept -> Value const& {
+			DCOOL_CORE_ASSERT(index_ < this->length(engine_));
+			return this->access_(engine_, index_);
+		}
+
+		public: constexpr auto access(Engine& engine_, Index index_) noexcept -> Value& {
+			DCOOL_CORE_ASSERT(index_ < this->length(engine_));
+			return this->access_(engine_, index_);
 		}
 
 		public: constexpr auto front(Engine& engine_) const noexcept -> Value const& {
@@ -1167,7 +1195,7 @@ namespace dcool::container {
 						::dcool::core::ContaminatedPointer<Value> endToMove_ =
 							beginToMove_ + ::dcool::core::min(oldFrontPartLength_, extra_)
 						;
-						Value* beginOfDestination_ = beginToMove_ + oldCapacity_;
+						Value* beginOfDestination_ = beginToMove_.rawPointer() + oldCapacity_;
 						::dcool::core::ContaminatedPointer<Value> endOfBackPart_ = beginToMove_ + oldFrontPartLength_;
 						::dcool::core::batchRelocate<strategyC__>(beginToMove_, endToMove_, beginOfDestination_);
 						try {
@@ -1191,7 +1219,7 @@ namespace dcool::container {
 			if (extra_ == 0) {
 				return;
 			}
-			if (this->m_storage_.expandBack(engine_, extra_)) {
+			if (this->expandBack_(engine_, extra_)) {
 				return;
 			}
 			StorageType_ newStorage_;
@@ -1235,6 +1263,8 @@ namespace dcool::container {
 		> constexpr void makeRoom_(
 			Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1
 		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= gapBegin_ && gapBegin_ <= this->end(engine_));
+			DCOOL_CORE_ASSERT(gapLength_ <= this->remaining(engine_));
 			Length newLength_ = this->length(engine_) + gapLength_;
 			if constexpr (circular) {
 				if (gapBegin_.index() * 2 < this->length(engine_)) {
@@ -1280,6 +1310,143 @@ namespace dcool::container {
 		}
 
 		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsert_(Engine& engine_, Iterator position_, IteratorT__ begin_, IteratorT__ end_) -> Iterator {
+			return this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, ::dcool::core::rangeLength(begin_, end_));
+		}
+
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsertN_(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			DCOOL_CORE_ASSERT(count_ >= 0);
+			this->makeRoom_<strategyC__>(engine_, position_, count_);
+			try {
+				::dcool::core::batchCopyConstructN<strategyC__>(begin_, count_, position_);
+			} catch (...) {
+				this->reclaimRoom_<strategyC__>(engine_, position_);
+				throw;
+			}
+			return position_;
+		}
+
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsert(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator requires (!stuffed) {
+			return this->braveBatchInsert_<strategyC__>(engine_, position_, begin_, end_);
+		}
+
+		private: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto braveBatchInsert(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator {
+			return this->braveBatchInsert<exceptionSafetyStrategy>(engine_, position_, begin_, end_);
+		}
+
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsertN(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator requires (!stuffed) {
+			return this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, count_);
+		}
+
+		private: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto braveBatchInsertN(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->braveBatchInsertN<exceptionSafetyStrategy>(engine_, position_, begin_, count_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto batchInsert(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator {
+			return this->batchInsertN<strategyC__>(engine_, position_, begin_, ::dcool::core::rangeLength(begin_, end_));
+		}
+
+		public: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto batchInsert(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator {
+			return this->batchInsert<exceptionSafetyStrategy>(engine_, position_, begin_, end_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto batchInsertN(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			DCOOL_CORE_ASSERT(count_ >= 0);
+			Length remaining_ = this->remaining(engine_);
+			if (remaining_ < static_cast<Length>(count_)) {
+				if constexpr (!squeezedOnly) {
+					Length extraCapacity_ = count_ - remaining_;
+					if (this->expandBack_(engine_, extraCapacity_)) {
+						this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, count_);
+						return position_;
+					}
+					Self_ newChassis_;
+					Length newCapacity_ = this->capacity(engine_) + extraCapacity_;
+					newChassis_.initializeWithoutFill_(engine_, newCapacity_);
+					Length lengthBeforePosition_ = static_cast<Length>(position_ - this->begin(engine_));
+					Iterator newPosition_ = newChassis_.position(engine_, lengthBeforePosition_);
+					try {
+						::dcool::core::batchCopyConstructN(begin_, count_, newPosition_);
+					} catch (...) {
+						newChassis_.uninitializeWithoutFilled_(engine_);
+						throw;
+					}
+					try {
+						if constexpr (::dcool::core::atAnyCost(strategyC__) && !(::dcool::core::isNoThrowMoveConstructible<Value>)) {
+							::std::uninitialized_copy(this->begin(engine_), position_, newChassis_.begin(engine_));
+							try {
+								::dcool::core::batchRelocate<strategyC__>(position_, this->end(engine_), newPosition_ + count_);
+							} catch (...) {
+								::dcool::core::batchDestruct(newChassis_.begin(engine_), newPosition_);
+								throw;
+							}
+						} else {
+							::dcool::core::batchMoveConstruct<strategyC__>(this->begin(engine_), position_, newChassis_.begin(engine_));
+							try {
+								::dcool::core::batchRelocate<strategyC__>(position_, this->end(engine_), newPosition_ + count_);
+							} catch (...) {
+								try {
+									::dcool::core::batchMove(newChassis_.begin(engine_), newPosition_, this->begin(engine_));
+								} catch(...) {
+									::dcool::core::goWeak<strategyC__>();
+								}
+								::dcool::core::batchDestruct(newChassis_.begin(engine_), newPosition_);
+								throw;
+							}
+						}
+						::dcool::core::batchDestruct(this->begin(engine_), position_);
+					} catch (...) {
+						newPosition_->~Value();
+						newChassis_.uninitializeWithoutFilled_(engine_);
+						throw;
+					}
+					newChassis_.m_storage_.setLength(engine_, this->length(engine_) + count_);
+					this->uninitializeWithoutFilled_(engine_);
+					newChassis_.relocateTo(engine_, engine_, *this);
+					if constexpr (circular) {
+						newPosition_ = this->position(engine_, newPosition_.index());
+					}
+					return newPosition_;
+				}
+				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
+			}
+			return this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, count_);
+		}
+
+		public: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto batchInsertN(
+			Engine& engine_, Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->batchInsertN<exceptionSafetyStrategy>(engine_, position_, begin_, count_);
+		}
+
+		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto braveEmplace_(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
 			this->makeRoom_<strategyC__>(engine_, position_);
@@ -1294,8 +1461,9 @@ namespace dcool::container {
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
-		> constexpr auto braveEmplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
-			static_assert(!stuffed);
+		> constexpr auto braveEmplace(
+			Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator requires (!stuffed) {
 			return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
@@ -1310,10 +1478,11 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr auto emplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ <= this->end(engine_));
 			if (this->full(engine_)) {
 				if constexpr (!squeezedOnly) {
 					Length extraCapacity_ = (((!stuffed) && this->capacity(engine_) > 0) ? this->capacity(engine_) : 1);
-					if (this->m_storage_.expandBack(engine_, extraCapacity_)) {
+					if (this->expandBack_(engine_, extraCapacity_)) {
 						return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 					}
 					Self_ newChassis_;
@@ -1331,9 +1500,7 @@ namespace dcool::container {
 						if constexpr (::dcool::core::atAnyCost(strategyC__) && !(::dcool::core::isNoThrowMoveConstructible<Value>)) {
 							::std::uninitialized_copy(this->begin(engine_), position_, newChassis_.begin(engine_));
 							try {
-								::dcool::core::batchRelocate<strategyC__>(
-									position_, this->end(engine_), ::dcool::core::rawPointerOf(newPosition_) + 1
-								);
+								::dcool::core::batchRelocate<strategyC__>(position_, this->end(engine_), newPosition_ + 1);
 							} catch (...) {
 								::dcool::core::batchDestruct(newChassis_.begin(engine_), newPosition_);
 								throw;
@@ -1462,6 +1629,7 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void inPlacePopFront_(Engine& engine_, Iterator newBegin_) noexcept {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= newBegin_ && newBegin_ <= this->end(engine_));
 			Length lengthToPop_ = newBegin_ - this->begin(engine_);
 			Length newBeginOffset_ = this->m_storage_.beginOffset(engine_) + lengthToPop_;
 			if (newBeginOffset_ >= this->capacity(engine_)) {
@@ -1508,6 +1676,7 @@ namespace dcool::container {
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void inPlacePopBack_(Engine& engine_, Iterator newEnd_) noexcept {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= newEnd_ && newEnd_ <= this->end(engine_));
 			Length lengthToPop_ = this->end(engine_) - newEnd_;
 			::dcool::core::batchDestruct(newEnd_, this->end(engine_));
 			Length newLength_ = this->length(engine_) - lengthToPop_;
@@ -1558,6 +1727,7 @@ namespace dcool::container {
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto inPlaceErase_(Engine& engine_, Iterator position_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ < this->end(engine_));
 			if constexpr (circular) {
 				if (position_ - this->begin(engine_) < this->end(engine_) - position_ - 1) {
 					::dcool::core::batchMove(
@@ -1577,6 +1747,7 @@ namespace dcool::container {
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto inPlaceErase_(Engine& engine_, Iterator begin_, Iterator end_) -> Iterator {
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= begin_ && begin_ <= end_ && end_ <= this->end(engine_));
 			if constexpr (circular) {
 				if (begin_ - this->begin(engine_) < this->end(engine_) - end_) {
 					::dcool::core::batchMove(
@@ -1597,6 +1768,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto eraseAndShrink(Engine& engine_, Iterator position_) -> Iterator {
 			static_assert(!squeezedOnly);
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ < this->end(engine_));
 			if (this->squeezed(engine_)) {
 				return this->inPlaceErase_<strategyC__>(engine_, position_);
 			}
@@ -1641,6 +1813,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr auto eraseAndShrink(Engine& engine_, Iterator begin_, Iterator end_) -> Iterator {
 			static_assert(!squeezedOnly);
+			DCOOL_CORE_ASSERT(this->begin(engine_) <= begin_ && begin_ <= end_ && end_ <= this->end(engine_));
 			if (this->squeezed(engine_)) {
 				return this->inPlaceErase_<strategyC__>(engine_, begin_, end_);
 			}
@@ -1878,6 +2051,58 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void forceExpandBack(Length extra_) {
 			this->chassis().template forceExpandBack<strategyC__>(this->engine_(), extra_);
+		}
+
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsert(Iterator position_, IteratorT__ begin_, IteratorT__ end_) -> Iterator {
+			return this->chassis().template braveBatchInsert<strategyC__>(this->engine_(), position_, begin_, end_);
+		}
+
+		private: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto braveBatchInsert(
+			Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator {
+			return this->chassis().braveBatchInsert(this->engine_(), position_, begin_, end_);
+		}
+
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto braveBatchInsertN(
+			Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->chassis().template braveBatchInsertN<strategyC__>(this->engine_(), position_, begin_, count_);
+		}
+
+		private: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto braveBatchInsertN(
+			Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->chassis().braveBatchInsertN(this->engine_(), position_, begin_, count_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto batchInsert(Iterator position_, IteratorT__ begin_, IteratorT__ end_) -> Iterator {
+			return this->chassis().template batchInsert<strategyC__>(this->engine_(), position_, begin_, end_);
+		}
+
+		public: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto batchInsert(
+			Iterator position_, IteratorT__ begin_, IteratorT__ end_
+		) -> Iterator {
+			return this->chassis().batchInsert(this->engine_(), position_, begin_, end_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, ::dcool::core::ForwardIterator IteratorT__
+		> constexpr auto batchInsertN(
+			Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->chassis().template batchInsertN<strategyC__>(this->engine_(), position_, begin_, count_);
+		}
+
+		public: template <::dcool::core::ForwardIterator IteratorT__> constexpr auto batchInsertN(
+			Iterator position_, IteratorT__ begin_, ::dcool::core::IteratorDifferenceType<IteratorT__> count_
+		) -> Iterator {
+			return this->chassis().batchInsertN(this->engine_(), position_, begin_, count_);
 		}
 
 		public: template <

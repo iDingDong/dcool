@@ -61,6 +61,9 @@ DCOOL_TEST_CASE(dcoolContainer, listBasics) {
 			list2.erase(list2.begin());
 			DCOOL_TEST_EXPECT(Traced::livingCount() == 7);
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
+			list2.batchInsert(list2.begin() + 1, list1.begin() + 1, list1.begin() + 3);
+			DCOOL_TEST_EXPECT(Traced::livingCount() == 9);
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 1, 2, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
 		list1.erase(list1.begin() + 1, list1.end() - 1);
@@ -142,6 +145,10 @@ DCOOL_TEST_CASE(dcoolContainer, stuffedlistBasics) {
 			DCOOL_TEST_EXPECT(Traced::livingCount() == 7);
 			DCOOL_TEST_EXPECT(list2.length() == list2.capacity());
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
+			list2.batchInsert(list2.begin() + 1, list1.begin() + 1, list1.begin() + 3);
+			DCOOL_TEST_EXPECT(list2.length() == list2.capacity());
+			DCOOL_TEST_EXPECT(Traced::livingCount() == 9);
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 1, 2, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
 		list1.erase(list1.begin() + 1, list1.end() - 1);
@@ -212,6 +219,9 @@ DCOOL_TEST_CASE(dcoolContainer, circularlistBasics) {
 			list2.erase(list2.begin());
 			DCOOL_TEST_EXPECT(Traced::livingCount() == 7);
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
+			list2.batchInsert(list2.begin() + 1, list1.begin() + 1, list1.begin() + 3);
+			DCOOL_TEST_EXPECT(Traced::livingCount() == 9);
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 1, 2, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
 		list1.erase(list1.begin() + 1, list1.end() - 1);
@@ -281,6 +291,9 @@ DCOOL_TEST_CASE(dcoolContainer, smallListBasics) {
 			list2.erase(list2.begin());
 			DCOOL_TEST_EXPECT(Traced::livingCount() == 7);
 			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 2, 3));
+			list2.batchInsert(list2.begin() + 1, list1.begin() + 1, list1.begin() + 3);
+			DCOOL_TEST_EXPECT(Traced::livingCount() == 9);
+			DCOOL_TEST_EXPECT_RANGE_EQUALITY(list2, DCOOL_TEST_SEQUENCE_OF(Traced, 1, 1, 2, 2, 3));
 		}
 		DCOOL_TEST_EXPECT(Traced::livingCount() == 4);
 		list1.erase(list1.begin() + 1, list1.end() - 1);

@@ -3,6 +3,8 @@
 
 #	include <dcool/core.hpp>
 
+#	include <iterator>
+
 namespace dcool::container {
 	namespace detail_ {
 		template <
@@ -83,6 +85,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr void advance(Difference step_ = 1) noexcept {
+			DCOOL_CORE_ASSERT(static_cast<Difference>(this->index()) >= -step_);
 			this->m_index_ += step_;
 		}
 
@@ -354,6 +357,32 @@ namespace dcool::container {
 
 		public: friend constexpr auto operator -(Self_ const& left_, Self_ const& right_) noexcept -> Difference {
 			return right_.distanceTo(left_);
+		}
+	};
+}
+
+namespace std {
+	template <typename RangeChassisT_> struct pointer_traits<::dcool::container::IndexableChassisIterator<RangeChassisT_>> {
+		using pointer = ::dcool::container::IndexableChassisIterator<RangeChassisT_>;
+		using element_type = pointer::Value;
+		using difference_type = pointer::Difference;
+
+		static constexpr auto to_address(pointer const& pointer_) noexcept -> element_type* {
+			return pointer_.rawPointer();
+		}
+	};
+
+	template <typename RangeChassisT_> struct pointer_traits<
+		::std::reverse_iterator<::dcool::container::IndexableChassisIterator<RangeChassisT_>>
+	> {
+		using pointer = ::std::reverse_iterator<::dcool::container::IndexableChassisIterator<RangeChassisT_>>;
+		using element_type = pointer::value_type;
+		using difference_type = pointer::difference_type;
+
+		static constexpr auto to_address(pointer const& pointer_) noexcept -> element_type* {
+			auto base_ = pointer_.base();
+			--base_;
+			return base_.rawPointer();
 		}
 	};
 }

@@ -7,6 +7,7 @@
 #	include <dcool/core/range.hpp>
 
 #	include <new>
+#	include <iterator>
 
 namespace dcool::core {
 	using ::std::launder;
@@ -145,6 +146,30 @@ namespace dcool::core {
 		public: friend constexpr auto operator >(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator <=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend constexpr auto operator >=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+	};
+}
+
+namespace std {
+	template <typename ValueT_> struct pointer_traits<::dcool::core::ContaminatedPointer<ValueT_>> {
+		using pointer = ::dcool::core::ContaminatedPointer<ValueT_>;
+		using element_type = pointer::Value;
+		using difference_type = pointer::Difference;
+
+		static constexpr auto to_address(pointer const& pointer_) noexcept -> element_type* {
+			return pointer_.rawPointer();
+		}
+	};
+
+	template <typename ValueT_> struct pointer_traits<::std::reverse_iterator<::dcool::core::ContaminatedPointer<ValueT_>>> {
+		using pointer = ::std::reverse_iterator<::dcool::core::ContaminatedPointer<ValueT_>>;
+		using element_type = pointer::value_type;
+		using difference_type = pointer::difference_type;
+
+		static constexpr auto to_address(pointer const& pointer_) noexcept -> element_type* {
+			auto base_ = pointer_.base();
+			--base_;
+			return base_.rawPointer();
+		}
 	};
 }
 

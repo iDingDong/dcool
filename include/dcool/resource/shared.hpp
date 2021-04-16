@@ -309,7 +309,7 @@ namespace dcool::resource {
 				::dcool::core::ConditionalType<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
 			>;
 			private: static constexpr ::dcool::core::CounterScenario counterScenario_ = (
-				atomicallyCounted ? ::dcool::core::CounterScenario::synchronized : ::dcool::core::CounterScenario::logicDependent
+				atomicallyCounted ? ::dcool::core::CounterScenario::logicDependent : ::dcool::core::CounterScenario::synchronized
 			);
 
 			public: using Counters = ::dcool::resource::detail_::SharedCounter_<

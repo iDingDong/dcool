@@ -20,9 +20,10 @@ Unless otherwise specified, the behavior is undefined if a user-defined name
 
 - is documented to be defined by this library, or
 - begins with `DCOOL_` and all letters uppercase, or
+- begins with `DCOOLER_` and all letters uppercase but not documented as a preprocessor configuration, or
 - begins with `dcool` and ends with an underscore, or
 - is in the namespace `dcool`, or
-- is a macro defined before inclusion of one of this library's headers that is neither all letters uppercase nor begins with no underscore.
+- is a macro defined before inclusion of one of this library's headers that does not have all letters uppercase, begins with no underscore and ends with an underscore.
 
 ## Compatibility
 
