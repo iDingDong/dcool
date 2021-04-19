@@ -1,9 +1,14 @@
-add_library(
-	dcool_test
-	SHARED
+set(
+	dcool_test_sources
 	"./case.cpp"
 	"./center.cpp"
 	"./suite.cpp"
+)
+
+add_library(
+	dcool_test
+	SHARED
+	${dcool_test_sources}
 )
 
 target_compile_features(dcool_test PUBLIC cxx_std_20)
@@ -19,9 +24,7 @@ set_target_properties(dcool_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${DCOOL_OU
 add_library(
 	dcooldebug_test
 	SHARED
-	"./case.cpp"
-	"./center.cpp"
-	"./suite.cpp"
+	${dcool_test_sources}
 )
 
 target_compile_features(dcooldebug_test PUBLIC cxx_std_20)
@@ -34,4 +37,4 @@ target_include_directories(dcooldebug_test PUBLIC "${DCOOL_INCLUDE_DIRECTORY}")
 
 set_target_properties(dcooldebug_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${DCOOL_OUTPUT_DIRECTORY}")
 
-target_compile_definitions(dcooldebug_test PUBLIC DCOOLER_CORE_ENABLE_BINARY_BREAKING_DEBUG=1)
+target_compile_definitions(dcooldebug_test PUBLIC DCOOLER_CORE_ENABLE_AGGRESSIVE_DEBUG=1)
