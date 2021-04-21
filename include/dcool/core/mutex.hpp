@@ -12,6 +12,10 @@
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeMutex, ExtractedMutexType, Mutex)
 
 namespace dcool::core {
+	using AdoptLockTag = ::std::adopt_lock_t;
+
+	constexpr ::dcool::core::AdoptLockTag adoptLock = ::std::adopt_lock;
+
 	template <typename T_> concept StandardBasicLockable = requires (T_ mutex_) {
 		mutex_.lock();
 		mutex_.unlock(); // ISO C++ requires this expression to throw nothing, but 'noexcept' is not required.
@@ -301,8 +305,12 @@ namespace dcool::core {
 		public: PhoneyLockGuard() = delete;
 		public: PhoneyLockGuard(Self_ const&) = delete;
 		public: PhoneyLockGuard(Self_&&) = delete;
+
 		public: constexpr PhoneyLockGuard(Mutex& mutex_) noexcept: m_mutex_(mutex_) {
 			::dcool::core::phoneyLock(this->m_mutex_);
+		}
+
+		public: constexpr PhoneyLockGuard(::dcool::core::AdoptLockTag, Mutex& mutex_) noexcept: m_mutex_(mutex_) {
 		}
 
 		public: constexpr ~PhoneyLockGuard() noexcept {
