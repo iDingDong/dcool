@@ -20,6 +20,7 @@ DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
 )
 
 namespace dcool::core {
+	using InputIteratorTag = ::std::input_iterator_tag;
 	using OutputIteratorTag = ::std::output_iterator_tag;
 	using RandomAccessIteratorTag = ::std::random_access_iterator_tag;
 	using ContiguousIteratorTag = ::std::contiguous_iterator_tag;
