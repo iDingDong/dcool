@@ -79,6 +79,12 @@ namespace dcool::resource {
 			pointer_, ::dcool::resource::PoolDestroyer<Pool_>{ .pool = ::dcool::core::forward<PoolT_>(pool_) }
 		);
 	}
+
+	template <typename ValueT_, typename DismissorT_> constexpr auto makeUniqueGuard(ValueT_& value_, DismissorT_&& dismissor_) {
+		return ::dcool::resource::UniquePointer<ValueT_, ::dcool::core::ReferenceRemovedType<DismissorT_>>(
+			::dcool::core::addressOf(value_), ::dcool::core::forward<DismissorT_>(dismissor_)
+		);
+	}
 }
 
 #endif
