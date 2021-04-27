@@ -23,4 +23,13 @@
 
 #	define DCOOL_TEST_SEQUENCE_OF(Type, ...) ::std::initializer_list<Type>{ __VA_ARGS__ }
 
+#	define DCOOL_TEST_EXPECT_THROW(ExceptionType, ...) \
+	do { \
+		dcool::core::Boolean dcoolTestThrown_ = false; \
+		try __VA_ARGS__ catch (ExceptionType) { \
+			dcoolTestThrown_ = true; \
+		} \
+		DCOOL_TEST_EXPECT(dcoolTestThrown_); \
+	} while (false)
+
 #endif
