@@ -41,7 +41,7 @@ Unless otherwise specified, source-code compatibility is preserved within the sa
 
 ### Consider any undocumented behavior related to this library unstable
 
-In addition, names defined in namespace `*::detail_`, or names followed by tailing underscore are not even yet planned to be stablized in the future.
+In addition, unless otherwise specified, consider inheriting any class type (documented to be class or not) defined by this library undefined behavior.
 
 ### Code previews does not necessarily express the exact look of implementation
 
