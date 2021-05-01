@@ -7,8 +7,8 @@ This document records bugs of the dependencies of this library encoutered during
 ### Bug_1: class type NTTP causes ICE
 
 - Compiler: GCC
-- Info last updated: 2021-01-09
-- Status: Unresolved (latest version 10.2.0)
+- Info last updated: 2021-04-28
+- Status: Unresolved (latest version 11.1.0)
 - Report link: [GCC Bug #95159](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95159)
 
 Minial reprocase:
@@ -40,8 +40,8 @@ The workaround is never to pass class type non-type template argument.
 ### Bug_2: Unused warning on used item
 
 - Compiler: GCC
-- Info last updated: 2021-01-09
-- Status: Unresolved (latest version 10.2.0)
+- Info last updated: 2021-04-28
+- Status: Unresolved (latest version 11.1.0)
 - Report link: [GCC Bug #61596](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61596)
 
 Minial reprocase:
@@ -70,8 +70,8 @@ The `Type` is actually used in `bar`. The workaround is to define the above clas
 ### Bug_3: Copy operations not defaultable
 
 - Compiler: GCC
-- Info last updated: 2021-01-10
-- Status: Unresolved (latest version 10.2.0)
+- Info last updated: 2021-04-28
+- Status: Unresolved (latest version 11.1.0)
 - Report link: [GCC Bug #98614](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98614)
 
 Minial reprocase:
