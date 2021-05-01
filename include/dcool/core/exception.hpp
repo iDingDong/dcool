@@ -72,12 +72,22 @@ namespace dcool::core {
 
 	using ExceptionPointer = ::std::exception_ptr;
 
+	template <typename ExceptionT_> auto makeExceptionPointer(ExceptionT_ exception_) noexcept {
+		return ::std::make_exception_ptr(::dcool::core::move(exception_));
+	}
+
 	inline auto currentException() noexcept -> ::dcool::core::ExceptionPointer {
 		return ::std::current_exception();
 	}
 
-	[[noreturn]] inline void rethrow(ExceptionPointer pointer_) {
+	[[noreturn]] inline void rethrow(::dcool::core::ExceptionPointer pointer_) {
 		::std::rethrow_exception(pointer_);
+	}
+
+	inline void rethrowIfValid(::dcool::core::ExceptionPointer pointer_) {
+		if (pointer_) {
+			::dcool::core::rethrow(pointer_);
+		}
 	}
 
 	template <typename... Ts_> class ExceptionSafetyDowngrade : ::std::runtime_error {
@@ -94,6 +104,8 @@ namespace dcool::core {
 			::dcool::core::rethrow(this->m_underlying_);
 		}
 	};
+
+	using OutOfRange = ::std::out_of_range;
 }
 
 #endif

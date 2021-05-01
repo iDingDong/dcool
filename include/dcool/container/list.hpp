@@ -24,8 +24,6 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 
 namespace dcool::container {
-	using OutOfRange = ::std::out_of_range;
-
 	namespace detail_ {
 		template <::dcool::core::Boolean squeezedOnlyC_, typename ConfigT_, typename ValueT_> struct ListConfigAdaptorBase_ {
 			private: using Self_ = ListConfigAdaptorBase_<squeezedOnlyC_, ConfigT_, ValueT_>;
@@ -1435,7 +1433,7 @@ namespace dcool::container {
 					}
 					return newPosition_;
 				}
-				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
+				throw ::dcool::core::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
 			}
 			return this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, count_);
 		}
@@ -1533,7 +1531,7 @@ namespace dcool::container {
 					}
 					return newPosition_;
 				}
-				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
+				throw ::dcool::core::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
 			}
 			return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}

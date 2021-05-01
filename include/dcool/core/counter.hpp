@@ -68,7 +68,9 @@ namespace dcool::core {
 			private: friend Refered_;
 
 			private: Refered_* m_counter_;
-			private: Underlying m_value_;
+			private: Underlying m_value_ = 0;
+
+			public: constexpr PositiveToken() noexcept = default;
 
 			private: constexpr PositiveToken(
 				Refered_& counter_, Underlying value_
@@ -83,7 +85,9 @@ namespace dcool::core {
 			}
 
 			public: constexpr ~PositiveToken() noexcept {
-				this->m_counter_->decrement(this->m_value_);
+				if (this->m_value_ != 0) {
+					this->m_counter_->decrement(this->m_value_);
+				}
 			}
 
 			public: auto operator =(Self_ const& other_) -> Self_& = delete;
@@ -100,7 +104,9 @@ namespace dcool::core {
 			private: friend Refered_;
 
 			private: Refered_* m_counter_;
-			private: Underlying m_value_;
+			private: Underlying m_value_ = 0;
+
+			public: constexpr NegativeToken() noexcept = default;
 
 			private: constexpr NegativeToken(
 				Refered_& counter_, Underlying value_
@@ -111,7 +117,9 @@ namespace dcool::core {
 			public: NegativeToken(Self_ const&) = delete;
 
 			public: constexpr NegativeToken(Self_&& other_) noexcept: m_counter_(other_.m_counter_), m_value_(other_.m_value_) {
-				other_.m_value_ = 0;
+				if (this->m_value_ != 0) {
+					other_.m_value_ = 0;
+				}
 			}
 
 			public: constexpr ~NegativeToken() noexcept {

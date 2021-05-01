@@ -17,7 +17,7 @@ namespace dcool::core {
 	namespace detail_ {
 		template <
 			typename T_, typename OptionalT_
-		> concept OptionalDirectionInitializeArgumentFor_ = !::dcool::core::FormOfOneOf<
+		> concept OptionalDirectInitializeArgumentFor_ = !::dcool::core::FormOfOneOf<
 			T_, OptionalT_, ::dcool::core::InPlaceTag, ::dcool::core::NullOptional
 		>;
 
@@ -99,7 +99,7 @@ namespace dcool::core {
 			}
 
 			public: template <
-				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
+				::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
 			> constexpr explicit(
 				!::dcool::core::ConvertibleTo<ValueT__&&, Value>
 			) Optional_(ValueT__&& value_) noexcept(
@@ -124,7 +124,7 @@ namespace dcool::core {
 			}
 
 			public: template <
-				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
+				::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
 			> constexpr auto operator =(ValueT__&& value_) -> Self_& {
 				this->m_underlying_ = ::dcool::core::forward<ValueT__>(value_);
 				return *this;
@@ -153,7 +153,7 @@ namespace dcool::core {
 			public: template <typename... ArgumentTs__> constexpr void emplace(ArgumentTs__&&... arguments_) noexcept(
 				noexcept(::dcool::core::declval<Underlying_&>().emplace(::dcool::core::forward<ArgumentTs__>(arguments_)...))
 			) {
-				return this->m_underlying_.emplace(::dcool::core::forward<ArgumentTs__>(arguments_)...);
+				this->m_underlying_.emplace(::dcool::core::forward<ArgumentTs__>(arguments_)...);
 			}
 
 			public: constexpr void reset() noexcept {
@@ -185,7 +185,7 @@ namespace dcool::core {
 			}
 
 			public: template <
-				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
+				::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
 			> constexpr explicit(
 				!::dcool::core::ConvertibleTo<ValueT__&&, Value>
 			) Optional_(ValueT__&& value_) noexcept(
@@ -199,20 +199,20 @@ namespace dcool::core {
 			public: constexpr auto operator =(Optional_ const& other_) -> Self_& = default;
 			public: constexpr auto operator =(Self_&& other_) -> Self_& = default;
 
-			public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
-				return ConfigAdaptor_::isInvalidValue(this->access());
-			}
-
 			public: constexpr auto operator =(::dcool::core::NullOptional) -> Self_& {
 				this->reset();
 				return *this;
 			}
 
 			public: template <
-				::dcool::core::detail_::OptionalDirectionInitializeArgumentFor_<Self_> ValueT__
+				::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
 			> constexpr auto operator =(ValueT__&& value_) -> Self_& {
 				this->m_value_ = ::dcool::core::forward<ValueT__>(value_);
 				return *this;
+			}
+
+			public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
+				return !(ConfigAdaptor_::isInvalidValue(this->access()));
 			}
 
 			public: constexpr auto access() const noexcept -> Value const& {
@@ -244,8 +244,91 @@ namespace dcool::core {
 	}
 
 	template <
-		typename ValueT_, OptionalConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
-	> using Optional = ::dcool::core::detail_::Optional_<ValueT_, ConfigT_>;
+		typename ValueT_, ::dcool::core::OptionalConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+	> struct Optional: public ::dcool::core::detail_::Optional_<ValueT_, ConfigT_> {
+		private: using Super_ = ::dcool::core::detail_::Optional_<ValueT_, ConfigT_>;
+
+		public: using Super_::Super_;
+	};
+
+	template <
+		::dcool::core::Reference ValueT_, ::dcool::core::OptionalConfig<ValueT_> ConfigT_
+	> struct Optional<ValueT_, ConfigT_> {
+		private: using Self_ = Optional<ValueT_, ConfigT_>;
+		public: using Value = ValueT_;
+		public: using Config = ConfigT_;
+
+		private: using Refered_ = ::dcool::core::ReferenceRemovedType<Value>;
+		private: using ConfigAdaptor_ = ::dcool::core::OptionalConfigAdaptor<Config, Value>;
+
+		private: struct UnderlyingConfig_ {
+			public: static constexpr auto invalidValue() -> Refered_* {
+				return ::dcool::core::nullPointer;
+			}
+		};
+
+		private: using Underlying_ = ::dcool::core::Optional<Refered_*, UnderlyingConfig_>;
+
+		private: Underlying_ m_underlying_;
+
+		public: constexpr Optional() noexcept = default;
+		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' in the copy assignment operator.
+		// See document/dependency_bugs#Bug_3 for mor details.
+		public: constexpr Optional(Optional const& other_) = default;
+		public: constexpr Optional(Self_&& other_) = default;
+
+		public: constexpr Optional(::dcool::core::NullOptional nullOptional_) noexcept: m_underlying_(nullOptional_) {
+		}
+
+		public: template <
+			::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
+		> constexpr explicit(
+			!::dcool::core::ConvertibleTo<ValueT__*, Refered_*>
+		) Optional(ValueT__&& value_) noexcept requires (
+			::dcool::core::RvalueReference<ValueT__&&> || ::dcool::core::LvalueReference<Value>
+		): m_underlying_(::dcool::core::addressOf(value_)) {
+		}
+
+		public: constexpr ~Optional() noexcept = default;
+		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' in the copy assignment operator.
+		// See document/dependency_bugs#Bug_3 for mor details.
+		public: constexpr auto operator =(Optional const& other_) noexcept -> Self_& = default;
+		public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& = default;
+
+		public: constexpr auto operator =(::dcool::core::NullOptional nullOptional_) -> Self_& {
+			this->m_underlying_ = nullOptional_;
+			return *this;
+		}
+
+		public: template <
+			::dcool::core::detail_::OptionalDirectInitializeArgumentFor_<Self_> ValueT__
+		> constexpr auto operator =(ValueT__&& value_) -> Self_& {
+			this->m_underlying_ = ::dcool::core::addressOf(value_);
+			return *this;
+		}
+
+		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
+			return this->m_underlying_.valid();
+		}
+
+		public: constexpr auto access() const noexcept -> Value {
+			return static_cast<Value>(*(this->m_underlying_.access()));
+		}
+
+		public: constexpr auto value() const -> Value {
+			return static_cast<Value>(*(this->m_underlying_.value()));
+		}
+
+		public: template <typename ValueT__> constexpr void emplace(ValueT__&& value_) noexcept requires (
+			::dcool::core::RvalueReference<ValueT__&&> || ::dcool::core::LvalueReference<Value>
+		) {
+			this->m_underlying_.emplace(::dcool::core::addressOf(value_));
+		}
+
+		public: constexpr void reset() noexcept {
+			this->m_underlying_.reset();
+		}
+	};
 
 	namespace detail_ {
 		template <typename ValueT_, ValueT_ invalidValueC_> struct CompactOptional_ {

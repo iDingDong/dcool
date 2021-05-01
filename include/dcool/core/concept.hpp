@@ -116,6 +116,14 @@ namespace dcool::core {
 
 	template <typename T_> concept Reference = ::std::is_reference_v<T_>;
 
+	template <typename T_> concept LvalueReference = ::std::is_lvalue_reference_v<T_>;
+
+	template <typename T_> concept RvalueReference = ::std::is_rvalue_reference_v<T_>;
+
+	template <typename T_, typename ReferedT_> concept ReferenceOf =
+		::dcool::core::Reference<T_> && ::dcool::core::SameAs<::dcool::core::ReferenceRemovedType<T_>, ReferedT_>
+	;
+
 	template <typename T_> concept ConstReference = ::dcool::core::Const<::dcool::core::ReferenceRemovedType<T_>> && Reference<T_>;
 
 	template <typename T_> concept Pointer = ::std::is_pointer_v<T_>;
@@ -155,7 +163,7 @@ namespace dcool::core {
 	>;
 
 	template <typename T_> concept Dereferenceable = requires (T_ toDereference_) {
-		{ *toDereference_ } -> ::dcool::core::Reference;
+		{ *toDereference_ };
 	};
 
 	template <
