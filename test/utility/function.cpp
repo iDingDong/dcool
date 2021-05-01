@@ -37,13 +37,7 @@ DCOOL_TEST_CASE(dcoolUtility, nonImmutablyInvocableFunction) {
 	DCOOL_TEST_EXPECT(!(function2.immutablyInvocable()));
 	function2();
 	DCOOL_TEST_EXPECT(function2.value<Counter>().count == 1);
-	{
-		dcool::core::Boolean thrown = false;
-		try {
-			dcool::core::constantize(function2)();
-		} catch (dcool::utility::BadFunctionCall const&) {
-			thrown = true;
-		}
-		DCOOL_TEST_EXPECT(thrown);
-	}
+	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadFunctionCall const&, {
+		dcool::core::constantize(function2)();
+	});
 }

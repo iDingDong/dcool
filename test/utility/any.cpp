@@ -7,43 +7,25 @@ DCOOL_TEST_CASE(dcoolUtility, anyBasics) {
 	DCOOL_TEST_EXPECT(!(any1.valid()));
 	DCOOL_TEST_EXPECT(any1.typeInfo() == typeid(void));
 	DCOOL_TEST_EXPECT(dcool::core::size(any1.storageRequirement()) == 0);
-	{
-		dcool::core::Boolean thrown = false;
-		try {
-			static_cast<void>(any1.value<int>());
-		} catch (dcool::utility::BadAnyCast const&) {
-			thrown = true;
-		}
-		DCOOL_TEST_EXPECT(thrown);
-	}
+	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadAnyCast const&, {
+		static_cast<void>(any1.value<int>());
+	});
 	dcool::utility::Any any2 = 237;
 	DCOOL_TEST_EXPECT(any2.valid());
 	DCOOL_TEST_EXPECT(any2.typeInfo() == typeid(int));
 	DCOOL_TEST_EXPECT(any2.storageRequirement() == dcool::core::storageRequirementFor<int>);
 	DCOOL_TEST_EXPECT(any2.value<int>() == 237);
-	{
-		dcool::core::Boolean thrown = false;
-		try {
-			static_cast<void>(any2.value<char>());
-		} catch (dcool::utility::BadAnyCast const&) {
-			thrown = true;
-		}
-		DCOOL_TEST_EXPECT(thrown);
-	}
+	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadAnyCast const&, {
+		static_cast<void>(any2.value<char>());
+	});
 	any1 = 137;
 	DCOOL_TEST_EXPECT(any1.valid());
 	DCOOL_TEST_EXPECT(any1.typeInfo() == typeid(int));
 	DCOOL_TEST_EXPECT(any1.storageRequirement() == dcool::core::storageRequirementFor<int>);
 	DCOOL_TEST_EXPECT(any1.value<int>() == 137);
-	{
-		dcool::core::Boolean thrown = false;
-		try {
-			static_cast<void>(any1.value<char>());
-		} catch (dcool::utility::BadAnyCast const&) {
-			thrown = true;
-		}
-		DCOOL_TEST_EXPECT(thrown);
-	}
+	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadAnyCast const&, {
+		static_cast<void>(any1.value<char>());
+	});
 	auto bigObject = dcool::core::Tuple<int, int, int, int, int>(7, 3, 4, 6, 5);
 	dcool::utility::Any any3 = bigObject;
 	DCOOL_TEST_EXPECT(any3.value<decltype(bigObject)>() == bigObject);
