@@ -1,6 +1,8 @@
 set(
 	test_dcool_sources
 	"./test.cpp"
+	"./concurrency/latch.cpp"
+	"./concurrency/semaphore.cpp"
 	"./coroutine/async_mutex.cpp"
 	"./coroutine/generator.cpp"
 	"./coroutine/task.cpp"
