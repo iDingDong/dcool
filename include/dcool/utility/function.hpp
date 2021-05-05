@@ -17,8 +17,8 @@ namespace dcool::utility {
 			::dcool::core::Complete ConfigT_, typename PrototypeT_
 		> struct FunctionConfigAdaptor_;
 
-		template <typename ConfigT_, typename ReturnT_, typename... ParameterTs_> struct FunctionConfigAdaptor_<
-			ConfigT_, auto(ParameterTs_...) -> ReturnT_
+		template <typename ConfigT_, typename ResultT_, typename... ParameterTs_> struct FunctionConfigAdaptor_<
+			ConfigT_, auto(ParameterTs_...) -> ResultT_
 		>: public ::dcool::utility::AnyConfigAdaptor<ConfigT_> {
 		};
 
@@ -41,11 +41,11 @@ namespace dcool::utility {
 			typename FunctionChassisT_,
 			typename CallableT_,
 			::dcool::core::Boolean noexceptC_,
-			typename ReturnT_,
+			typename ResultT_,
 			typename... ParameterTs_
 		> constexpr auto immutablyInvokeFunctionChassis_(
 			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_ const& functionChassis_, ParameterTs_... parameters_
-		) noexcept(noexceptC_) -> ReturnT_ {
+		) noexcept(noexceptC_) -> ResultT_ {
 			if constexpr (::dcool::utility::detail_::isImmutablyInvocable_<CallableT_, ParameterTs_...>) {
 				return ::dcool::core::invoke(
 					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
@@ -61,11 +61,11 @@ namespace dcool::utility {
 			typename FunctionChassisT_,
 			typename CallableT_,
 			::dcool::core::Boolean noexceptC_,
-			typename ReturnT_,
+			typename ResultT_,
 			typename... ParameterTs_
 		> constexpr auto invokeFunctionChassis_(
 			typename FunctionChassisT_::Engine& engine_, FunctionChassisT_& functionChassis_, ParameterTs_... parameters_
-		) noexcept(noexceptC_) -> ReturnT_ {
+		) noexcept(noexceptC_) -> ResultT_ {
 			if constexpr (::dcool::core::NonVoid<CallableT_>) {
 				return ::dcool::core::invoke(
 					functionChassis_.template access<CallableT_>(engine_), ::dcool::core::forward<ParameterTs_>(parameters_)...
@@ -78,14 +78,14 @@ namespace dcool::utility {
 		}
 
 		template <
-			typename ConfigT_, ::dcool::core::Boolean noexceptC_, typename ReturnT_, typename... ParameterTs_
-		> struct FunctionChassis_<auto(ParameterTs_...) noexcept(noexceptC_) -> ReturnT_, ConfigT_> {
-			private: using Self_ = FunctionChassis_<auto(ParameterTs_...) -> ReturnT_, ConfigT_>;
-			public: using Prototype = auto(ParameterTs_...) -> ReturnT_;
+			typename ConfigT_, ::dcool::core::Boolean noexceptC_, typename ResultT_, typename... ParameterTs_
+		> struct FunctionChassis_<auto(ParameterTs_...) noexcept(noexceptC_) -> ResultT_, ConfigT_> {
+			private: using Self_ = FunctionChassis_<auto(ParameterTs_...) -> ResultT_, ConfigT_>;
+			public: using Prototype = auto(ParameterTs_...) -> ResultT_;
 			public: using Config = ConfigT_;
 
 			private: using ConfigAdaptor_ = ::dcool::utility::detail_::FunctionConfigAdaptor_<Config, Prototype>;
-			public: using Return = ReturnT_;
+			public: using Result = ResultT_;
 			public: using Pool = ConfigAdaptor_::Pool;
 			public: using Engine = ConfigAdaptor_::Engine;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
@@ -95,8 +95,8 @@ namespace dcool::utility {
 				ConfigAdaptor_::exceptionSafetyStrategy
 			;
 
-			private: using ImmutableInvoker_ = auto (*)(Engine& engine_, Self_ const& self_, ParameterTs_... parameters_) -> Return;
-			private: using Invoker_ = auto (*)(Engine& engine_, Self_& self_, ParameterTs_... parameters_) -> Return;
+			private: using ImmutableInvoker_ = auto (*)(Engine& engine_, Self_ const& self_, ParameterTs_... parameters_) -> Result;
+			private: using Invoker_ = auto (*)(Engine& engine_, Self_& self_, ParameterTs_... parameters_) -> Result;
 
 			private: struct AnyExtendedInformation_ {
 				ImmutableInvoker_ immutableInvoker_;
@@ -106,9 +106,9 @@ namespace dcool::utility {
 
 				template <typename ValueT__> constexpr AnyExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
 					immutableInvoker_(
-						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<Self_, ValueT__, noexceptC_, Return, ParameterTs_...>
+						::dcool::utility::detail_::immutablyInvokeFunctionChassis_<Self_, ValueT__, noexceptC_, Result, ParameterTs_...>
 					),
-					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<Self_, ValueT__, noexceptC_, Return, ParameterTs_...>),
+					invoker_(::dcool::utility::detail_::invokeFunctionChassis_<Self_, ValueT__, noexceptC_, Result, ParameterTs_...>),
 					immutablyInvocable_(::dcool::utility::detail_::isImmutablyInvocable_<ValueT__, ParameterTs_...>),
 					extendedInformation_(typed_)
 				{
@@ -208,13 +208,13 @@ namespace dcool::utility {
 
 			public: constexpr auto invokeSelf(
 				Engine& engine_, ParameterTs_... parameters_
-			) const noexcept(noexceptInvocable) -> Return {
+			) const noexcept(noexceptInvocable) -> Result {
 				return this->m_underlying_.extendedInformation(engine_).immutableInvoker_(
 					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
 			}
 
-			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
+			public: constexpr auto invokeSelf(Engine& engine_, ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Result {
 				return this->m_underlying_.extendedInformation(engine_).invoker_(
 					engine_, *this, ::dcool::core::forward<ParameterTs_>(parameters_)...
 				);
@@ -239,14 +239,14 @@ namespace dcool::utility {
 	> struct Function;
 
 	template <
-		typename ConfigT_, typename ReturnT_, typename... ParameterTs_
-	> struct Function<auto(ParameterTs_...) -> ReturnT_, ConfigT_> {
-		private: using Self_ = Function<auto(ParameterTs_...) -> ReturnT_, ConfigT_>;
-		public: using Prototype = auto(ParameterTs_...) -> ReturnT_;
+		typename ConfigT_, typename ResultT_, typename... ParameterTs_
+	> struct Function<auto(ParameterTs_...) -> ResultT_, ConfigT_> {
+		private: using Self_ = Function<auto(ParameterTs_...) -> ResultT_, ConfigT_>;
+		public: using Prototype = auto(ParameterTs_...) -> ResultT_;
 		public: using Config = ConfigT_;
 
 		public: using Chassis = ::dcool::utility::FunctionChassis<Prototype, Config>;
-		public: using Return = Chassis::Return;
+		public: using Result = Chassis::Result;
 		public: using Engine = Chassis::Engine;
 		public: using ExtendedInformation = Chassis::ExtendedInformation;
 		public: static constexpr ::dcool::core::Boolean noexceptInvocable = Chassis::noexceptInvocable;
@@ -367,19 +367,19 @@ namespace dcool::utility {
 			return this->chassis().template value<ValueT__>(this->mutableEngine());
 		}
 
-		public: constexpr auto invokeSelf(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Return {
+		public: constexpr auto invokeSelf(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Result {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto invokeSelf(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
+		public: constexpr auto invokeSelf(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Result {
 			return this->chassis().invokeSelf(this->mutableEngine(), ::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto operator()(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Return {
+		public: constexpr auto operator()(ParameterTs_... parameters_) const noexcept(noexceptInvocable) -> Result {
 			return this->invokeSelf(::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 
-		public: constexpr auto operator()(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Return {
+		public: constexpr auto operator()(ParameterTs_... parameters_) noexcept(noexceptInvocable) -> Result {
 			return this->invokeSelf(::dcool::core::forward<ParameterTs_>(parameters_)...);
 		}
 	};

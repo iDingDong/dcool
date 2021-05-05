@@ -4,7 +4,7 @@ Include `<dcool/utility.hpp>` to use.
 
 ```cpp
 template <
-	dcool::core::TypeList PrototypesT_, typename ConfigT = /* unspecified type */
+	dcool::core::TypeList PrototypesT, typename ConfigT = /* unspecified type */
 > struct dcool::utility::OverloadedFunction;
 ```
 
@@ -27,7 +27,7 @@ Its member shall customize the list as decribed:
 | Name | Definition |
 | - | - |
 | `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
-| `Prototypes` | Defined by `using Prototypes = PrototypesT_;`. |
+| `Prototypes` | Defined by `using Prototypes = PrototypesT;`. |
 
 ## Constructors
 

@@ -16,10 +16,10 @@ namespace dcool::utility {
 		template <typename PrototypeT_> struct OverloadedFunctionChassisBase_;
 
 		template <
-			::dcool::core::Boolean noexceptC_, typename ReturnT_, typename... ParameterTs_
-		> struct OverloadedFunctionChassisBase_<auto (ParameterTs_...) noexcept(noexceptC_) -> ReturnT_> {
-			private: using Self_ = OverloadedFunctionChassisBase_<auto (ParameterTs_...) -> ReturnT_>;
-			private: using Return_ = ReturnT_;
+			::dcool::core::Boolean noexceptC_, typename ResultT_, typename... ParameterTs_
+		> struct OverloadedFunctionChassisBase_<auto (ParameterTs_...) noexcept(noexceptC_) -> ResultT_> {
+			private: using Self_ = OverloadedFunctionChassisBase_<auto (ParameterTs_...) -> ResultT_>;
+			private: using Return_ = ResultT_;
 
 			private: template <typename ChassisT__> using ImmutableInvoker_ = auto (*)(
 				typename ChassisT__::Engine& engine_, ChassisT__ const& self_, ParameterTs_... parameters_

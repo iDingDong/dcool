@@ -3,7 +3,7 @@
 Include `<dcool/utility.hpp>` to use.
 
 ```cpp
-template <typename PrototypeT_, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
+template <typename PrototypeT, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
 template <
 	typename ConfigT, dcool::core::Boolean noexceptInvocableC, typename ReturnT, typename... ParameterTs
 > struct dcool::utility::Function<auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT, ConfigT>;
@@ -28,8 +28,8 @@ Its member shall customize the list as decribed:
 | Name | Definition |
 | - | - |
 | `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
-| `Prototype` | Defined by `using Prototype = auto(ParameterTs...) -> ReturnT;`. |
-| `Return` | Defined by `using Return = ReturnT;`. |
+| `Prototype` | Defined by `using Prototype = auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT;`. |
+| `Result` | Defined by `using Result = ResultT;`. |
 
 ## Member constant
 
