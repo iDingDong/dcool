@@ -16,6 +16,7 @@ namespace dcool::core {
 	using Difference = decltype(::dcool::core::declval<char*>() - ::dcool::core::declval<char*>());
 	using Alignment = decltype(alignof(char));
 	using Length = ::dcool::core::Size;
+	using ForwardOffset = ::dcool::core::Size;
 	using Index = ::dcool::core::Length;
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
@@ -34,7 +35,7 @@ namespace dcool::core {
 
 	using PostDisambiguator = int;
 
-	template <typename... Ts_> struct Empty {
+	template <typename... Ts_> struct [[maybe_unused]] Empty {
 	};
 
 	namespace detail_ {
@@ -50,15 +51,31 @@ namespace dcool::core {
 	template <typename T_, typename DistinguisherT_ = void> inline T_ instance;
 
 	struct Pit {
-		template <typename... ArgumentTs_> constexpr Pit(ArgumentTs_&&... parameters_) noexcept {
+		private: using Self_ = Pit;
+
+		public: template <typename... ArgumentTs_> constexpr Pit(ArgumentTs_&&... parameters_) noexcept {
+		}
+
+		public: template <typename ArgumentT_> constexpr auto operator =(ArgumentT_&& argument_) noexcept -> Self_& {
+			return *this;
 		}
 	};
 
+	constexpr ::dcool::core::Pit pit;
+
 	template <typename ValueT_, ::dcool::core::Boolean validC_> struct StaticOptional {
+		static consteval auto valid() noexcept -> ::dcool::core::Boolean {
+			return false;
+		}
+
 		[[no_unique_address]] ::dcool::core::Pit value;
 	};
 
 	template <typename ValueT_> struct StaticOptional<ValueT_, true> {
+		static consteval auto valid() noexcept -> ::dcool::core::Boolean {
+			return true;
+		}
+
 		ValueT_ value;
 	};
 

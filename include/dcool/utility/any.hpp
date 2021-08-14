@@ -7,33 +7,41 @@
 #	include <any>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
-	dcool::utility::detail_, HasTypeExtendedInformation_, ExtractedExtendedInformationType_, ExtendedInformation
-);
+	dcool::utility::detail_, HasTypeExtendedInformationForAny_, ExtractedExtendedInformationForAnyType_, ExtendedInformation
+)
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
-	dcool::utility::detail_, HasValueSqueezedTankage_, extractedSqueezedTankage_, squeezedTankage
-);
+	dcool::utility::detail_, HasValueCopyableForAny_, extractedCopyableForAnyValue_, copyable
+)
+DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
+	dcool::utility::detail_, HasValueMoveableForAny_, extractedMoveableForAnyValue_, moveable
+)
+DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
+	dcool::utility::detail_, HasValueSqueezedTankageForAny_, extractedSqueezedTankageForAnyValue_, squeezedTankage
+)
 
 namespace dcool::utility {
 	using BadAnyCast = ::std::bad_any_cast;
 
-	template <typename ConfigT_> struct AnyChassis_;
-
 	namespace detail_ {
-		enum class DefaultAnyOpcode_ {
-			DCOOL_UTILITY_ANY_BASIC_OPERATIONS
-		};
-
 		template <::dcool::core::Complete ConfigT_> class AnyConfigAdaptor_ {
 			private: using Self_ = AnyConfigAdaptor_<ConfigT_>;
 			public: using Config = ConfigT_;
 
 			public: using Pool = ::dcool::resource::PoolType<Config>;
 			public: using DynamicHandle = ::dcool::resource::UnifiedHandleType<Pool>;
-			public: using ExtendedInformation = ::dcool::utility::detail_::ExtractedExtendedInformationType_<
+			public: using ExtendedInformation = ::dcool::utility::detail_::ExtractedExtendedInformationForAnyType_<
 				Config, ::dcool::core::Pit
 			>;
+			public: static constexpr ::dcool::core::Boolean copyable =
+				::dcool::utility::detail_::extractedCopyableForAnyValue_<Config>(true)
+			;
+			public: static constexpr ::dcool::core::Boolean moveable =
+				::dcool::utility::detail_::extractedMoveableForAnyValue_<Config>(copyable)
+			;
 			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage =
-				::dcool::utility::detail_::extractedSqueezedTankage_<Config>(::dcool::core::storageRequirementFor<DynamicHandle>)
+				::dcool::utility::detail_::extractedSqueezedTankageForAnyValue_<Config>(
+					::dcool::core::storageRequirementFor<DynamicHandle>
+				)
 			;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 				::dcool::core::exceptionSafetyStrategyOf<Config>
@@ -69,6 +77,8 @@ namespace dcool::utility {
 			public: using DynamicHandle = ConfigAdaptor_::DynamicHandle;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
 			public: using Engine = ConfigAdaptor_::Engine;
+			public: static constexpr ::dcool::core::Boolean copyable = ConfigAdaptor_::copyable;
+			public: static constexpr ::dcool::core::Boolean moveable = ConfigAdaptor_::moveable;
 			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 				ConfigAdaptor_::exceptionSafetyStrategy
@@ -80,17 +90,29 @@ namespace dcool::utility {
 			;
 
 			private: using Storage_ = ::dcool::resource::StorageSqueezer<squeezedTankage, DynamicHandle>;
-			private: using Cloner_ = void (*)(Engine& engine_, Self_ const& self_, Engine& otherEngine_, Self_& other_);
-			private: using Relocator_ = void (*)(Engine& engine_, Self_& self_, Self_& other_) noexcept(noThrowMovable);
-			private: using CrossRelocator_ = void (*)(Engine& engine_, Self_& self_, Engine& otherEngine_, Self_& other_);
+			private: using Cloner_ = ::dcool::core::ConditionalType<
+				copyable,
+				void (*)(Engine& engine_, Self_ const& self_, Engine& otherEngine_, Self_& other_),
+				::dcool::core::Pit
+			>;
+			private: using Relocator_ = ::dcool::core::ConditionalType<
+				moveable,
+				void (*)(Engine& engine_, Self_& self_, Self_& other_) noexcept(noThrowMovable),
+				::dcool::core::Pit
+			>;
+			private: using CrossRelocator_ = ::dcool::core::ConditionalType<
+				moveable,
+				void (*)(Engine& engine_, Self_& self_, Engine& otherEngine_, Self_& other_),
+				::dcool::core::Pit
+			>;
 			private: using Destructor_ = void (*)(Engine& engine_, Self_& self_) noexcept;
 
 			private: struct InformationTable_ {
 				::dcool::core::StorageRequirement storageRequirement_;
 				::dcool::core::TypeInfo const& typeInfo_;
-				Cloner_ cloner_;
-				Relocator_ relocator_;
-				CrossRelocator_ crossRelocator_;
+				[[no_unique_address]] Cloner_ cloner_;
+				[[no_unique_address]] Relocator_ relocator_;
+				[[no_unique_address]] CrossRelocator_ crossRelocator_;
 				Destructor_ destructor_;
 				[[no_unique_address]] ExtendedInformation extendedInformation_;
 			};
@@ -102,59 +124,71 @@ namespace dcool::utility {
 			private: template <typename ValueT__> static void clone_(
 				Engine& engine_, Self_ const& from_, Engine& otherEngine_, Self_& to_
 			) {
-				if constexpr (::dcool::core::NonVoid<ValueT__>) {
-					to_.initialize<ValueT__>(otherEngine_, ::dcool::core::inPlace, from_.access<ValueT__>(engine_));
+				if constexpr (copyable) {
+					if constexpr (::dcool::core::NonVoid<ValueT__>) {
+						to_.initialize<ValueT__>(otherEngine_, ::dcool::core::inPlace, from_.access<ValueT__>(engine_));
+					} else {
+						to_.initialize(otherEngine_);
+					}
 				} else {
-					to_.initialize(otherEngine_);
+					::dcool::core::terminate();
 				}
 			}
 
 			private: template <typename ValueT__> static void relocate_(
 				Engine& engine_, Self_& from_, Self_& to_
 			) noexcept(noThrowMovable) {
-				if constexpr (::dcool::core::NonVoid<ValueT__>) {
-					if constexpr (squeezable_<ValueT__>) {
-						to_.initialize<ValueT__>(engine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_)));
-						destruct_<ValueT__>(engine_, from_);
+				if constexpr (moveable) {
+					if constexpr (::dcool::core::NonVoid<ValueT__>) {
+						if constexpr (squeezable_<ValueT__>) {
+							to_.initialize<ValueT__>(engine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_)));
+							destruct_<ValueT__>(engine_, from_);
+						} else {
+							to_.m_storage_.activateAlternative();
+							to_.m_storage_.alternative() = from_.m_storage_.alternative();
+							from_.m_storage_.deactivateAlternative();
+							to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
+							from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+						}
 					} else {
-						to_.m_storage_.activateAlternative();
-						to_.m_storage_.alternative() = from_.m_storage_.alternative();
-						from_.m_storage_.deactivateAlternative();
-						to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
-						from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+						to_.initialize(engine_);
+						destruct_<ValueT__>(engine_, from_);
 					}
 				} else {
-					to_.initialize(engine_);
-					destruct_<ValueT__>(engine_, from_);
+					::dcool::core::terminate();
 				}
 			}
 
 			private: template <typename ValueT__> static void crossRelocate_(
 				Engine& engine_, Self_& from_, Engine& otherEngine_, Self_& to_
 			) {
-				if constexpr (::dcool::core::NonVoid<ValueT__>) {
-					if constexpr (squeezable_<ValueT__>) {
-						to_.initialize<ValueT__>(
-							otherEngine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_))
-						);
-						destruct_<ValueT__>(engine_, from_);
-					} else {
-						if (engine_ == otherEngine_) {
-							to_.m_storage_.activateAlternative();
-							to_.m_storage_.alternative() = from_.m_storage_.alternative();
-							from_.m_storage_.deactivateAlternative();
-							to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
-							from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
-						} else {
+				if constexpr (moveable) {
+					if constexpr (::dcool::core::NonVoid<ValueT__>) {
+						if constexpr (squeezable_<ValueT__>) {
 							to_.initialize<ValueT__>(
 								otherEngine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_))
 							);
 							destruct_<ValueT__>(engine_, from_);
+						} else {
+							if (engine_ == otherEngine_) {
+								to_.m_storage_.activateAlternative();
+								to_.m_storage_.alternative() = from_.m_storage_.alternative();
+								from_.m_storage_.deactivateAlternative();
+								to_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<ValueT__>);
+								from_.m_informationTable_ = ::dcool::core::addressOf(informationTable_<void>);
+							} else {
+								to_.initialize<ValueT__>(
+									otherEngine_, ::dcool::core::inPlace, ::dcool::core::move(from_.access<ValueT__>(engine_))
+								);
+								destruct_<ValueT__>(engine_, from_);
+							}
 						}
+					} else {
+						to_.initialize(otherEngine_);
+						destruct_<ValueT__>(engine_, from_);
 					}
 				} else {
-					to_.initialize(otherEngine_);
-					destruct_<ValueT__>(engine_, from_);
+					::dcool::core::terminate();
 				}
 			}
 
@@ -221,7 +255,7 @@ namespace dcool::utility {
 				this->m_informationTable_->destructor_(engine_, *this);
 			}
 
-			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const requires (copyable) {
 				this->m_informationTable_->cloner_(engine_, *this, otherEngine_, other_);
 			}
 
@@ -229,18 +263,18 @@ namespace dcool::utility {
 				::dcool::core::Boolean engineWillBeUniformedC__ = false
 			> constexpr void relocateTo(
 				Engine& engine_, Engine& otherEngine_, Self_& other_
-			) noexcept(engineWillBeUniformedC__ && noThrowMovable) {
+			) noexcept(engineWillBeUniformedC__ && noThrowMovable) requires (moveable) {
 				if constexpr (engineWillBeUniformedC__) {
 					this->m_informationTable_->relocator_(engine_, *this, other_);
 				} else {
-					this->m_informationTable_->crossRelocator_(engine_, *this, other_);
+					this->m_informationTable_->crossRelocator_(engine_, *this, otherEngine_, other_);
 				}
 			}
 
 			public: template <
 				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
 				::dcool::core::Boolean engineWillBeSwappedC__ = false
-			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) requires (moveable) {
 				Self_ middleMan_;
 				this->relocateTo<true>(engine_, engine_, middleMan_);
 				struct UniqueType_ {
@@ -360,6 +394,8 @@ namespace dcool::utility {
 		private: using ConfigAdaptor_ = ::dcool::utility::detail_::AnyConfigAdaptor_<Config>;
 		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
 		public: using Engine = ConfigAdaptor_::Engine;
+		public: static constexpr ::dcool::core::Boolean copyable = Chassis::copyable;
+		public: static constexpr ::dcool::core::Boolean moveable = Chassis::moveable;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			ConfigAdaptor_::exceptionSafetyStrategy
@@ -388,8 +424,8 @@ namespace dcool::utility {
 			this->chassis().initialize(this->mutableEngine(), ::dcool::core::forward<ValueT__>(value_));
 		}
 
-		public: template <typename ValueT__, typename... ArgumentTs__> constexpr Any(
-			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+		public: template <typename ValueT__, typename... ArgumentTs__> constexpr explicit Any(
+			::dcool::core::TypedInPlaceTag<ValueT__>, ArgumentTs__&&... parameters_
 		) {
 			this->chassis().template initialize<ValueT__>(
 				this->mutableEngine(), ::dcool::core::inPlace, ::dcool::core::forward<ArgumentTs__>(parameters_)...

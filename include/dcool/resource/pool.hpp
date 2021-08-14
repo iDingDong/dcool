@@ -191,6 +191,10 @@ namespace dcool::resource {
 		public: static constexpr ::dcool::core::Alignment maxAlignment = ::dcool::core::maxRepresentableAlignment;
 		public: static constexpr ::dcool::core::Alignment defaultAlignment = ::dcool::core::defaultNewAlignment;
 
+		public: [[nodiscard("Might leak memory.")]] auto noThrowAllocate(Size size_) noexcept -> void* {
+			return ::operator new(size_, ::std::nothrow);
+		}
+
 		public: [[nodiscard("Might leak memory.")]] auto allocate(Size size_) -> void* {
 			return ::operator new(size_);
 		}

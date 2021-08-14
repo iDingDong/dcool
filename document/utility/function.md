@@ -3,7 +3,7 @@
 Include `<dcool/utility.hpp>` to use.
 
 ```cpp
-template <typename PrototypeT_, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
+template <typename PrototypeT, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
 template <
 	typename ConfigT, dcool::core::Boolean noexceptInvocableC, typename ReturnT, typename... ParameterTs
 > struct dcool::utility::Function<auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT, ConfigT>;
@@ -20,6 +20,8 @@ Its member shall customize the list as decribed:
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of function. |
 | Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| `static constexpr dcool::core::Boolean copyable` | `true` | The function shall be copyable if it takes value `true`; otherwise non-copyable. |
+| `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The function shall be moveable if it takes value `true`; otherwise non-moveable. |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
 
@@ -28,8 +30,8 @@ Its member shall customize the list as decribed:
 | Name | Definition |
 | - | - |
 | `ExtendedInformation` | Determined by configuration `ExtendedInformation`. |
-| `Prototype` | Defined by `using Prototype = auto(ParameterTs...) -> ReturnT;`. |
-| `Return` | Defined by `using Return = ReturnT;`. |
+| `Prototype` | Defined by `using Prototype = auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT;`. |
+| `Result` | Defined by `using Result = ResultT;`. |
 
 ## Member constant
 
@@ -45,7 +47,7 @@ constexpr Function(Function const& other);
 constexpr Function(Function&& other) noexcept(/* unspecified expression */);
 template <typename ValueT> constexpr Function(ValueT&& value) noexcept(/* unspecified expression */);
 template <typename ValueT, typename... ArgumentTs> constexpr Function(
-	dcool::core::InPlaceTag, ArgumentTs&&... parameters
+	dcool::core::TypedInPlaceTag<ValueT>, ArgumentTs&&... parameters
 ) noexcept(/* unspecified expression */);
 ```
 

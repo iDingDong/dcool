@@ -14,6 +14,8 @@
 #	include <dcool/core/execution.hpp>
 #	include <dcool/core/functional.hpp>
 #	include <dcool/core/integer.hpp>
+#	include <dcool/core/iteration.hpp>
+#	include <dcool/core/layout.hpp>
 #	include <dcool/core/member_detector.hpp>
 #	include <dcool/core/min_max.hpp>
 #	include <dcool/core/mutex.hpp>
@@ -23,6 +25,7 @@
 #	include <dcool/core/range_operation.hpp>
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/raw_pointer_operation.hpp>
+#	include <dcool/core/relay.hpp>
 #	include <dcool/core/select.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>
@@ -35,5 +38,6 @@
 #	include <dcool/core/type_value_detector.hpp>
 #	include <dcool/core/unused_representation.hpp>
 #	include <dcool/core/utility.hpp>
+#	include <dcool/core/value_list.hpp>
 
 #endif

@@ -24,8 +24,6 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 
 namespace dcool::container {
-	using OutOfRange = ::std::out_of_range;
-
 	namespace detail_ {
 		template <::dcool::core::Boolean squeezedOnlyC_, typename ConfigT_, typename ValueT_> struct ListConfigAdaptorBase_ {
 			private: using Self_ = ListConfigAdaptorBase_<squeezedOnlyC_, ConfigT_, ValueT_>;
@@ -1223,10 +1221,12 @@ namespace dcool::container {
 				return;
 			}
 			StorageType_ newStorage_;
+			Length oldLength_ = this->length(engine_);
 			Length newCapacity_ = this->capacity(engine_) + extra_;
 			newStorage_.initialize(engine_, newCapacity_);
 			try {
 				::dcool::core::batchRelocate<strategyC__>(this->begin(engine_), this->end(engine_), newStorage_.data(engine_));
+				newStorage_.setLength(engine_, oldLength_);
 			} catch (...) {
 				newStorage_.uninitialize(engine_);
 				throw;
@@ -1258,7 +1258,7 @@ namespace dcool::container {
 		}
 
 		// This function will leave the gap uninitialized, making the list invalid.
-		private: public: template <
+		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void makeRoom_(
 			Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1
@@ -1301,12 +1301,24 @@ namespace dcool::container {
 		}
 
 		// This function is intended for recover a valid state after 'makeRoom_'. Failure of recovery would be considered fatal.
-		private: public: template <
+		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void reclaimRoom_(Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1) noexcept {
 			::dcool::core::batchRelocateForward<strategyC__>(
 				gapBegin_ + gapLength_, this->end(engine_), this->begin(engine_) + (gapBegin_ - this->begin(engine_))
 			);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr auto uninitializedInsertN(
+			Engine& engine_, Iterator position_, Length count_
+		) -> Iterator requires (::dcool::core::TriviallyCopyable<Value>) {
+			Index index_ = position_ - this->begin(engine_);
+			this->reserve_(engine_, this->length(engine_) + count_);
+			position_ = this->begin(engine_) + index_;
+			this->makeRoom_(engine_, position_, count_);
+			return position_;
 		}
 
 		private: template <
@@ -1435,7 +1447,7 @@ namespace dcool::container {
 					}
 					return newPosition_;
 				}
-				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
+				throw ::dcool::core::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
 			}
 			return this->braveBatchInsertN_<strategyC__>(engine_, position_, begin_, count_);
 		}
@@ -1533,7 +1545,7 @@ namespace dcool::container {
 					}
 					return newPosition_;
 				}
-				throw ::dcool::container::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
+				throw ::dcool::core::OutOfRange("Further growing this 'dcool::container::List' would cause out of range access.");
 			}
 			return this->braveEmplace_<strategyC__>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
@@ -2051,6 +2063,12 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void forceExpandBack(Length extra_) {
 			this->chassis().template forceExpandBack<strategyC__>(this->engine_(), extra_);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr auto uninitializedInsertN(Iterator position_, Length count_) -> Iterator {
+			this->chassis().uninitializedInsertN(this->engine_(), position_, count_);
 		}
 
 		private: template <

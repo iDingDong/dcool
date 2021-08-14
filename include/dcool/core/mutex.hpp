@@ -12,6 +12,10 @@
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeMutex, ExtractedMutexType, Mutex)
 
 namespace dcool::core {
+	using AdoptLockTag = ::std::adopt_lock_t;
+
+	constexpr ::dcool::core::AdoptLockTag adoptLock = ::std::adopt_lock;
+
 	template <typename T_> concept StandardBasicLockable = requires (T_ mutex_) {
 		mutex_.lock();
 		mutex_.unlock(); // ISO C++ requires this expression to throw nothing, but 'noexcept' is not required.
@@ -85,7 +89,7 @@ namespace dcool::core {
 		public: using typename Super_::Underlying;
 		public: using Super_::underlying;
 
-		public: constexpr void lockShared() noexcept(::dcool::core::declval<Underlying&>().lock_shared()) {
+		public: constexpr void lockShared() noexcept(noexcept(::dcool::core::declval<Underlying&>().lock_shared())) {
 			this->underlying.lock_shared();
 		}
 
@@ -93,7 +97,7 @@ namespace dcool::core {
 			return this->underlying.try_lock_shared();
 		}
 
-		public: constexpr void unlockShared() noexcept(::dcool::core::declval<Underlying&>().unlock_shared()) {
+		public: constexpr void unlockShared() noexcept(noexcept(::dcool::core::declval<Underlying&>().unlock_shared())) {
 			this->underlying.unlock_shared();
 		}
 
@@ -301,8 +305,12 @@ namespace dcool::core {
 		public: PhoneyLockGuard() = delete;
 		public: PhoneyLockGuard(Self_ const&) = delete;
 		public: PhoneyLockGuard(Self_&&) = delete;
+
 		public: constexpr PhoneyLockGuard(Mutex& mutex_) noexcept: m_mutex_(mutex_) {
 			::dcool::core::phoneyLock(this->m_mutex_);
+		}
+
+		public: constexpr PhoneyLockGuard(::dcool::core::AdoptLockTag, Mutex& mutex_) noexcept: m_mutex_(mutex_) {
 		}
 
 		public: constexpr ~PhoneyLockGuard() noexcept {

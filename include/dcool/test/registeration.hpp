@@ -10,7 +10,7 @@
 #define DCOOL_TEST_CASE(suiteName_, caseName_) \
 		static void DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)(::dcool::test::Case::Record& dcoolTestRecord); \
+		)(::dcool::test::Case::ActiveRecord& dcoolTestRecord_); \
 		static int DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutorTestCaseHelper, suiteName_, caseName_ \
 		) = ::dcool::test::detail_::registerCase_( \
@@ -18,7 +18,9 @@
 		); \
 		static void DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)(::dcool::test::Case::Record& dcoolTestRecord)
+		)(::dcool::test::Case::ActiveRecord& dcoolTestRecord_)
+
+#define DCOOL_TEST_CAPTURE_CONTEXT &dcoolTestRecord_
 
 #define DCOOL_TEST_BEFORE_FULL_EXECUTION \
 		static void dcoolImplementationTestBeforeFullExecution_(); \
@@ -34,32 +36,32 @@
 		); \
 		static void dcoolImplementationTestAfterFullExecution_()
 
-#define DCOOL_TEST_BEFORE_EACH_SUITE \
-		static void dcoolImplementationTestBeforeSuite_(::dcool::test::Name suiteName); \
+#define DCOOL_TEST_BEFORE_EACH_SUITE(suiteNameArgumentName_) \
+		static void dcoolImplementationTestBeforeSuite_(::dcool::test::Name suiteNameArgumentName_); \
 		static int dcoolImplementationTestBeforeSuiteHelper_ = ::dcool::test::detail_::registerListener_( \
 			dcoolImplementationTestBeforeSuite_, ::dcool::test::Center::instance().beforeSuite \
 		); \
-		static void dcoolImplementationTestBeforeSuite_(::dcool::test::Name suiteName)
+		static void dcoolImplementationTestBeforeSuite_(::dcool::test::Name suiteNameArgumentName_)
 
-#define DCOOL_TEST_AFTER_EACH_SUITE \
-		static void dcoolImplementationTestAfterSuite_(::dcool::test::Name suiteName); \
+#define DCOOL_TEST_AFTER_EACH_SUITE(suiteNameArgumentName_) \
+		static void dcoolImplementationTestAfterSuite_(::dcool::test::Name suiteNameArgumentName_); \
 		static int dcoolImplementationTestAfterSuiteHelper_ = ::dcool::test::detail_::registerListener_( \
 			dcoolImplementationTestAfterSuite_, ::dcool::test::Center::instance().afterSuite \
 		); \
-		static void dcoolImplementationTestAfterSuite_(::dcool::test::Name suiteName)
+		static void dcoolImplementationTestAfterSuite_(::dcool::test::Name suiteNameArgumentName_)
 
-#define DCOOL_TEST_BEFORE_EACH_CASE_OF_SUITE(suiteName_) \
-		static void dcoolImplementationTestBeforeCase_(::dcool::test::Name caseName); \
+#define DCOOL_TEST_BEFORE_EACH_CASE_OF_SUITE(suiteName_, caseNameArgumentName_) \
+		static void dcoolImplementationTestBeforeCase_(::dcool::test::Name caseNameArgumentName_); \
 		static int dcoolImplementationTestBeforeCaseHelper_ = ::dcool::test::detail_::registerListener_( \
 			dcoolImplementationTestBeforeCase_, ::dcool::test::Center::instance().forceAccess(#suiteName_).beforeCase \
 		); \
-		static void dcoolImplementationTestBeforeCase_(::dcool::test::Name caseName)
+		static void dcoolImplementationTestBeforeCase_(::dcool::test::Name caseNameArgumentName_)
 
-#define DCOOL_TEST_AFTER_EACH_CASE_OF_SUITE(suiteName_) \
-		static void dcoolImplementationTestAfterCase_(::dcool::test::Name caseName); \
+#define DCOOL_TEST_AFTER_EACH_CASE_OF_SUITE(suiteName_, caseNameArgumentName_) \
+		static void dcoolImplementationTestAfterCase_(::dcool::test::Name caseNameArgumentName_); \
 		static int dcoolImplementationTestAfterCaseHelper_ = ::dcool::test::detail_::registerListener_( \
 			dcoolImplementationTestAfterCase_, ::dcool::test::Center::instance().forceAccess(#suiteName_).afterCase \
 		); \
-		static void dcoolImplementationTestAfterCase_(::dcool::test::Name caseName)
+		static void dcoolImplementationTestAfterCase_(::dcool::test::Name caseNameArgumentName_)
 
 #endif

@@ -30,15 +30,9 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 	DCOOL_TEST_EXPECT(function1() == 4);
 	function1(27);
 	DCOOL_TEST_EXPECT(function1() == 4 + 27);
-	{
-		dcool::core::Boolean thrown = false;
-		try {
-			dcool::core::constantize(function1)(3);
-		} catch (dcool::utility::BadFunctionCall const&) {
-			thrown = true;
-		}
-		DCOOL_TEST_EXPECT(thrown);
-	}
+	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadFunctionCall const&, {
+		dcool::core::constantize(function1)(3);
+	});
 }
 
 DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionOverloading) {

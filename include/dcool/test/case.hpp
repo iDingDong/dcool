@@ -3,8 +3,10 @@
 
 #	include <dcool/test/basic.hpp>
 
+#	include <dcool/core.hpp>
 #	include <dcool/container.hpp>
 
+#	include <atomic>
 #	include <algorithm>
 #	include <iterator>
 
@@ -18,15 +20,34 @@ namespace dcool::test {
 				fatalForCase
 			};
 
-			// Use std::source_location instead once it is available. Effectively we are waiting for GCC 11 for the intrinsics.
+			// Use std::source_location instead once it is available. Effectively we are waiting for GCC 11 for the stablization.
 			::dcool::test::FileName fileName;
 			::dcool::test::LineNumber lineNumber;
 			::dcool::test::TimePoint time;
 		};
 
 		public: struct Record {
-			::dcool::test::Count checkCount;
+			::dcool::test::Count checkCount = 0;
 			::dcool::container::List<Failure> failures;
+		};
+
+		public: struct ActiveRecord {
+			private: using Self_ = ActiveRecord;
+
+			private: ::std::atomic<::dcool::test::Count> m_checkCount_;
+			private: ::dcool::container::List<Failure> m_failures_;
+			private: mutable ::dcool::core::MinimalMutex m_mutex_;
+
+			public: ActiveRecord() noexcept;
+			public: ActiveRecord(Self_ const& other_);
+			public: ActiveRecord(Record record_);
+			public: auto operator =(Self_ const& other_) -> Self_&;
+			public: auto operator =(Record record_) -> Self_&;
+			public: ~ActiveRecord() noexcept;
+
+			public: auto snapshot() const -> Record;
+			public: void recordSuccess();
+			public: void recordFailure(Failure failure_);
 		};
 
 		public: struct Result {
@@ -36,7 +57,7 @@ namespace dcool::test {
 			Record record;
 		};
 
-		public: using Executor = void(*)(Record& dcoolTestRecord_);
+		public: using Executor = void(*)(ActiveRecord& dcoolTestRecord_);
 
 		private: Executor m_executor_;
 
@@ -50,7 +71,7 @@ namespace dcool::test {
 			::dcool::test::LineNumber lineNumber_,
 			::dcool::test::Case::Failure::Level level_,
 			::dcool::core::Boolean predicate_,
-			::dcool::test::Case::Record& record_
+			::dcool::test::Case::ActiveRecord& record_
 		);
 
 		template <typename LeftRangeT_, typename RightRangeT_> void checkRangeEquality_(
@@ -59,7 +80,7 @@ namespace dcool::test {
 			::dcool::test::Case::Failure::Level level_,
 			LeftRangeT_&& left_,
 			RightRangeT_&& right_,
-			::dcool::test::Case::Record& record_
+			::dcool::test::Case::ActiveRecord& record_
 		) {
 			// GCC 10.2.0 introduced an ICE if 'std::ranges::equal' is used.
 			::dcool::test::detail_::check_(
