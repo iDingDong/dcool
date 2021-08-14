@@ -10,13 +10,22 @@
 #	include <type_traits>
 
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
-	dcool::resource::detail_, HasValueAtomicallyCounted_, extractedAtomicallyCountedValue_, atomicallyCounted
+	dcool::resource::detail_, HasValueCompactForShared_, extractedCompactForSharedValue_, compact
 )
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
-	dcool::resource::detail_, HasValueMaxStrongReferenceCount_, extractedMaxStrongReferenceCountValue_, maxStrongReferenceCount
+	dcool::resource::detail_, HasValueAtomicallyCountedForShared_, extractedAtomicallyCountedForSharedValue_, atomicallyCounted
 )
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
-	dcool::resource::detail_, HasValueMaxWeakReferenceCount_, extractedMaxWeakReferenceCountValue_, maxWeakReferenceCount
+	dcool::resource::detail_,
+	HasValueMaxStrongReferenceCountForShared_,
+	extractedMaxStrongReferenceCountForSharedValue_,
+	maxStrongReferenceCount
+)
+DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
+	dcool::resource::detail_,
+	HasValueMaxWeakReferenceCountForShared_,
+	extractedMaxWeakReferenceCountForSharedValue_,
+	maxWeakReferenceCount
 )
 
 namespace dcool::resource {
@@ -132,7 +141,7 @@ namespace dcool::resource {
 		}
 
 		private: constexpr auto release_() noexcept -> Pointer {
-			Pointer result_ = this->pointer();
+			Pointer result_ = this->rawPointer();
 			this->m_pointer_ = ::dcool::core::nullPointer;
 			return result_;
 		}
@@ -290,23 +299,26 @@ namespace dcool::resource {
 			public: using Value = ValueT_;
 
 			public: using Dismissor = ::dcool::resource::ExtractedDismissorType<Config, ::dcool::resource::DefaultDestroyer>;
-			public: static constexpr ::dcool::core::Boolean atomicallyCounted =
-				::dcool::resource::detail_::extractedAtomicallyCountedValue_<Config>(false)
+			public: static constexpr ::dcool::core::Boolean compact =
+				::dcool::resource::detail_::extractedCompactForSharedValue_<Config>(false)
 			;
-			private: static constexpr ::dcool::core::UnsignedMaxInteger maxStrongReferenceCount_ =
-				::dcool::resource::detail_::extractedMaxStrongReferenceCountValue_<Config>(
+			public: static constexpr ::dcool::core::Boolean atomicallyCounted =
+				::dcool::resource::detail_::extractedAtomicallyCountedForSharedValue_<Config>(false)
+			;
+			public: static constexpr ::dcool::core::UnsignedMaxInteger maxStrongReferenceCount =
+				::dcool::resource::detail_::extractedMaxStrongReferenceCountForSharedValue_<Config>(
 					static_cast<::dcool::core::UnsignedMaxInteger>(::std::numeric_limits<::dcool::core::Length>::max())
 				)
 			;
-			private: static constexpr ::dcool::core::UnsignedMaxInteger maxWeakReferenceCount_ =
-				::dcool::resource::detail_::extractedMaxWeakReferenceCountValue_<Config>(
+			public: static constexpr ::dcool::core::UnsignedMaxInteger maxWeakReferenceCount =
+				::dcool::resource::detail_::extractedMaxWeakReferenceCountForSharedValue_<Config>(
 					static_cast<::dcool::core::UnsignedMaxInteger>(0)
 				)
 			;
 
-			public: using StrongCountUnderlying = ::dcool::core::IntegerType<maxStrongReferenceCount_>;
+			public: using StrongCountUnderlying = ::dcool::core::IntegerType<maxStrongReferenceCount>;
 			public: using WeakCountUnderlying =
-				::dcool::core::ConditionalType<(maxWeakReferenceCount_ > 0), ::dcool::core::IntegerType<maxWeakReferenceCount_>, void
+				::dcool::core::ConditionalType<(maxWeakReferenceCount > 0), ::dcool::core::IntegerType<maxWeakReferenceCount>, void
 			>;
 			private: static constexpr ::dcool::core::CounterScenario counterScenario_ = (
 				atomicallyCounted ? ::dcool::core::CounterScenario::logicDependent : ::dcool::core::CounterScenario::synchronized
@@ -353,8 +365,11 @@ namespace dcool::resource {
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Dismissor = ConfigAdaptor_::Dismissor;
 		public: using Counters = ConfigAdaptor_::Counters;
+		public: static constexpr ::dcool::core::Boolean compact = ConfigAdaptor_::compact;
 
-		private: Value* m_value_;
+		private: using ValueHolder_ = ::dcool::core::ConditionalType<compact, ::dcool::core::StorageFor<Value>, Value*>;
+
+		private: ValueHolder_ m_valueHolder_;
 		private: Counters m_counters_;
 
 		public: constexpr SharedAgentChassis() noexcept = default;
@@ -364,12 +379,26 @@ namespace dcool::resource {
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
+		public: template <typename... ArgumentTs__> constexpr void initialize(
+			Engine& engine_, ArgumentTs__&&... parameters_
+		) noexcept requires (compact) {
+			new (::dcool::core::addressOf(this->m_valueHolder_)) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
 		public: constexpr void initialize(Engine& engine_, Value& value_) noexcept {
-			this->m_value_ = ::dcool::core::addressOf(value_);
+			if constexpr (compact) {
+				new (::dcool::core::addressOf(this->m_valueHolder_)) Value(value_);
+			} else {
+				this->m_valueHolder_ = ::dcool::core::addressOf(value_);
+			}
 		}
 
 		private: constexpr void invalidate_(Engine& engine_) noexcept {
-			engine_.dismissor()(this->value(engine_));
+			if constexpr (compact) {
+				::dcool::core::destruct(this->value(engine_));
+			} else {
+				engine_.dismissor()(this->value(engine_));
+			}
 		}
 
 		public: constexpr void uninitialize(Engine& engine_) noexcept {
@@ -383,8 +412,24 @@ namespace dcool::resource {
 			return this->m_counters_;
 		}
 
-		public: constexpr auto value(Engine& engine_) const noexcept -> Value& {
-			return *(this->m_value_);
+		public: constexpr auto value(Engine& engine_) const noexcept -> Value const& {
+			Value const* value_;
+			if constexpr (compact) {
+				value_ = reinterpret_cast<Value const*>(::dcool::core::addressOf(this->m_valueHolder_));
+			} else {
+				value_ = this->m_valueHolder_;
+			}
+			return *(value_);
+		}
+
+		public: constexpr auto value(Engine& engine_) noexcept -> Value& {
+			Value* value_;
+			if constexpr (compact) {
+				value_ = reinterpret_cast<Value*>(::dcool::core::addressOf(this->m_valueHolder_));
+			} else {
+				value_ = this->m_valueHolder_;
+			}
+			return *(value_);
 		}
 
 		public: constexpr void recordStrongReference(Engine& engine_) noexcept {
@@ -437,10 +482,18 @@ namespace dcool::resource {
 		public: using Chassis = ::dcool::resource::SharedAgentChassis<Value, Config>;
 		public: using Dismissor = ConfigAdaptor_::Dismissor;
 		public: using Counters = ConfigAdaptor_::Counters;
+		public: using StrongCountUnderlying = ConfigAdaptor_::StrongCountUnderlying;
+		public: static constexpr ::dcool::core::Boolean compact = Chassis::compact;
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
 		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
+
+		public: template <typename... ArgumentTs__> constexpr SharedAgent(
+			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+		) requires (compact) {
+			this->chassis().initialize(this->engine(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
 
 		public: constexpr SharedAgent(Value& value_) {
 			this->chassis().initialize(this->engine(), value_);
@@ -478,7 +531,11 @@ namespace dcool::resource {
 			return this->m_engine_;
 		}
 
-		public: constexpr auto value() const noexcept -> Value& {
+		public: constexpr auto value() const noexcept -> Value const& {
+			return this->chassis().value(this->engine());
+		}
+
+		public: constexpr auto value() noexcept -> Value& {
 			return this->chassis().value(this->engine());
 		}
 
@@ -496,7 +553,7 @@ namespace dcool::resource {
 			}
 		}
 
-		public: constexpr auto strongReferenceCount() noexcept -> ConfigAdaptor_::StrongCountUnderlying {
+		public: constexpr auto strongReferenceCount() noexcept -> StrongCountUnderlying {
 			return this->chassis().strongReferenceCount(this->engine());
 		}
 
@@ -528,6 +585,8 @@ namespace dcool::resource {
 
 		public: using Agent = ::dcool::resource::SharedAgent<Value, AgentConfig>;
 		public: using Intrusive = ::dcool::resource::IntrusiveStrong<Agent>;
+		public: using StrongCountUnderlying = Agent::StrongCountUnderlying;
+		public: static constexpr ::dcool::core::Boolean compact = Agent::compact;
 
 		public: template <typename ValueT__, typename ValueDismissorT__, typename AgentPoolT__> friend constexpr auto wrapToShare(
 			ValueT__& value_, ValueDismissorT__ valueDismissor_, AgentPoolT__ agentPool_
@@ -538,12 +597,19 @@ namespace dcool::resource {
 
 		public: constexpr SharedStrongPointer() noexcept = default;
 		public: constexpr SharedStrongPointer(Self_ const&) noexcept = default;
-		public: constexpr SharedStrongPointer(Self_&&) = default;
+		public: constexpr SharedStrongPointer(Self_&&) noexcept = default;
 
 		public: constexpr SharedStrongPointer(::dcool::core::NullPointer) noexcept: Self_() {
 		}
 
 		private: constexpr SharedStrongPointer(Agent& agent_) noexcept: m_intrusive_(::dcool::core::addressOf(agent_)) {
+		}
+
+		public: template <typename... ArgumentTs__> constexpr SharedStrongPointer(
+			::dcool::core::InPlaceTag inPlaceTag_, ArgumentTs__&&... parameters_
+		) requires (compact): Self_(
+			*new ::dcool::resource::SharedAgent<Value, AgentConfig>(inPlaceTag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+		) {
 		}
 
 		public: constexpr ~SharedStrongPointer() noexcept = default;
@@ -559,8 +625,16 @@ namespace dcool::resource {
 			return this->m_intrusive_;
 		}
 
+		private: constexpr auto agent_() const noexcept -> Agent& {
+			return this->intrusive().dereferenceSelf();
+		}
+
+		public: constexpr auto strongReferenceCount() const noexcept -> StrongCountUnderlying {
+			return this->agent_().strongReferenceCount();
+		}
+
 		public: constexpr auto dereferenceSelf() const noexcept -> Value& {
-			return this->intrusive().dereferenceSelf().value();
+			return this->agent_().value();
 		}
 
 		public: constexpr auto operator *() const noexcept -> Value& {
@@ -632,6 +706,28 @@ namespace dcool::resource {
 		auto agentPointer_ = new ::dcool::resource::SharedAgent<ValueT_>(value_);
 		return ::dcool::resource::SharedStrongPointer<ValueT_>(*agentPointer_);
 	}
+
+	namespace detail_ {
+		// Workaround for a compiler bug.
+	// See document/dependency_bugs#Bug_2 for mor details.
+		template <typename BaseConfigT_, typename ValueT_> struct CompactSharedAgentConfig_ {
+			private: using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<BaseConfigT_, ValueT_>;
+			public: static constexpr ::dcool::core::Boolean compact = true;
+			public: static constexpr ::dcool::core::Boolean atomicallyCounted = ConfigAdaptor_::atomicallyCounted;
+			public: static constexpr ::dcool::core::UnsignedMaxInteger maxStrongReferenceCount =
+				ConfigAdaptor_::maxStrongReferenceCount
+			;
+			public: static constexpr ::dcool::core::UnsignedMaxInteger maxWeakReferenceCount =
+				ConfigAdaptor_::maxWeakReferenceCount
+			;
+		};
+	}
+
+	template <
+		typename ValueT_, typename BaseConfigT_ = ::dcool::core::Empty<>
+	> using CompactSharedStrongPointer = ::dcool::resource::SharedStrongPointer<
+		ValueT_, ::dcool::resource::detail_::CompactSharedAgentConfig_<BaseConfigT_, ValueT_>
+	>;
 }
 
 #endif

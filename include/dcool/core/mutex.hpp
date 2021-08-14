@@ -89,7 +89,7 @@ namespace dcool::core {
 		public: using typename Super_::Underlying;
 		public: using Super_::underlying;
 
-		public: constexpr void lockShared() noexcept(::dcool::core::declval<Underlying&>().lock_shared()) {
+		public: constexpr void lockShared() noexcept(noexcept(::dcool::core::declval<Underlying&>().lock_shared())) {
 			this->underlying.lock_shared();
 		}
 
@@ -97,7 +97,7 @@ namespace dcool::core {
 			return this->underlying.try_lock_shared();
 		}
 
-		public: constexpr void unlockShared() noexcept(::dcool::core::declval<Underlying&>().unlock_shared()) {
+		public: constexpr void unlockShared() noexcept(noexcept(::dcool::core::declval<Underlying&>().unlock_shared())) {
 			this->underlying.unlock_shared();
 		}
 

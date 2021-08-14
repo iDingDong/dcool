@@ -73,4 +73,14 @@
 #		endif
 #	endif
 
+#	ifdef DCOOLER_ENABLE_CPP_P0024R2
+#		if DCOOLER_ENABLE_CPP_P0024R2
+#			define DCOOL_ENABLE_CPP_P0024R2 1
+#		else
+#			define DCOOL_ENABLE_CPP_P0024R2 0
+#		endif
+#	else
+#		define DCOOLER_CPP_P1135R6_ENABLED 0
+#	endif
+
 #endif

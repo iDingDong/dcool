@@ -17,6 +17,8 @@ Its member shall customize the list as decribed:
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of any. |
 | Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| `static constexpr dcool::core::Boolean copyable` | `true` | The any shall be copyable if it takes value `true`; otherwise non-copyable. |
+| `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The any shall be moveable if it takes value `true`; otherwise non-moveable. |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
 | `static constexpr dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy` | `dcool::core::defaultExceptionSafetyStrategy` | The default exception safety strategy of all operations. |
 
@@ -34,7 +36,7 @@ constexpr Any(Any const& other);
 constexpr Any(Any&& other) noexcept(/* unspecified expression */);
 template <typename ValueT> constexpr Any(ValueT&& value) noexcept(/* unspecified expression */);
 template <typename ValueT, typename... ArgumentTs> constexpr Any(
-	dcool::core::InPlaceTag, ArgumentTs&&... parameters
+	dcool::core::TypedInPlaceTag<ValueT>, ArgumentTs&&... parameters
 ) noexcept(/* unspecified expression */);
 ```
 
@@ -116,7 +118,11 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 
 ## Customized extended operations
 
-User may inherit an instantiated 'dcool::utility::Any' to implement customized extended operations on any object with compile-time type information. We will go through an example to implement a customized any type named `MyAny` that can perform convertion to string (and requires `std::to_string` accepts the holded object as the argument).
+User may inherit from or composite with an instantiated 'dcool::utility::Any' to implement customized extended operations on any object with compile-time type information. You will need to configure the `ExtendedInformation` type to hold constant data related to the stored object type.
+
+### Example
+
+We will implement a customized any type named `MyAny` that can perform convertion to string (and requires `std::to_string` accepts the holded object as the argument).
 
 ```cpp
 class MyAny {
@@ -126,13 +132,13 @@ class MyAny {
 	}
 
 	// We then need to define a customized 'virtual table' as our extended information.
-	//
-	// The extended information is required to be constructible with a single argument of type `dcool::core::Typed<ValueT>` and
-	// should be properly overloaded or templated to accept all possibly holded object types.
 	struct MyVirtualTable {
 		using ConverterToString = auto (*)(MyAny const&) -> std::string;
+		// Intended to mimic a virtual function.
 		ConverterToString converterToString;
 
+		// The extended information is required to be constructible with a single argument of type `dcool::core::TypedTag<ValueT>`
+		// and should be properly overloaded or templated to accept all possibly holded object types.
 		template <typename ValueT> MyVirtualTable(dcool::core::TypedTag<ValueT>) noexcept: converterToString(myToString<ValueT>) {
 		}
 	};
@@ -144,6 +150,11 @@ class MyAny {
 
 	// Other possible members are omitted.
 	private: dcool::utility::Any<MyAnyConfig> m_underlying;
+
+	// Constructor of `dcool::utility::Any` will store a reference to an constant `MyVirtualTable` object constructed with
+	// `dcool::core::typed<ValueT>`.
+	public: template <typename ValueT> MyAny(ValueT const& value): m_underlying(value) {
+	}
 
 	public: auto toString() const -> std::string {
 		return this->m_underlying.extendedInformation().converterToString(*this);

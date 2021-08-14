@@ -81,9 +81,8 @@ namespace dcool::core {
 
 	template <
 		auto maxC_, auto minC_ = 0
-	> requires Integer<decltype(maxC_)> && Integer<decltype(minC_)> using IntegerType = ::dcool::core::detail_::IntegerType_<
-		maxC_, minC_
-	>::Result_;
+	> requires (::dcool::core::Integral<decltype(maxC_)> && ::dcool::core::Integral<decltype(minC_)>) using IntegerType =
+		::dcool::core::detail_::IntegerType_<maxC_, minC_>::Result_;
 
 	namespace detail_ {
 		template <
@@ -146,6 +145,11 @@ namespace dcool::core {
 		short,
 		signed char
 	>::Result_;
+
+	template <typename T_, typename SubT_> concept SuperSetOfNumeric =
+		::std::numeric_limits<T_>::min() <= ::std::numeric_limits<SubT_>::min() &&
+		::std::numeric_limits<SubT_>::max() <= ::std::numeric_limits<T_>::max()
+	;
 }
 
 #endif

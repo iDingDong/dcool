@@ -5,7 +5,6 @@
 
 DCOOL_TEST_CASE(dcoolResource, sharedBasics) {
 	class A {
-		public:
 		private: int m_id;
 
 		public: A() noexcept: m_id(allocateId()) {

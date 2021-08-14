@@ -4,14 +4,14 @@
 #	include <dcool/test/case.hpp>
 
 #	define DCOOL_TEST_CHECK(level_, predicate_) \
-	::dcool::test::detail_::check_(__FILE__, __LINE__, (level_), (predicate_), dcoolTestRecord)
+	::dcool::test::detail_::check_(__FILE__, __LINE__, (level_), (predicate_), dcoolTestRecord_)
 
 #	define DCOOL_TEST_EXPECT(predicate_) DCOOL_TEST_CHECK(::dcool::test::Case::Failure::Level::gentle, (predicate_))
 
 #	define DCOOL_TEST_ASSERT(predicate_) DCOOL_TEST_CHECK(::dcool::test::Case::Failure::Level::fatalForCase, (predicate_))
 
 #	define DCOOL_TEST_CHECK_RANGE_EQUALITY(level_, left_, right_) \
-	::dcool::test::detail_::checkRangeEquality_(__FILE__, __LINE__, (level_), (left_), (right_), dcoolTestRecord)
+	::dcool::test::detail_::checkRangeEquality_(__FILE__, __LINE__, (level_), (left_), (right_), dcoolTestRecord_)
 
 #	define DCOOL_TEST_EXPECT_RANGE_EQUALITY(left_, right_) \
 	DCOOL_TEST_CHECK_RANGE_EQUALITY(::dcool::test::Case::Failure::Level::gentle, (left_), (right_))

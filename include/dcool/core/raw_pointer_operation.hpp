@@ -22,7 +22,7 @@ namespace dcool::core {
 	template <typename T_> constexpr auto stepOver(
 		::dcool::core::IdenticallyQualifiedType<void, T_>* pointer_
 	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, T_>* {
-		return ::dcool::core::stepByByte(pointer_, sizeof(*pointer_));
+		return ::dcool::core::stepByByte(pointer_, sizeof(T_));
 	}
 
 	inline constexpr auto differenceByByte(

@@ -1,6 +1,7 @@
 set(
 	test_dcool_sources
 	"./test.cpp"
+	"./core/layout.cpp"
 	"./concurrency/latch.cpp"
 	"./concurrency/semaphore.cpp"
 	"./coroutine/async_mutex.cpp"
@@ -10,7 +11,10 @@ set(
 	"./container/list.cpp"
 	"./container/string.cpp"
 	"./resource/shared.cpp"
+	"./service/timer.cpp"
+	"./utility/any_mutex.cpp"
 	"./utility/any.cpp"
+	"./utility/cow.cpp"
 	"./utility/function.cpp"
 	"./utility/overloaded_function.cpp"
 	"./vigor/sealer.cpp"

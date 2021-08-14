@@ -4,15 +4,17 @@
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/concept.hpp>
 
+#	include <algorithm>
+#	include <bit>
 #	include <limits>
 #	include <memory>
 
 namespace dcool::core {
 	constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 	constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
-	constexpr ::dcool::core::Alignment maxRepresentableAlignment =
-		minRepresentableAlignment << (::std::numeric_limits<::dcool::core::Alignment>::digits - 1)
-	;
+	constexpr ::dcool::core::Alignment maxRepresentableAlignment = std::bit_floor(
+		::std::numeric_limits<::dcool::core::Alignment>::max()
+	);
 	template <::dcool::core::Size sizeC_> constexpr ::dcool::core::Alignment defaultAlignmentFor = alignof(
 		::std::aligned_storage_t<sizeC_>
 	);
@@ -30,12 +32,11 @@ namespace dcool::core {
 		return static_cast<::dcool::core::Alignment>(requirement_ >> 64);
 	}
 
-	template <
-		::dcool::core::Size sizeC_,
-		::dcool::core::Alignment alignmentC_ = ::dcool::core::defaultAlignmentFor<sizeC_>
-	> constexpr ::dcool::core::StorageRequirement storageRequirement =
-		static_cast<::dcool::core::StorageRequirement>(sizeC_) | (static_cast<::dcool::core::StorageRequirement>(alignmentC_) << 64)
-	;
+	constexpr auto makeStorageRequirement(::dcool::core::Size size_, ::dcool::core::Alignment alignment_) noexcept {
+		return 
+			static_cast<::dcool::core::StorageRequirement>(size_) | (static_cast<::dcool::core::StorageRequirement>(alignment_) << 64)
+		;
+	}
 #	else
 	struct StorageRequirement {
 		private: using Self_ = StorageRequirement;
@@ -54,13 +55,18 @@ namespace dcool::core {
 		return requirement_.alignment;
 	}
 
+	constexpr auto makeStorageRequirement(::dcool::core::Size size_, ::dcool::core::Alignment alignment_) noexcept {
+		return ::dcool::core::StorageRequirement {
+			.size = size_,
+			.alignmentC_ = alignment_
+		};
+	}
+#	endif
+
 	template <
 		::dcool::core::Size sizeC_,
 		::dcool::core::Alignment alignmentC_ = ::dcool::core::defaultAlignmentFor<sizeC_>
-	> constexpr ::dcool::core::StorageRequirement storageRequirement = ::dcool::core::StorageRequirement {
-		.size = sizeC_, .alignmentC_ = alignmentC_
-	};
-#	endif
+	> constexpr ::dcool::core::StorageRequirement storageRequirement = ::dcool::core::makeStorageRequirement(sizeC_, alignmentC_);
 
 	template <
 		typename ValueT_
@@ -113,6 +119,35 @@ namespace dcool::core {
 	template <typename ValueT_> using StorageFor = ::dcool::core::AlignedStorage<
 		::dcool::core::storageRequirementFor<ValueT_>
 	>;
+
+	constexpr auto padSizeToMatchAligment(
+		::dcool::core::Size size_, ::dcool::core::Alignment alignmentToMatch_
+	) noexcept -> ::dcool::core::Size {
+		::dcool::core::Size remainning_ = size_ % alignmentToMatch_;
+		return remainning_ > 0 ? alignmentToMatch_ - remainning_ : 0;
+	}
+
+	constexpr auto matchAlignment(
+		::dcool::core::Size size_, ::dcool::core::Alignment alignmentToMatch_
+	) noexcept -> ::dcool::core::Size {
+		return size_ + ::dcool::core::padSizeToMatchAligment(size_, alignmentToMatch_);
+	}
+
+	template <
+		::dcool::core::ConvertibleTo<::dcool::core::StorageRequirement>... Ts_
+	> constexpr auto commonStorageRequirement(::dcool::core::StorageRequirement first_, Ts_... rests_) {
+		if constexpr (sizeof...(rests_) > 0) {
+			::dcool::core::StorageRequirement subResult_ = ::dcool::core::commonStorageRequirement(rests_...);
+			::dcool::core::Alignment alignment_ = ::std::max(
+				::dcool::core::alignment(first_), ::dcool::core::alignment(subResult_)
+			);
+			::dcool::core::Size size_ = ::dcool::core::matchAlignment(
+				::std::max(::dcool::core::size(first_), ::dcool::core::size(subResult_)), alignment_
+			);
+			return ::dcool::core::makeStorageRequirement(size_, alignment_);
+		}
+		return first_;
+	}
 }
 
 #endif

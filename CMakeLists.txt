@@ -33,5 +33,13 @@ function(target_link_library_if_exist TARGET SCOPE LIBRARY_NAME)
 	unset(LIBRARY_PATH CACHE)
 endfunction()
 
+add_library(dcool_header INTERFACE)
+
+target_compile_features(dcool_header INTERFACE cxx_std_20)
+target_enable_common_warnings(dcool_header INTERFACE)
+target_compile_definitions(dcool_header INTERFACE DCOOLER_CPP_P1135R6_ENABLED=1)
+target_include_directories(dcool_header INTERFACE ${DCOOL_INCLUDE_DIRECTORY})
+target_link_library_if_exist(dcool_header INTERFACE tbb)
+
 add_subdirectory("./source")
 add_subdirectory("./test")

@@ -28,7 +28,7 @@ namespace dcool::core {
 
 	template <::dcool::core::Reference FromT_, typename ToT_> struct DefaultImplicitConverter<FromT_, ToT_> {
 		constexpr auto operator ()(FromT_ from_) const -> ToT_ {
-			return static_cast<FromT_>(from_);
+			return from_;
 		}
 	};
 
@@ -38,6 +38,19 @@ namespace dcool::core {
 	};
 
 	template <typename T_> struct DefaultBidirectionalImplicitConverter<T_, T_>: DefaultImplicitConverter<T_, T_> {
+	};
+
+	template <typename T_> struct DefaultUniversalPointerConverterOf {
+		public: using Pointer = T_*;
+		public: using UniversalPointer = ::dcool::core::IdenticallyQualifiedType<void, T_>*;
+
+		public: constexpr auto operator ()(Pointer from_) const noexcept -> UniversalPointer {
+			return from_;
+		}
+
+		public: constexpr auto operator ()(UniversalPointer from_) const noexcept -> Pointer {
+			return static_cast<Pointer>(from_);
+		}
 	};
 
 	namespace customizable {

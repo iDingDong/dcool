@@ -102,6 +102,8 @@ namespace dcool::utility {
 			typename ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>::template ExtendedInformation_<Self_>...
 		>;
 		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
+		public: static constexpr ::dcool::core::Boolean copyable = ConfigAdaptor_::copyable;
+		public: static constexpr ::dcool::core::Boolean moveable = ConfigAdaptor_::moveable;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			ConfigAdaptor_::exceptionSafetyStrategy
@@ -121,6 +123,8 @@ namespace dcool::utility {
 			using Pool = ConfigAdaptor_::Pool;
 			using ExtendedInformation = UnderlyingExtendedInformation_;
 			using Engine = Engine;
+			static constexpr ::dcool::core::Boolean copyable = copyable;
+			static constexpr ::dcool::core::Boolean moveable = moveable;
 			static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
 			static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy = exceptionSafetyStrategy;
 		};
@@ -181,15 +185,15 @@ namespace dcool::utility {
 		}
 
 		public: constexpr auto valid(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_(engine_).valid(engine_);
+			return this->m_underlying_.valid(engine_);
 		}
 
 		public: constexpr auto storageRequirement(Engine& engine_) const noexcept -> ::dcool::core::StorageRequirement {
-			return this->m_underlying_(engine_).storageRequirement(engine_);
+			return this->m_underlying_.storageRequirement(engine_);
 		}
 
 		public: constexpr auto typeInfo(Engine& engine_) const noexcept -> ::dcool::core::TypeInfo const& {
-			return this->m_underlying_(engine_).typeInfo(engine_);
+			return this->m_underlying_.typeInfo(engine_);
 		}
 
 		private: constexpr auto baseExtendedInformations_(Engine& engine_) const noexcept -> BaseExtendedInformations_ const& {
@@ -250,6 +254,8 @@ namespace dcool::utility {
 		public: using Chassis = ::dcool::utility::OverloadedFunctionChassis<Prototypes, Config>;
 		public: using ExtendedInformation = Chassis::ExtendedInformation;
 		public: using Engine = Chassis::Engine;
+		public: static constexpr ::dcool::core::Boolean copyable = Chassis::copyable;
+		public: static constexpr ::dcool::core::Boolean moveable = Chassis::moveable;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = Chassis::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
 			Chassis::exceptionSafetyStrategy
@@ -262,13 +268,13 @@ namespace dcool::utility {
 			this->chassis().initialize(this->mutableEngine());
 		}
 
-		public: constexpr OverloadedFunction(Self_ const& other_) {
-			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine, *this);
+		public: constexpr OverloadedFunction(Self_ const& other_): m_engine_(other_.mutableEngine()) {
+			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
 		}
 
-		public: constexpr OverloadedFunction(Self_&& other_) {
-			other_.chassis().relocateTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
-			other_.chassis().initialize(this->mutableEngine());
+		public: constexpr OverloadedFunction(Self_&& other_): m_engine_(other_.mutableEngine()) {
+			other_.chassis().template relocateTo<true>(other_.mutableEngine(), this->mutableEngine(), this->chassis());
+			other_.chassis().initialize(other_.mutableEngine());
 		}
 
 		public: template <typename ValueT__> requires (!::dcool::core::FormOfSame<ValueT__, Self_>) constexpr OverloadedFunction(
@@ -277,8 +283,8 @@ namespace dcool::utility {
 			this->chassis().initialize(this->mutableEngine(), ::dcool::core::forward<ValueT__>(value_));
 		}
 
-		public: template <typename ValueT__, typename... ArgumentTs__> constexpr OverloadedFunction(
-			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+		public: template <typename ValueT__, typename... ArgumentTs__> constexpr explicit OverloadedFunction(
+			::dcool::core::TypedInPlaceTag<ValueT__>, ArgumentTs__&&... parameters_
 		) {
 			this->chassis().template initialize<ValueT__>(
 				this->mutableEngine(), ::dcool::core::inPlace, ::dcool::core::forward<ArgumentTs__>(parameters_)...

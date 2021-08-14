@@ -30,7 +30,7 @@ namespace dcool::core {
 		};
 	}
 
-	template <typename T_> concept CounterConfig = ::dcool::core::Integer<
+	template <typename T_> concept CounterConfig = ::dcool::core::Integral<
 		typename ::dcool::core::detail_::CounterConfigAdaptor_<T_>::Underlying
 	>;
 

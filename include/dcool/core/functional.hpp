@@ -9,11 +9,21 @@
 
 namespace dcool::core {
 	struct NoOp {
-		template <typename... ArgumentTs_> void operator ()(ArgumentTs_&&...) noexcept {
+		template <typename... ArgumentTs_> constexpr void operator ()(ArgumentTs_&&...) noexcept {
 		}
 	};
 
 	constexpr NoOp noOp;
+
+	template <auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)> struct ConstantReturn {
+		template <typename... ArgumentTs_> constexpr auto operator ()(ArgumentTs_&&...) noexcept -> ReturnT_ {
+			return returnValueC_;
+		}
+	};
+
+	template <
+		auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)
+	> constexpr ConstantReturn<returnValueC_, ReturnT_> constantReturn;
 
 	struct ComparableNoOp: public NoOp {
 		private: using Self_ = ComparableNoOp;
