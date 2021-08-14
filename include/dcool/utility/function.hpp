@@ -11,8 +11,6 @@ namespace dcool::utility {
 	using BadFunctionCall = ::std::bad_function_call;
 
 	namespace detail_ {
-		template <typename PrototypeT_, typename ConfigT_> struct FunctionChassis_;
-
 		template <
 			::dcool::core::Complete ConfigT_, typename PrototypeT_
 		> struct FunctionConfigAdaptor_;
@@ -77,6 +75,8 @@ namespace dcool::utility {
 			::dcool::core::terminate();
 		}
 
+		template <typename PrototypeT_, typename ConfigT_> struct FunctionChassis_;
+
 		template <
 			typename ConfigT_, ::dcool::core::Boolean noexceptC_, typename ResultT_, typename... ParameterTs_
 		> struct FunctionChassis_<auto(ParameterTs_...) noexcept(noexceptC_) -> ResultT_, ConfigT_> {
@@ -89,6 +89,8 @@ namespace dcool::utility {
 			public: using Pool = ConfigAdaptor_::Pool;
 			public: using Engine = ConfigAdaptor_::Engine;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
+			public: static constexpr ::dcool::core::Boolean copyable = ConfigAdaptor_::copyable;
+			public: static constexpr ::dcool::core::Boolean moveable = ConfigAdaptor_::moveable;
 			public: static constexpr ::dcool::core::Boolean noexceptInvocable = noexceptC_;
 			public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = ConfigAdaptor_::squeezedTankage;
 			public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
@@ -119,6 +121,8 @@ namespace dcool::utility {
 				using Pool = Pool;
 				using ExtendedInformation = AnyExtendedInformation_;
 				using Engine = Engine;
+				static constexpr ::dcool::core::Boolean copyable = copyable;
+				static constexpr ::dcool::core::Boolean moveable = moveable;
 				static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
 				static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy = exceptionSafetyStrategy;
 			};
@@ -138,15 +142,15 @@ namespace dcool::utility {
 			}
 
 			public: template <typename ValueT__, typename... ArgumentTs__> constexpr void initialize(
-				Engine& engine_, ::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+				Engine& engine_, ::dcool::core::InPlaceTag tag_, ArgumentTs__&&... parameters_
 			) noexcept(
 				noexcept(
 					::dcool::core::declval<Underlying_&>().template initialize<ValueT__>(
-						engine_,::dcool::core::forward<ArgumentTs__>(parameters_)...
+						engine_, tag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
 					)
 				)
 			) {
-				this->m_underlying_.template initialize<ValueT__>(engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+				this->m_underlying_.template initialize<ValueT__>(engine_, tag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 			}
 
 			public: constexpr void uninitialize(Engine& engine_) noexcept {
@@ -249,6 +253,8 @@ namespace dcool::utility {
 		public: using Result = Chassis::Result;
 		public: using Engine = Chassis::Engine;
 		public: using ExtendedInformation = Chassis::ExtendedInformation;
+		public: static constexpr ::dcool::core::Boolean copyable = Chassis::copyable;
+		public: static constexpr ::dcool::core::Boolean moveable = Chassis::moveable;
 		public: static constexpr ::dcool::core::Boolean noexceptInvocable = Chassis::noexceptInvocable;
 		public: static constexpr ::dcool::core::StorageRequirement squeezedTankage = Chassis::squeezedTankage;
 		public: static constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategy =
@@ -262,13 +268,13 @@ namespace dcool::utility {
 			this->chassis().initialize(this->mutableEngine());
 		}
 
-		public: constexpr Function(Self_ const& other_) {
-			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine, *this);
+		public: constexpr Function(Self_ const& other_): m_engine_(other_.mutableEngine()) {
+			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
 		}
 
-		public: constexpr Function(Self_&& other_) {
-			other_.chassis().relocateTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
-			other_.chassis().initialize(this->mutableEngine());
+		public: constexpr Function(Self_&& other_): m_engine_(other_.mutableEngine()) {
+			other_.chassis().template relocateTo<true>(other_.mutableEngine(), this->mutableEngine(), this->chassis());
+			other_.chassis().initialize(other_.mutableEngine());
 		}
 
 		public: template <typename ValueT__> requires (!::dcool::core::FormOfSame<ValueT__, Self_>) constexpr Function(
@@ -277,8 +283,8 @@ namespace dcool::utility {
 			this->chassis().initialize(this->mutableEngine(), ::dcool::core::forward<ValueT__>(value_));
 		}
 
-		public: template <typename ValueT__, typename... ArgumentTs__> constexpr Function(
-			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+		public: template <typename ValueT__, typename... ArgumentTs__> constexpr explicit Function(
+			::dcool::core::TypedInPlaceTag<ValueT__>, ArgumentTs__&&... parameters_
 		) {
 			this->chassis().template initialize<ValueT__>(
 				this->mutableEngine(), ::dcool::core::inPlace, ::dcool::core::forward<ArgumentTs__>(parameters_)...

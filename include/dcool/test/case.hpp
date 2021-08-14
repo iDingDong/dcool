@@ -6,6 +6,7 @@
 #	include <dcool/core.hpp>
 #	include <dcool/container.hpp>
 
+#	include <atomic>
 #	include <algorithm>
 #	include <iterator>
 
@@ -33,17 +34,18 @@ namespace dcool::test {
 		public: struct ActiveRecord {
 			private: using Self_ = ActiveRecord;
 
-			private: Record m_record_;
+			private: ::std::atomic<::dcool::test::Count> m_checkCount_;
+			private: ::dcool::container::List<Failure> m_failures_;
 			private: mutable ::dcool::core::MinimalMutex m_mutex_;
 
 			public: ActiveRecord() noexcept;
 			public: ActiveRecord(Self_ const& other_);
-			public: ActiveRecord(Self_&& other_) noexcept;
+			public: ActiveRecord(Record record_);
 			public: auto operator =(Self_ const& other_) -> Self_&;
-			public: auto operator =(Self_&& other_) noexcept -> Self_&;
+			public: auto operator =(Record record_) -> Self_&;
 			public: ~ActiveRecord() noexcept;
 
-			public: auto snapshot() -> Record;
+			public: auto snapshot() const -> Record;
 			public: void recordSuccess();
 			public: void recordFailure(Failure failure_);
 		};

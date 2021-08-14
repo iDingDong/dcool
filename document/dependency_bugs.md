@@ -4,39 +4,6 @@ This document records bugs of the dependencies of this library encoutered during
 
 ## Unresolved bugs
 
-### Bug_1: class type NTTP causes ICE
-
-- Compiler: GCC
-- Info last updated: 2021-04-28
-- Status: Unresolved (latest version 11.1.0)
-- Report link: [GCC Bug #95159](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95159)
-
-Minial reprocase:
-
-```cpp
-#include <cstdlib>
-#include <memory>
-
-struct MemAttr {
-	std::size_t size;
-	std::size_t align;
-};
-
-template <typename T> constexpr MemAttr memAttrOf = MemAttr { .size = sizeof(T), .align = alignof(T) };
-
-template <MemAttr attr> using AlignedStorage = ::std::aligned_storage_t<attr.size, attr.align>;
-
-template <typename T> using AlignedStorageFor = AlignedStorage<memAttrOf<T>>;
-```
-
-The code above is rejected by compiler with message:
-
-> ```terminal
-> internal compiler error: Segmentation fault
-> ```
-
-The workaround is never to pass class type non-type template argument.
-
 ### Bug_2: Unused warning on used item
 
 - Compiler: GCC
@@ -100,4 +67,35 @@ The workaround is to omit the `<T>` in the argument declarator.
 
 ## Resolved bugs
 
-None.
+### Bug_1: class type NTTP causes ICE
+
+- Compiler: GCC
+- Info last updated: 2021-07-07
+- Status: Resolved in 11.2.0
+- Report link: [GCC Bug #95159](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95159)
+
+Minial reprocase:
+
+```cpp
+#include <cstdlib>
+#include <memory>
+
+struct MemAttr {
+	std::size_t size;
+	std::size_t align;
+};
+
+template <typename T> constexpr MemAttr memAttrOf = MemAttr { .size = sizeof(T), .align = alignof(T) };
+
+template <MemAttr attr> using AlignedStorage = ::std::aligned_storage_t<attr.size, attr.align>;
+
+template <typename T> using AlignedStorageFor = AlignedStorage<memAttrOf<T>>;
+```
+
+The code above is rejected by compiler with message:
+
+> ```terminal
+> internal compiler error: Segmentation fault
+> ```
+
+The workaround is never to pass class type non-type template argument.

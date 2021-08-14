@@ -31,50 +31,44 @@ namespace dcool::test {
 
 	Case::ActiveRecord::ActiveRecord() noexcept = default;
 
-	Case::ActiveRecord::ActiveRecord(Case::ActiveRecord::Self_ const& other_) {
-		core::PhoneySharedLockGuard locker(other_.m_mutex_);
-		this->m_record_ = other_.m_record_;
+	Case::ActiveRecord::ActiveRecord(Case::ActiveRecord::Self_ const& other_): Case::ActiveRecord(other_.snapshot()) {
 	}
 
-	Case::ActiveRecord::ActiveRecord(Case::ActiveRecord::Self_&& other_) noexcept {
-		core::PhoneyLockGuard locker(other_.m_mutex_);
-		this->m_record_ = core::move(other_.m_record_);
+	Case::ActiveRecord::ActiveRecord(
+		Case::Record record
+	): m_checkCount_(record.checkCount), m_failures_(::dcool::core::move(record.failures)) {
 	}
 
-	auto Case::ActiveRecord::operator =(Case::ActiveRecord::Self_ const& other_) -> Self_& {
-		Case::ActiveRecord middleMan_(other_);
-		{
-			core::PhoneyLockGuard locker(this->m_mutex_);
-			core::intelliSwap(this->m_record_, middleMan_.m_record_);
-		}
+	auto Case::ActiveRecord::operator =(Case::ActiveRecord::Self_ const& other) -> Self_& {
+		(*this) = other.snapshot();
 		return *this;
 	}
 
-	auto Case::ActiveRecord::operator =(Case::ActiveRecord::Self_&& other_) noexcept -> Self_& {
-		Case::ActiveRecord middleMan_(::dcool::core::move(other_));
-		{
-			core::PhoneyLockGuard locker(this->m_mutex_);
-			core::intelliSwap(this->m_record_, middleMan_.m_record_);
-		}
+	auto Case::ActiveRecord::operator =(Case::Record record) -> Self_& {
+		core::PhoneySharedLockGuard locker(this->m_mutex_);
+		this->m_checkCount_.store(record.checkCount, ::std::memory_order::relaxed);
+		this->m_failures_ = ::dcool::core::move(record.failures);
 		return *this;
 	}
 
 	Case::ActiveRecord::~ActiveRecord() noexcept = default;
 
-	auto Case::ActiveRecord::snapshot() -> Case::Record {
+	auto Case::ActiveRecord::snapshot() const -> Case::Record {
 		core::PhoneySharedLockGuard locker(this->m_mutex_);
-		return this->m_record_;
+		return Case::Record {
+			.checkCount = this->m_checkCount_.load(::std::memory_order::consume),
+			.failures = this->m_failures_
+		};
 	}
 
 	void Case::ActiveRecord::recordSuccess() {
-		core::PhoneyLockGuard locker(this->m_mutex_);
-		++(this->m_record_.checkCount);
+		static_cast<void>(this->m_checkCount_.fetch_add(1, ::std::memory_order::acq_rel));
 	}
 
 	void Case::ActiveRecord::recordFailure(Case::Failure failure) {
 		core::PhoneyLockGuard locker(this->m_mutex_);
-		++(this->m_record_.checkCount);
-		this->m_record_.failures.emplaceBack(core::move(failure));
+		static_cast<void>(this->m_checkCount_.fetch_add(1, ::std::memory_order::relaxed));
+		this->m_failures_.emplaceBack(core::move(failure));
 	}
 
 	namespace detail_ {

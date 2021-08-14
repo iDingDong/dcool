@@ -1,7 +1,11 @@
 #ifndef DCOOL_CORE_DEBUG_INCLUDED_
 #	define DCOOL_CORE_DEBUG_INCLUDED_ 1
 
-#	include <cassert>
+#	ifdef __cplusplus
+#		include <cassert>
+#	else
+#		include <assert.h>
+#	endif
 
 #	if defined(NDEBUG)
 #		define DCOOL_CORE_DEBUG_ENABLED 0

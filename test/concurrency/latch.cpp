@@ -13,7 +13,7 @@ DCOOL_TEST_CASE(dcoolConcurrency, latchBasics) {
 	std::atomic<dcool::core::Length> postCount = 0;
 	dcool::concurrency::TimedLatch latch(3);
 
-	std::jthread task1([&dcoolTestRecord, &preCount, &postCount, &latch]() {
+	std::jthread task1([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &latch]() {
 		++preCount;
 		DCOOL_TEST_EXPECT(postCount == 0);
 		latch.arriveAndWait();
@@ -23,7 +23,7 @@ DCOOL_TEST_CASE(dcoolConcurrency, latchBasics) {
 	DCOOL_TEST_EXPECT(!(latch.tryWait()));
 	DCOOL_TEST_EXPECT(!(latch.tryWaitFor(10ms)));
 	DCOOL_TEST_EXPECT(postCount == 0);
-	std::jthread task2([&dcoolTestRecord, &preCount, &postCount, &latch]() {
+	std::jthread task2([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &latch]() {
 		++preCount;
 		DCOOL_TEST_EXPECT(postCount == 0);
 		latch.arriveAndWait();
@@ -31,7 +31,7 @@ DCOOL_TEST_CASE(dcoolConcurrency, latchBasics) {
 		++postCount;
 	});
 	DCOOL_TEST_EXPECT(postCount == 0);
-	std::jthread task3([&dcoolTestRecord, &preCount, &postCount, &latch]() {
+	std::jthread task3([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &latch]() {
 		++preCount;
 		DCOOL_TEST_EXPECT(postCount == 0);
 		latch.countDown();

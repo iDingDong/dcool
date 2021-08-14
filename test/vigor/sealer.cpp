@@ -47,7 +47,7 @@ DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	la.emplaceBack();
 	la.emplaceBack();
 	dcool::vigor::Sealer<SealedValue> sealer(dcool::core::inPlace, dcool::core::move(la));
-	auto observer = [&dcoolTestRecord](SealedValue const& value) {
+	auto observer = [DCOOL_TEST_CAPTURE_CONTEXT](SealedValue const& value) {
 		DCOOL_TEST_EXPECT(value.length() == 2);
 	};
 	auto transaction = [](SealedValue value) -> SealedValue {

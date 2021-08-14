@@ -24,7 +24,7 @@ namespace dcool::concurrency {
 				::dcool::concurrency::detail_::extractedTimedForSemaphoreValue_<Config>(false)
 			;
 
-			static_assert(::dcool::core::Integer<Count>);
+			static_assert(::dcool::core::Integral<Count>);
 		};
 	}
 

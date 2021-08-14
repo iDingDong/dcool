@@ -130,7 +130,9 @@ namespace dcool::core {
 
 	template <typename T_> concept Class = ::std::is_class_v<T_>;
 
-	template <typename T_> concept Integer = ::std::is_integral_v<T_>;
+	template <typename T_> concept Integral = ::std::is_integral_v<T_>;
+
+	template <typename T_> concept UnsignedIntegral = ::std::is_unsigned_v<T_>;
 
 	template <typename T_> constexpr ::dcool::core::Boolean isFinal = ::std::is_final_v<T_>;
 

@@ -1,6 +1,7 @@
 #ifndef DCOOL_CONCURRENCY_LATCH_HPP_INCLUDED_
 #	define DCOOL_CONCURRENCY_LATCH_HPP_INCLUDED_ 1
 
+#	include <dcool/concurrency/atomic_flag.hpp>
 #	include <dcool/concurrency/basic.hpp>
 
 #	include <dcool/core.hpp>
@@ -30,7 +31,7 @@ namespace dcool::concurrency {
 				::dcool::concurrency::detail_::extractedTimedForLatchValue_<Config>(false)
 			;
 
-			static_assert(::dcool::core::Integer<Count>);
+			static_assert(::dcool::core::Integral<Count>);
 		};
 	}
 
@@ -51,6 +52,8 @@ namespace dcool::concurrency {
 		public: static constexpr ::dcool::core::Boolean minimalSize = ConfigAdaptor_::minimalSize;
 		public: static constexpr ::dcool::core::Boolean timed = ConfigAdaptor_::timed;
 		private: static constexpr ::dcool::core::Boolean atomicOnly_ = minimalSize && (!timed);
+		private: static constexpr ::dcool::core::Boolean booleanCount_ = ::dcool::core::isSame<Count, ::dcool::core::Boolean>;
+		private: static constexpr Count expectedTermination_ = static_cast<Count>(0);
 
 		private: struct DefaultUnderlying_ {
 			Count count_;
@@ -61,12 +64,17 @@ namespace dcool::concurrency {
 			}
 		};
 
+		private: using AtomicUnderlying_ = ::dcool::core::ConditionalType<
+			booleanCount_, ::dcool::concurrency::NegativeAtomicFlag, ::std::atomic<Count>
+		>;
 		private: using Underlying_ = ::dcool::core::ConditionalType<atomicOnly_, ::std::atomic<Count>, DefaultUnderlying_>;
 
 		private: Underlying_ m_underlying_;
 
 		public: constexpr explicit Latch(Count expected_) noexcept: m_underlying_(expected_) {
-			DCOOL_CORE_ASSERT(expected_ >= 0);
+			if constexpr (!booleanCount_) {
+				DCOOL_CORE_ASSERT(expected_ >= expectedTermination_);
+			}
 		}
 
 		public: Latch(Self_ const&) = delete;
@@ -74,7 +82,26 @@ namespace dcool::concurrency {
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
-		public: constexpr void countDown(Count n_ = 1) {
+		public: constexpr void countDown() {
+			if constexpr (booleanCount_) {
+				// Boolean latch works differently 
+				if constexpr (atomicOnly_) {
+					DCOOL_CORE_ASSERT(this->m_underlying_.testAndClear());
+					this->m_underlying_.notify_all();
+				} else {
+					{
+						::std::lock_guard locker_(this->m_underlying_.mutex_);
+						DCOOL_CORE_ASSERT(this->m_underlying_.count_);
+						this->m_underlying_.count_ = false;
+					}
+					this->m_underlying_.blocker_.notify_all();
+				}
+			} else {
+				this->countDown(1);
+			}
+		}
+
+		public: constexpr void countDown(Count n_) requires (!booleanCount_) {
 			if constexpr (atomicOnly_) {
 				Count previousValue_ = this->m_underlying_.fetch_sub(n_);
 				DCOOL_CORE_ASSERT(n_ <= previousValue_);
@@ -89,54 +116,72 @@ namespace dcool::concurrency {
 					this->m_underlying_.count_ -= n_;
 					newCount_ = this->m_underlying_.count_;
 				}
-				if (newCount_ == 0) {
+				if (newCount_ == expectedTermination_) {
 					this->m_underlying_.blocker_.notify_all();
 				}
 			}
 		}
 
 		public: constexpr auto tryWait() const noexcept -> ::dcool::core::Boolean {
+			::dcool::core::Boolean result_;
 			if constexpr (atomicOnly_) {
-				return this->m_underlying_.load() == 0;
+				result_ = (this->m_underlying_.load() == expectedTermination_);
 			} else {
 				::std::lock_guard locker_(this->m_underlying_.mutex_);
-				return this->m_underlying_.count_ == 0;
+				result_ = (this->m_underlying_.count_ == expectedTermination_);
 			}
+			return result_;
 		}
 
-		public: template <typename DurationT_> constexpr auto tryWaitFor(
-			DurationT_ duration_
+		public: template <typename DurationT__> constexpr auto tryWaitFor(
+			DurationT__ duration_
 		) -> ::dcool::core::Boolean requires (timed) {
 			return this->tryWaitUntil(::std::chrono::steady_clock::now() + duration_);
 		}
 
-		public: template <typename TimePointT_> constexpr auto tryWaitUntil(
-			TimePointT_ deadline_
+		public: template <typename TimePointT__> constexpr auto tryWaitUntil(
+			TimePointT__ deadline_
 		) -> ::dcool::core::Boolean requires (timed) {
 			::std::unique_lock locker_(this->m_underlying_.mutex_);
-			return this->m_underlying_.blocker_.wait_until(locker_, deadline_, [this]() -> ::dcool::core::Boolean {
-				return this->m_underlying_.count_ == 0;
-			});
+			return this->m_underlying_.blocker_.wait_until(
+				locker_,
+				deadline_,
+				[this]() -> ::dcool::core::Boolean {
+					return this->m_underlying_.count_ == expectedTermination_;
+				}
+			);
 		}
 
 		public: constexpr void wait() const {
 			if constexpr (atomicOnly_) {
 				for (; ; ) {
 					Count current_ = this->m_underlying_.load();
-					if (current_ == 0) {
+					if (current_ == expectedTermination_) {
 						break;
 					}
 					this->m_underlying_.wait(current_);
 				}
 			} else {
 				::std::unique_lock locker_(this->m_underlying_.mutex_);
-				this->m_underlying_.blocker_.wait(locker_, [this]() -> ::dcool::core::Boolean {
-					return this->m_underlying_.count_ == 0;
-				});
+				this->m_underlying_.blocker_.wait(
+					locker_,
+					[this]() -> ::dcool::core::Boolean {
+						return this->m_underlying_.count_ == expectedTermination_;
+					}
+				);
 			}
 		}
 
-		public: constexpr auto arriveAndTryWait(Count n_ = 1) -> ::dcool::core::Boolean {
+		public: constexpr auto arriveAndTryWait() -> ::dcool::core::Boolean {
+			if constexpr (booleanCount_) {
+				this->countDown();
+			} else {
+				return this->arriveAndTryWait(1);
+			}
+			return true;
+		}
+
+		public: constexpr auto arriveAndTryWait(Count n_) -> ::dcool::core::Boolean requires (!booleanCount_)  {
 			if constexpr (atomicOnly_) {
 				Count previousValue_ = this->m_underlying_.fetch_sub(n_);
 				DCOOL_CORE_ASSERT(n_ <= previousValue_);
@@ -149,7 +194,7 @@ namespace dcool::concurrency {
 					::std::unique_lock locker_(this->m_underlying_.mutex_);
 					DCOOL_CORE_ASSERT(n_ <= this->m_underlying_.count_);
 					this->m_underlying_.count_ -= n_;
-					if (this->m_underlying_.count_ > 0) {
+					if (this->m_underlying_.count_ > expectedTermination_) {
 						return false;
 					}
 				}
@@ -158,7 +203,15 @@ namespace dcool::concurrency {
 			return true;
 		}
 
-		public: constexpr void arriveAndWait(Count n_ = 1) {
+		public: constexpr void arriveAndWait() {
+			if constexpr (booleanCount_) {
+				this->countDown();
+			} else {
+				this->arriveAndWait(1);
+			}
+		}
+
+		public: constexpr void arriveAndWait(Count n_) {
 			if constexpr (atomicOnly_) {
 				Count previousValue_ = this->m_underlying_.fetch_sub(n_);
 				DCOOL_CORE_ASSERT(n_ <= previousValue_);
@@ -169,7 +222,7 @@ namespace dcool::concurrency {
 					for (; ; ) {
 						this->m_underlying_.wait(current_);
 						current_ = this->m_underlying_.load();
-						if (current_ == 0) {
+						if (current_ == expectedTermination_) {
 							break;
 						}
 					}
@@ -179,10 +232,14 @@ namespace dcool::concurrency {
 					::std::unique_lock locker_(this->m_underlying_.mutex_);
 					DCOOL_CORE_ASSERT(n_ <= this->m_underlying_.count_);
 					this->m_underlying_.count_ -= n_;
-					if (this->m_underlying_.count_ > 0) {
-						::dcool::concurrency::permissiveWait(this->m_underlying_.blocker_, locker_, [this]() -> ::dcool::core::Boolean {
-							return this->m_underlying_.count_ == 0;
-						});
+					if (this->m_underlying_.count_ > expectedTermination_) {
+						::dcool::concurrency::permissiveWait(
+							this->m_underlying_.blocker_,
+							locker_,
+							[this]() -> ::dcool::core::Boolean {
+								return this->m_underlying_.count_ == expectedTermination_;
+							}
+						);
 						return;
 					}
 				}
@@ -192,12 +249,16 @@ namespace dcool::concurrency {
 	};
 
 	namespace detail_ {
-		struct TimedLatchConfig_ {
+		template <typename CountT_> struct TimedLatchConfig_ {
+			using Count = CountT_;
 			static constexpr ::dcool::core::Boolean timed = true;
 		};
 	}
 
-	using TimedLatch = ::dcool::concurrency::Latch<::dcool::concurrency::detail_::TimedLatchConfig_>;
+	template <
+		typename CountT_ = ::dcool::core::Length
+	> using TimedLatchOf = ::dcool::concurrency::Latch<::dcool::concurrency::detail_::TimedLatchConfig_<CountT_>>;
+	using TimedLatch = ::dcool::concurrency::TimedLatchOf<>;
 }
 
 #endif

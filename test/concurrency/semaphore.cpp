@@ -15,13 +15,13 @@ DCOOL_TEST_CASE(dcoolConcurrency, semaphoreBasics) {
 	std::atomic<dcool::core::Length> postCount = 0;
 	dcool::concurrency::TimedSemaphore semaphore;
 
-	auto checker = [&dcoolTestRecord, &preCount, &postCount] {
+	auto checker = [DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount] {
 		auto postCountValue = postCount.load();
 		auto preCountValue = preCount.load();
 		DCOOL_TEST_EXPECT(postCountValue <= preCountValue);
 	};
 
-	std::jthread consumer([&dcoolTestRecord, &preCount, &postCount, &semaphore, checker]() {
+	std::jthread consumer([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
 		for (dcool::core::Length i = 0; i < testCount; ++i) {
 			checker();
 			semaphore.acquire();
@@ -35,7 +35,7 @@ DCOOL_TEST_CASE(dcoolConcurrency, semaphoreBasics) {
 	DCOOL_TEST_EXPECT(!(semaphore.tryAcquireFor(10ms)));
 	DCOOL_TEST_EXPECT(postCount == 0);
 
-	std::jthread producer([&dcoolTestRecord, &preCount, &postCount, &semaphore, checker]() {
+	std::jthread producer([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
 		for (dcool::core::Length i = 0; i < testCount; ++i) {
 			checker();
 			auto newPreCountValue = ++preCount;
