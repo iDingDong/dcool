@@ -16,7 +16,7 @@ Its member shall customize the list as decribed:
 | - | - | - |
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of any. |
-| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management. |
 | `static constexpr dcool::core::Boolean copyable` | `true` | The any shall be copyable if it takes value `true`; otherwise non-copyable. |
 | `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The any shall be moveable if it takes value `true`; otherwise non-moveable. |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |

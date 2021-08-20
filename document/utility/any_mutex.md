@@ -16,7 +16,7 @@ Its member shall customize the list as decribed:
 | - | - | - |
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of any mutex. |
-| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management. |
 | Type `SupportedTimePoints` | `dcool::core::Types<>` | Represent a list of types instanitiated from template `std::chrono::time_point` that can be used for timed lock. If it either failes to meet `dcool::core::TypeList` or contains a element not instanitiated from template `std::chrono::time_point`, the behavior is undefined. |
 | `static constexpr dcool::core::Boolean copyable` | `false` | The any mutex shall be copyable if it takes value `true`; otherwise non-copyable. |
 | `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The any mutex shall be moveable if it takes value `true`; otherwise non-moveable. |
