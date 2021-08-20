@@ -19,10 +19,9 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 		}
 	};
 
-	dcool::utility::DefaultOverloadedFunction<auto(int, int) -> int, void(int), auto() -> int> function1 = OverloadedAdder();
-	DCOOL_TEST_EXPECT(function1.immutablyInvocable<0>());
-	DCOOL_TEST_EXPECT(!(function1.immutablyInvocable<1>()));
-	DCOOL_TEST_EXPECT(function1.immutablyInvocable<2>());
+	dcool::utility::DefaultOverloadedFunction<
+		auto (int, int) const -> int, void (int), auto () -> int
+	> function1 = OverloadedAdder();
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1(3, 17) == 3 + 17));
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(dcool::core::constantize(function1)(3, 17) == 3 + 17));
 	DCOOL_TEST_EXPECT(function1() == 0);
@@ -30,26 +29,28 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 	DCOOL_TEST_EXPECT(function1() == 4);
 	function1(27);
 	DCOOL_TEST_EXPECT(function1() == 4 + 27);
-	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadFunctionCall const&, {
-		dcool::core::constantize(function1)(3);
-	});
 }
 
 DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionOverloading) {
-	struct OverloadedTypeInfo {
-		auto operator ()(int) noexcept -> dcool::core::TypeInfo const& {
-			return typeid(int);
+	struct OverloadedFunctor {
+		auto operator ()(int) const noexcept -> int {
+			return 0;
 		}
 
-		auto operator ()(double) noexcept -> dcool::core::TypeInfo const& {
-			return typeid(double);
+		auto operator ()(int) noexcept -> int {
+			return 1;
+		}
+
+		auto operator ()(double) noexcept -> int {
+			return 2;
 		}
 	};
 
 	dcool::utility::DefaultOverloadedFunction<
-		auto(int) noexcept -> dcool::core::TypeInfo const&, auto(double) noexcept -> dcool::core::TypeInfo const&
-	> function1 = OverloadedTypeInfo();
+		auto (int) const noexcept -> int, auto (int) noexcept -> int, auto (double) noexcept -> int
+	> function1 = OverloadedFunctor();
 
-	DCOOL_TEST_EXPECT(function1(1) == typeid(int));
-	DCOOL_TEST_EXPECT(function1(1.0) == typeid(double));
+	DCOOL_TEST_EXPECT(dcool::core::constantize(function1)(1) == 0);
+	DCOOL_TEST_EXPECT(function1(1) == 1);
+	DCOOL_TEST_EXPECT(function1(1.0) == 2);
 }

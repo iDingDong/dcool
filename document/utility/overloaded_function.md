@@ -18,7 +18,7 @@ Its member shall customize the list as decribed:
 | - | - | - |
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of function. |
-| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management. |
 | `static constexpr dcool::core::Boolean copyable` | `true` | The function shall be copyable if it takes value `true`; otherwise non-copyable. |
 | `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The function shall be moveable if it takes value `true`; otherwise non-moveable. |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
@@ -132,30 +132,30 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
-template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) const noexcept(/* unspecified expression */);
-template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(ArgumentTs&&... parameters) noexcept(/* unspecified expression */);
+template <typename... ArgumentTs> constexpr decltype(auto) invokeSelf(
+	ArgumentTs&&... parameters
+) /* optional qualified reference as overloaded */ noexcept(/* unspecified expression */);
 ```
 
 Invoke the holded object with forwarded `parameters` if the function holds an object, otherwise terminate execution if corresponding prototype is marked `noexcept`, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
 
-For overload 1, if the const reference to the holded object is not invocable as above, terminate execution if corresponding prototype is marked `noexcept`, otherwise throws a `dcool::utility::BadFunctionCall`.
-
 ### `operator ()`
 
 ```cpp
-template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) const noexcept(/* unspecified expression */);
-template <typename... ArgumentTs> constexpr decltype(auto) operator ()(ArgumentTs&&... parameters) noexcept(/* unspecified expression */);
+template <typename... ArgumentTs> constexpr decltype(auto) operator ()(
+	ArgumentTs&&... parameters
+) /* optional qualified reference as overloaded */ noexcept(/* unspecified expression */);
 ```
 
-Equivalent to `this->invokeSelf(dcool::core::forward<ArgumentTs>(parameters)...)`.
+Equivalent to `this->invokeSelf(dcool::core::forward<ArgumentTs>(parameters)...)` (will move `*this` if necessary).
 
 ## Other helpers
 
 ### Type alias template `dcool::utility::DefaultOverloadedFunction`
 
 ```cpp
-template <typename... PrototypeTs> using dcool::utility::DefaultOverloadedFunction = ::dcool::utility::OverloadedFunction<
-	::dcool::core::Types<PrototypeTs...>
+template <typename... PrototypeTs> using dcool::utility::DefaultOverloadedFunction = dcool::utility::OverloadedFunction<
+	dcool::core::Types<PrototypeTs...>
 >;
 ```
 

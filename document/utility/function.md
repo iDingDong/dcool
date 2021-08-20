@@ -5,11 +5,13 @@ Include `<dcool/utility.hpp>` to use.
 ```cpp
 template <typename PrototypeT, typename ConfigT = /* unspecified type */> struct dcool::utility::Function; // Undefined
 template <
-	typename ConfigT, dcool::core::Boolean noexceptInvocableC, typename ReturnT, typename... ParameterTs
-> struct dcool::utility::Function<auto(ParameterTs...) noexcept(noexceptInvocableC) -> ReturnT, ConfigT>;
+	typename ConfigT, dcool::core::Boolean noexceptInvocableC, typename ResultT, typename... ParameterTs
+> struct dcool::utility::Function<
+	auto(ParameterTs...) /* optional qualified reference */ noexcept(noexceptInvocableC) -> ResultT, ConfigT
+>;
 ```
 
-An alternative to `std::function` with configurable small object optimization limit and customizable operations.
+An alternative to `std::function`(or `std::move_only_function` in P0288R8) with configurable small object optimization limit and customizable operations.
 
 ## Configuration `ConfigT`
 
@@ -19,7 +21,7 @@ Its member shall customize the list as decribed:
 | - | - | - |
 | Type `ExtendedInformation` | `dcool::core::Pit` | See *Customized extended operations* for more details. |
 | Type `Pool` | `dcool::resource::DefaultPool` | The dynamic memory resource of function. |
-| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management, and `engine.extendedOpterationExecutor` shall evaluate to a reference to `ExtendedOpterationExecutor` for extended operations (See *Customized extended operations* for more details). |
+| Type `Engine` | *Unspecified* | Provided `Engine engine`, `engine.pool()` shall evaluate to a reference to `Pool` for dynamic memory management. |
 | `static constexpr dcool::core::Boolean copyable` | `true` | The function shall be copyable if it takes value `true`; otherwise non-copyable. |
 | `static constexpr dcool::core::Boolean movable` | *Same as* `copyable` | The function shall be moveable if it takes value `true`; otherwise non-moveable. |
 | `static constexpr dcool::core::StorageRequirement squeezedTankage` | *Unspecfied* | If the item to be stored is storable in a statically allocated storage of `squeezedTankage`, implementation would attempt to avoid dynamic allocation. |
@@ -83,16 +85,6 @@ constexpr auto valid() const noexcept -> dcool::core::Boolean;
 
 Returns true if the function holds an object, otherwise returns false.
 
-### `immutablyInvocable`
-
-```cpp
-constexpr auto immutablyInvocable() const noexcept -> dcool::core::Boolean;
-```
-
-Returns true if the function can be invoked with a constant reference to this function without directly throwing a `dcool::utility::BadFunctionCall`, otherwise returns false.
-
-Note that `dcool::utility::BadFunctionCall` indirectly thrown when invoking the holded object does not count.
-
 ### `storageRequirement`
 
 ```cpp
@@ -140,22 +132,18 @@ Returns a reference to the holded object if `ValueT` is exactly the same as the 
 ### `invokeSelf`
 
 ```cpp
-constexpr auto invokeSelf(ParameterTs... parameters) const noexcept(noexceptInvocable) -> Return;
-constexpr auto invokeSelf(ParameterTs... parameters) noexcept(noexceptInvocable) -> Return;
+constexpr auto invokeSelf(ParameterTs... parameters) /* optional qualified reference */ noexcept(noexceptInvocable) -> Result;
 ```
 
 Equivalent to `dcool::core::invoke(this->access<ValueT>, dcool::core::forward<ParameterTs>(parameters)...)` (where `ValueT` is the type of the object holded by function) if the function holds an object, otherwise terminate execution if `noexceptInvocable`, otherwise throws a `dcool::utility::BadFunctionCall` (might be the same as `std::bad_function_call`).
 
-For overload 1, if the const reference to the holded object is not invocable as above, terminate execution if `noexceptInvocable`, otherwise throws a `dcool::utility::BadFunctionCall`.
-
 ### `operator ()`
 
 ```cpp
-constexpr auto operator ()(ParameterTs... parameters) const noexcept(noexceptInvocable) -> Return;
-constexpr auto operator ()(ParameterTs... parameters) noexcept(noexceptInvocable) -> Return;
+constexpr auto operator ()(ParameterTs... parameters) /* optional qualified reference */ noexcept(noexceptInvocable) -> Result;
 ```
 
-Equivalent to `this->invokeSelf(dcool::core::forward<ParameterTs>(parameters)...)`.
+Equivalent to `this->invokeSelf(dcool::core::forward<ParameterTs>(parameters)...)` (will move `*this` if necessary).
 
 ## Customized extended operations
 
@@ -164,3 +152,5 @@ Customizing extended operations is almost exactly the same as extending `dcool::
 ## Notes
 
 One of the major differences between `dcool::utility::Function` and `std::function` is that `std::function` acts more like a callable reference with ownership. If the stored object can only be invoked through a non-const reference, `std::function` will still commence the invocation if the `std::function` its self is const-qualified while `dcool::utility::Function` will throw an exception. If you want to emulate the behavior of `std::function` here, you can wrap your callable object in a struct and mark it `mutable`.
+
+Another difference is that `dcool::utility::Function` can be specified with combinations of `const`, `&`, `&&` to restrict the called expression when invoked. This works like `std::move_only_function` in P0288R8.
