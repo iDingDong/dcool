@@ -1,3 +1,4 @@
+#include <dcool/basic.hpp>
 #include <dcool/test.hpp>
 
 #include <chrono>
@@ -10,6 +11,7 @@ static auto executionDurationString(dcool::test::Duration const& duration) -> st
 }
 
 int main() {
+	std::cout << dcool::commonSelfNativeDescription << std::endl;
 	auto result = dcool::test::Center::instance().executeAll(dcool::core::parallelExecution, dcool::core::parallelExecution);
 	std::cout << "Test report:\n";
 	for (auto& suiteResult: result.details) {

@@ -33,6 +33,8 @@ function(target_link_library_if_exist TARGET SCOPE LIBRARY_NAME)
 	unset(LIBRARY_PATH CACHE)
 endfunction()
 
+option(DCOOL_AGGRESSIVE_DEBUG "Build dcool with more debug information with performance penalty" OFF)
+
 add_library(dcool_header INTERFACE)
 
 target_compile_features(dcool_header INTERFACE cxx_std_20)
@@ -40,6 +42,11 @@ target_enable_common_warnings(dcool_header INTERFACE)
 target_compile_definitions(dcool_header INTERFACE DCOOLER_CPP_P1135R6_ENABLED=1)
 target_include_directories(dcool_header INTERFACE ${DCOOL_INCLUDE_DIRECTORY})
 target_link_library_if_exist(dcool_header INTERFACE tbb)
+if(DCOOL_AGGRESSIVE_DEBUG)
+	target_compile_definitions(dcool_header INTERFACE DCOOLER_ENABLE_AGGRESSIVE_DEBUG=1)
+else()
+	target_compile_definitions(dcool_header INTERFACE DCOOLER_ENABLE_AGGRESSIVE_DEBUG=0)
+endif()
 
 add_subdirectory("./source")
 add_subdirectory("./test")
