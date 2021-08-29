@@ -608,6 +608,8 @@ namespace dcool::container {
 			ConfigAdaptor_::exceptionSafetyStrategy
 		;
 
+		public: using LightIterator = ::dcool::container::IndexableChassisLightIterator<Self_>;
+		public: using ConstLightIterator = ::dcool::container::IndexableChassisLightIterator<Self_ const>;
 		public: using Iterator = ::dcool::core::ConditionalType<
 			circular, ::dcool::container::IndexableChassisIterator<Self_>, ::dcool::core::ContaminatedPointer<Value>
 		>;
@@ -790,16 +792,22 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
 			if constexpr (squeezedOnly) {
-				this->squeezedRelocateTo_(engine_, otherEngine_, other_);
+				this->squeezedRelocateTo_<strategyC__>(engine_, otherEngine_, other_);
 			} else {
 				if constexpr (squeezedCapacity > 0) {
 					if (this->squeezed(engine_) || engine_ != otherEngine_) {
-						this->squeezedRelocateTo_(engine_, otherEngine_, other_);
+						this->squeezedRelocateTo_<strategyC__>(engine_, otherEngine_, other_);
 						return;
 					}
 				}
-				this->unsqueezedRelocateTo_(engine_, otherEngine_, other_);
+				this->unsqueezedRelocateTo_<strategyC__>(engine_, otherEngine_, other_);
 			}
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void relocateTo(Engine& engine_, Self_& other_) {
+			this->relocateTo<strategyC__>(engine_, engine_, other_);
 		}
 
 		private: template <::dcool::core::ExceptionSafetyStrategy strategyC__> constexpr void itemWiseSwapWith_(
@@ -955,6 +963,38 @@ namespace dcool::container {
 			return this->m_storage_.data(engine_);
 		}
 
+		public: constexpr auto lightBegin(Engine& engine_) const noexcept -> ConstLightIterator {
+			return ConstLightIterator(0);
+		}
+
+		public: constexpr auto lightBegin(Engine& engine_) noexcept -> LightIterator {
+			return LightIterator(0);
+		}
+
+		public: constexpr auto lightEnd(Engine& engine_) const noexcept -> ConstLightIterator {
+			return ConstLightIterator(this->length(engine_));
+		}
+
+		public: constexpr auto lightEnd(Engine& engine_) noexcept -> LightIterator {
+			return LightIterator(this->length(engine_));
+		}
+
+		public: constexpr auto toLight(Engine& engine_, ConstIterator independent_) const noexcept -> ConstLightIterator {
+			return ConstLightIterator(independent_ - this->begin(engine_));
+		}
+
+		public: constexpr auto toLight(Engine& engine_, Iterator independent_) noexcept -> LightIterator {
+			return ConstLightIterator(independent_ - this->begin(engine_));
+		}
+
+		public: constexpr auto fromLight(Engine& engine_, ConstLightIterator light_) const noexcept -> ConstIterator {
+			return this->position(engine_, light_.index());
+		}
+
+		public: constexpr auto fromLight(Engine& engine_, LightIterator light_) noexcept -> Iterator {
+			return this->position(engine_, light_.index());
+		}
+
 		public: constexpr auto begin(Engine& engine_) const noexcept -> ConstIterator {
 			ConstIterator result_;
 			if constexpr (circular) {
@@ -997,6 +1037,14 @@ namespace dcool::container {
 
 		public: constexpr auto reverseEnd(Engine& engine_) noexcept -> ReverseIterator {
 			return ::dcool::core::makeReverseIterator(this->begin(engine_));
+		}
+
+		public: constexpr auto lightPosition(Engine& engine_, Index index_) const noexcept -> ConstLightIterator {
+			return ConstLightIterator(index_);
+		}
+
+		public: constexpr auto lightPosition(Engine& engine_, Index index_) noexcept -> LightIterator {
+			return LightIterator(index_);
 		}
 
 		public: constexpr auto position(Engine& engine_, Index index_) const noexcept -> ConstIterator {
@@ -1261,6 +1309,15 @@ namespace dcool::container {
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void makeRoom_(
+			Engine& engine_, LightIterator gapBegin_, Length gapLength_ = 1
+		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
+			this->makeRoom_(engine_, this->fromLight(engine_, gapBegin_), gapLength_);
+		}
+
+		// This function will leave the gap uninitialized, making the list invalid.
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void makeRoom_(
 			Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1
 		) noexcept(::dcool::core::isNoThrowRelocatable<Value>) {
 			DCOOL_CORE_ASSERT(this->begin(engine_) <= gapBegin_ && gapBegin_ <= this->end(engine_));
@@ -1303,10 +1360,25 @@ namespace dcool::container {
 		// This function is intended for recover a valid state after 'makeRoom_'. Failure of recovery would be considered fatal.
 		private: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr void reclaimRoom_(Engine& engine_, LightIterator gapBegin_, Length gapLength_ = 1) noexcept {
+			this->reclaimRoom_(engine_, this->fromLight(engine_, gapBegin_), gapLength_);
+		}
+
+		// This function is intended for recover a valid state after 'makeRoom_'. Failure of recovery would be considered fatal.
+		private: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
 		> constexpr void reclaimRoom_(Engine& engine_, Iterator gapBegin_, Length gapLength_ = 1) noexcept {
 			::dcool::core::batchRelocateForward<strategyC__>(
 				gapBegin_ + gapLength_, this->end(engine_), this->begin(engine_) + (gapBegin_ - this->begin(engine_))
 			);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
+		> constexpr auto uninitializedInsertN(
+			Engine& engine_, LightIterator position_, Length count_
+		) -> LightIterator requires (::dcool::core::TriviallyCopyable<Value>) {
+			return this->toLight(engine_, this->uninitializedInsertN(engine_, this->fromLight(engine_, position_), count_));
 		}
 
 		public: template <

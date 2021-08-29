@@ -80,7 +80,7 @@
 #			define DCOOL_ENABLE_CPP_P0024R2 0
 #		endif
 #	else
-#		define DCOOLER_CPP_P1135R6_ENABLED 0
+#		define DCOOL_ENABLE_CPP_P0024R2 0
 #	endif
 
 #endif
