@@ -704,13 +704,14 @@ namespace dcool::container {
 		public: using Pool = ConfigAdaptor_::Pool;
 		private: using PoolAdaptorForNode_ = ConfigAdaptor_::PoolAdaptorForForwardLinkedNode;
 		private: using PoolAdaptorForNodeHeader_ = ConfigAdaptor_::PoolAdaptorForForwardLinkedNodeHeader;
+		public: using ConstHandle = ConfigAdaptor_::ConstHandle;
 		public: using Handle = ConfigAdaptor_::Handle;
 		public: using HandleConverter = ConfigAdaptor_::HandleConverter;
 		public: using HeaderHandleConverter = ConfigAdaptor_::HeaderHandleConverter;
 		public: using Iterator = ConfigAdaptor_::ForwardLinkedIterator;
 		public: using ConstIterator = ConfigAdaptor_::ForwardLinkedConstIterator;
 		public: using LightIterator = ConfigAdaptor_::ForwardLinkedLightIterator;
-		public: using LightConstIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
+		public: using ConstLightIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
 		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
@@ -742,12 +743,12 @@ namespace dcool::container {
 		) const {
 			other_.initialize(otherEngine_);
 			try {
-				LightConstIterator begin_ = this->lightBegin(engine_);
-				LightConstIterator end_ = this->lightEnd(engine_);
+				ConstLightIterator begin_ = this->lightBegin(engine_);
+				ConstLightIterator end_ = this->lightEnd(engine_);
 				typename ::dcool::container::ForwardLinkedChassis<
 					ValueT__, ConfigT__
 				>::LightIterator current_ = other_.lightBegin(otherEngine_);
-				for (; !(LightConstIterator::equal(begin_, end_, engine_)); begin_.advance(engine_)) {
+				for (; !(ConstLightIterator::equal(begin_, end_, engine_)); begin_.advance(engine_)) {
 					current_ = other_.emplaceAfter(otherEngine_, current_, begin_.dereferenceSelf(engine_));
 				}
 			} catch (...) {
@@ -777,15 +778,15 @@ namespace dcool::container {
 			middleMan_.relocateTo(other_);
 		}
 
-		public: constexpr auto lightBeforeBegin(Engine& engine_) const noexcept -> LightConstIterator {
-			return LightConstIterator(this->m_sentryHolder_.sentryHandle(engine_));
+		public: constexpr auto lightBeforeBegin(Engine& engine_) const noexcept -> ConstLightIterator {
+			return ConstLightIterator(this->m_sentryHolder_.sentryHandle(engine_));
 		}
 
 		public: constexpr auto lightBeforeBegin(Engine& engine_) noexcept -> LightIterator {
 			return LightIterator(this->m_sentryHolder_.sentryHandle(engine_));
 		}
 
-		public: constexpr auto lightBegin(Engine& engine_) const noexcept -> LightConstIterator {
+		public: constexpr auto lightBegin(Engine& engine_) const noexcept -> ConstLightIterator {
 			return this->lightBeforeBegin(engine_).next(engine_);
 		}
 
@@ -793,7 +794,7 @@ namespace dcool::container {
 			return this->lightBeforeBegin(engine_).next(engine_);
 		}
 
-		public: constexpr auto lightEnd(Engine& engine_) const noexcept -> LightConstIterator {
+		public: constexpr auto lightEnd(Engine& engine_) const noexcept -> ConstLightIterator {
 			return this->lightBeforeBegin(engine_);
 		}
 
@@ -801,12 +802,22 @@ namespace dcool::container {
 			return this->lightBeforeBegin(engine_);
 		}
 
+		public: static constexpr auto fromLight(
+			Engine& engine_, ConstLightIterator lightIterator_
+		) noexcept -> ConstIterator {
+			return ConstIterator(lightIterator_, engine_);
+		}
+
 		public: static constexpr auto fromLight(Engine& engine_, LightIterator lightIterator_) noexcept -> Iterator {
 			return Iterator(lightIterator_, engine_);
 		}
 
-		public: static constexpr auto fromLight(Engine& engine_, LightConstIterator lightIterator_) noexcept -> ConstIterator {
-			return Iterator(lightIterator_, engine_);
+		public: static constexpr auto toLight(Engine& engine_, ConstIterator iterator_) noexcept -> ConstLightIterator {
+			return static_cast<ConstLightIterator>(iterator_);
+		}
+
+		public: static constexpr auto toLight(Engine& engine_, Iterator iterator_) noexcept -> LightIterator {
+			return static_cast<LightIterator>(iterator_);
 		}
 
 		public: constexpr auto beforeBegin(Engine& engine_) const noexcept -> ConstIterator {
@@ -897,6 +908,20 @@ namespace dcool::container {
 			return this->insertNodeAfter_(position_.converter(), static_cast<LightIterator>(position_), toInsert_);
 		}
 
+		public: constexpr auto popNodeAfter(Engine& engine_, LightIterator positionBefore_) noexcept -> Handle {
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
+			return ::dcool::resource::adaptedToHandleFor<Node>(
+				engine_.pool(),
+				static_cast<Node*>(
+					::dcool::core::addressOf(
+						::dcool::container::detail_::popForwardNodeHeaderAfter_(
+							positionBefore_.nodeHeader(headerConverter_), headerConverter_
+						)
+					)
+				)
+			);
+		}
+
 		public: template <typename... ArgumentTs__> constexpr auto emplaceAfter(
 			Engine& engine_, LightIterator position_, ArgumentTs__&&... parameters_
 		) -> LightIterator {
@@ -908,7 +933,7 @@ namespace dcool::container {
 			Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_
 		) -> Iterator {
 			LightIterator result_ = this->emplaceAfter(
-				engine_, static_cast<LightIterator>(position_), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+				engine_, this->toLight(engine_, position_), ::dcool::core::forward<ArgumentTs__>(parameters_)...
 			);
 			return fromLight(engine_, result_);
 		}
@@ -933,7 +958,7 @@ namespace dcool::container {
 		}
 
 		public: constexpr auto eraseAfter(Engine& engine_, Iterator position_) noexcept -> Iterator {
-			LightIterator result_ = this->eraseAfter_(engine_.pool(), static_cast<LightIterator>(position_));
+			LightIterator result_ = this->eraseAfter_(engine_.pool(), this->toLight(engine_, position_));
 			return fromLight(engine_, result_);
 		}
 	};
@@ -953,7 +978,7 @@ namespace dcool::container {
 		public: using Iterator = ConfigAdaptor_::ForwardLinkedIterator;
 		public: using ConstIterator = ConfigAdaptor_::ForwardLinkedConstIterator;
 		public: using LightIterator = ConfigAdaptor_::ForwardLinkedLightIterator;
-		public: using LightConstIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
+		public: using ConstLightIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
 		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
@@ -1015,7 +1040,7 @@ namespace dcool::container {
 			return this->m_engine_;
 		}
 
-		public: constexpr auto lightBeforeBegin() const noexcept -> LightConstIterator {
+		public: constexpr auto lightBeforeBegin() const noexcept -> ConstLightIterator {
 			return this->chassis().lightBeforeBegin(this->engine());
 		}
 
@@ -1023,7 +1048,7 @@ namespace dcool::container {
 			return this->chassis().lightBeforeBegin(this->engine());
 		}
 
-		public: constexpr auto lightBegin() const noexcept -> LightConstIterator {
+		public: constexpr auto lightBegin() const noexcept -> ConstLightIterator {
 			return this->chassis().lightBegin(this->engine());
 		}
 
@@ -1031,7 +1056,7 @@ namespace dcool::container {
 			return this->chassis().lightBegin(this->engine());
 		}
 
-		public: constexpr auto lightEnd() const noexcept -> LightConstIterator {
+		public: constexpr auto lightEnd() const noexcept -> ConstLightIterator {
 			return this->chassis().lightEnd(this->engine());
 		}
 

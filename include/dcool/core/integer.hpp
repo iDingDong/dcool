@@ -6,6 +6,7 @@
 #	include <dcool/core/storage.hpp>
 
 #	include <limits>
+#	include <type_traits>
 
 namespace dcool::core {
 	namespace detail_ {
@@ -147,9 +148,24 @@ namespace dcool::core {
 	>::Result_;
 
 	template <typename T_, typename SubT_> concept SuperSetOfNumeric =
+		(::dcool::core::SignedIntegral<T_> || ::dcool::core::UnsignedIntegral<SubT_>) &&
 		::std::numeric_limits<T_>::min() <= ::std::numeric_limits<SubT_>::min() &&
 		::std::numeric_limits<SubT_>::max() <= ::std::numeric_limits<T_>::max()
 	;
+
+	template <::dcool::core::Integral SourceT_> using SignessRemovedType = ::std::make_unsigned_t<SourceT_>;
+	template <::dcool::core::Integral SourceT_> using SignessAddedType = ::std::make_signed_t<SourceT_>;
+
+	template <typename IntegerT_> concept RepresentableBySigned = ::dcool::core::SuperSetOfNumeric<
+		::dcool::core::SignedMaxInteger, IntegerT_
+	>;
+
+	template <
+		::dcool::core::RepresentableBySigned SourceT_
+	> using NegativeRepresentableSignedType = ::dcool::core::IntegerType<
+		::std::numeric_limits<SourceT_>::max(),
+		-static_cast<::dcool::core::SignedMaxInteger>(::std::numeric_limits<SourceT_>::max())
+	>;
 }
 
 #endif

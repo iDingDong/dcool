@@ -13,6 +13,7 @@
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/execution.hpp>
 #	include <dcool/core/functional.hpp>
+#	include <dcool/core/hash.hpp>
 #	include <dcool/core/integer.hpp>
 #	include <dcool/core/iteration.hpp>
 #	include <dcool/core/layout.hpp>

@@ -1,6 +1,7 @@
 #ifndef DCOOL_CONCURRENCY_SEMAPHORE_HPP_INCLUDED_
 #	define DCOOL_CONCURRENCY_SEMAPHORE_HPP_INCLUDED_ 1
 
+#	include <dcool/config.h>
 #	include <dcool/core.hpp>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::concurrency::detail_, HasTypeCountForSemaphore_, ExtractedCountForSemaphoreType_, Count)
@@ -57,7 +58,7 @@ namespace dcool::concurrency {
 
 		private: using Underlying_ = ::dcool::core::ConditionalType<atomicOnly_, ::std::atomic<Count>, DefaultUnderlying_>;
 
-#	if DCOOL_CORE_AGGRESSIVE_DEBUG_ENABLED
+#	if DCOOL_AGGRESSIVE_DEBUG_ENABLED
 		private: struct OperationCounterConfig_ {
 			using Underlying = ::dcool::core::Size;
 			static constexpr ::dcool::core::CounterScenario scenario = ::dcool::core::CounterScenario::logicDependent;
@@ -70,7 +71,7 @@ namespace dcool::concurrency {
 #	endif
 
 		private: Underlying_ m_underlying_;
-#	if DCOOL_CORE_AGGRESSIVE_DEBUG_ENABLED
+#	if DCOOL_AGGRESSIVE_DEBUG_ENABLED
 		private: OperationCounter_ m_operationCount_;
 #	endif
 
@@ -84,13 +85,13 @@ namespace dcool::concurrency {
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
 		public: constexpr ~Semaphore() noexcept {
-#	if DCOOL_CORE_AGGRESSIVE_DEBUG_ENABLED
+#	if DCOOL_AGGRESSIVE_DEBUG_ENABLED
 			DCOOL_CORE_ASSERT(this->m_operationCount_.value() == 0);
 #	endif
 		}
 
 		private: constexpr auto onOperationBegin_() noexcept -> OperationToken_ {
-#	if DCOOL_CORE_AGGRESSIVE_DEBUG_ENABLED
+#	if DCOOL_AGGRESSIVE_DEBUG_ENABLED
 			return this->m_operationCount_.positiveBorrow();
 #	else
 			return OperationToken_();
