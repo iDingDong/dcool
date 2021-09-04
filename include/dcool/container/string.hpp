@@ -171,7 +171,7 @@ namespace dcool::container {
 				}
 
 				static constexpr auto eq(Character left_, Character right_) noexcept -> ::dcool::core::Boolean {
-					return ::dcool::core::equalOrEquivalent(characterCompare(left_, right_));
+					return characterCompare(left_, right_) == 0;
 				}
 
 				static constexpr auto lt(Character left_, Character right_) noexcept -> ::dcool::core::Boolean {
@@ -407,7 +407,7 @@ namespace dcool::container {
 			auto compareResult_ = ConfigAdaptor_::characterSequenceCompare(
 				left_.data(leftEngine_), right_.data(rightEngine_), commonLength
 			);
-			if (::dcool::core::equalOrEquivalent(compareResult_)) {
+			if (compareResult_ == 0) {
 				if (left_.length(leftEngine_) < right_.length(rightEngine_)) {
 					return ComparisonCategory::less;
 				} else if (right_.length(rightEngine_) < left_.length(leftEngine_)) {
@@ -426,7 +426,7 @@ namespace dcool::container {
 			auto compareResult_ = ConfigAdaptor_::characterSequenceCompare(
 				left_.data(leftEngine_), right_.data(rightEngine_), left_.length(leftEngine_)
 			);
-			return ::dcool::core::equalOrEquivalent(compareResult_);
+			return compareResult_ == 0;
 		}
 	};
 

@@ -5,7 +5,7 @@
 #	include <dcool/resource.hpp>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(
-	dcool::container::detail_, HasTypeDefaultForwardLinkedNode_, ExtractedForwardLinkedNodeType_, ForwardLinkedNode
+	dcool::container::detail_, HasTypeLinkedNodeForLinked_, ExtractedLinkedNodeForLinkedType_, LinkedNode
 )
 
 namespace dcool::container {
@@ -31,36 +31,87 @@ namespace dcool::container {
 		nodeHeader_.setNextHandle(handle_);
 	};
 
+	template <
+		typename T_,
+		typename HandleConverterT_ = ::dcool::core::DefaultBidirectionalImplicitConverter<
+			::dcool::container::detail_::LinkedNodeHeaderHandleType_<T_>, void*
+		>
+	> concept BidirectionalLinkedNodeHeader = ::dcool::container::ForwardLinkedNodeHeader<T_, HandleConverterT_> && requires (
+		T_ nodeHeader_, ::dcool::container::detail_::LinkedNodeHeaderHandleType_<T_> handle_
+	) {
+		handle_ = nodeHeader_.previousHandle();
+		nodeHeader_.setPreviousHandle(handle_);
+	};
+
 	template <typename T_, typename HandleConverterT_> concept ForwardLinkedNode =
 		::dcool::core::ValueNode<T_> &&
 		::dcool::container::ForwardLinkedNodeHeader<::dcool::core::NodeHeaderType<T_>, HandleConverterT_>
 	;
 
+	template <typename T_, typename HandleConverterT_> concept BidirectionalLinkedNode =
+		::dcool::core::ValueNode<T_> &&
+		::dcool::container::BidirectionalLinkedNodeHeader<::dcool::core::NodeHeaderType<T_>, HandleConverterT_>
+	;
+
 	namespace detail_ {
-		template <typename NodeHeaderT_, typename ConverterT_> constexpr auto nextForwardNodeHeader_(
+		template <typename NodeHeaderT_, typename ConverterT_> constexpr auto nextLinkedNodeHeader_(
 			NodeHeaderT_& leading_, ConverterT_ const& converter_
 		) noexcept -> NodeHeaderT_& {
-			return *static_cast<NodeHeaderT_*>(converter_(leading_.nextHandle()));
+			return *reinterpret_cast<NodeHeaderT_*>(converter_(leading_.nextHandle()));
 		}
 
-		template <typename NodeHeaderT_, typename ConverterT_> constexpr void connectForwardNodeHeader_(
+		template <typename NodeHeaderT_, typename ConverterT_> requires (
+			::dcool::container::BidirectionalLinkedNodeHeader<NodeHeaderT_, ConverterT_>
+		) constexpr auto previousLinkedNodeHeader_(
+			NodeHeaderT_& tailing_, ConverterT_ const& converter_
+		) noexcept -> NodeHeaderT_& {
+			return *reinterpret_cast<NodeHeaderT_*>(converter_(tailing_.previousHandle()));
+		}
+
+		template <typename NodeHeaderT_, typename ConverterT_> constexpr void connectLinkedNodeHeader_(
 			NodeHeaderT_& leading_, NodeHeaderT_& following_, ConverterT_ const& converter_
 		) noexcept {
 			leading_.setNextHandle(converter_(static_cast<void*>(::dcool::core::addressOf(following_))));
+			if constexpr (::dcool::container::BidirectionalLinkedNodeHeader<NodeHeaderT_, ConverterT_>) {
+				following_.setPreviousHandle(converter_(static_cast<void*>(::dcool::core::addressOf(leading_))));
+			}
 		}
 
-		template <typename NodeHeaderT_, typename ConverterT_> constexpr void insertForwardNodeHeaderAfter_(
+		template <typename NodeHeaderT_, typename ConverterT_> constexpr void insertLinkedNodeHeaderAfter_(
 			NodeHeaderT_& leading_, NodeHeaderT_& toInsert_, ConverterT_ const& converter_
 		) noexcept {
-			toInsert_.setNextHandle(leading_.nextHandle());
-			::dcool::container::detail_::connectForwardNodeHeader_(leading_, toInsert_, converter_);
+			NodeHeaderT_& tailing_ = ::dcool::container::detail_::nextLinkedNodeHeader_(leading_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(toInsert_, tailing_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(leading_, toInsert_, converter_);
 		}
 
-		template <typename NodeHeaderT_, typename ConverterT_> constexpr auto popForwardNodeHeaderAfter_(
+		template <typename NodeHeaderT_, typename ConverterT_> requires (
+			::dcool::container::BidirectionalLinkedNodeHeader<NodeHeaderT_, ConverterT_>
+		) constexpr void insertLinkedNodeHeaderBefore_(
+			NodeHeaderT_& tailing_, NodeHeaderT_& toInsert_, ConverterT_ const& converter_
+		) noexcept {
+			NodeHeaderT_& leading_ = ::dcool::container::detail_::previousLinkedNodeHeader_(tailing_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(toInsert_, tailing_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(leading_, toInsert_, converter_);
+		}
+
+		template <typename NodeHeaderT_, typename ConverterT_> requires (
+			::dcool::container::BidirectionalLinkedNodeHeader<NodeHeaderT_, ConverterT_>
+		) constexpr auto popLinkedNodeHeader_(
+			NodeHeaderT_& toPop_, ConverterT_ const& converter_
+		) noexcept -> NodeHeaderT_& {
+			NodeHeaderT_& leading_ = ::dcool::container::detail_::previousLinkedNodeHeader_(toPop_, converter_);
+			NodeHeaderT_& tailing_ = ::dcool::container::detail_::nextLinkedNodeHeader_(toPop_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(leading_, tailing_, converter_);
+			return toPop_;
+		}
+
+		template <typename NodeHeaderT_, typename ConverterT_> constexpr auto popLinkedNodeHeaderAfter_(
 			NodeHeaderT_& leading_, ConverterT_ const& converter_
 		) noexcept -> NodeHeaderT_& {
-			NodeHeaderT_& result_ = ::dcool::container::detail_::nextForwardNodeHeader_(leading_, converter_);
-			leading_.setNextHandle(result_.nextHandle());
+			NodeHeaderT_& result_ = ::dcool::container::detail_::nextLinkedNodeHeader_(leading_, converter_);
+			NodeHeaderT_& tailing_ = ::dcool::container::detail_::nextLinkedNodeHeader_(result_, converter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(leading_, tailing_, converter_);
 			return result_;
 		}
 
@@ -78,48 +129,40 @@ namespace dcool::container {
 			}
 		};
 
+		// The distiguisher is intended to prevent node or iterator from being convertible between different type of linked.
 		template <
-			typename HandleT_, typename ValueT_, typename DistinguisherT_ = void
-		> struct DefaultForwardLinkedNode_: public ::dcool::container::detail_::DefaultForwardLinkedNodeHeader_<HandleT_> {
-			private: using Self_ = DefaultForwardLinkedNode_<HandleT_, ValueT_, DistinguisherT_>;
-			private: using Super_ = ::dcool::container::detail_::DefaultForwardLinkedNodeHeader_<HandleT_>;
-			public: using Value = ValueT_;
+			typename HandleT_, typename DistinguisherT_ = void
+		> struct DefaultBidirectionalLinkedNodeHeader_: private ::dcool::container::detail_::DefaultForwardLinkedNodeHeader_<
+			HandleT_, DistinguisherT_
+		> {
+			private: using Super_ = ::dcool::container::detail_::DefaultForwardLinkedNodeHeader_<HandleT_, DistinguisherT_>;
+			public: using Handle = HandleT_;
 
-			public: using Header = Super_;
+			private: HandleT_ m_previous_;
 
-			private: Value m_value_;
+			public: using Super_::nextHandle;
+			public: using Super_::setNextHandle;
 
-			public: template <typename... ArgumentTs__> constexpr DefaultForwardLinkedNode_(
-				ArgumentTs__&&... parameters_
-			) noexcept(noexcept(Value(::dcool::core::forward<ArgumentTs__>(parameters_)...))): m_value_(
-				::dcool::core::forward<ArgumentTs__>(parameters_)...
-			) {
+			public: constexpr auto previousHandle() const noexcept -> Handle {
+				return this->m_previous_;
 			}
 
-			public: constexpr auto value() const noexcept -> Value const& {
-				return this->m_value_;
-			}
-
-			public: constexpr auto value() noexcept -> Value& {
-				return this->m_value_;
-			}
-
-			public: constexpr auto header() const noexcept -> Header const& {
-				return *this;
-			}
-
-			public: constexpr auto header() noexcept -> Header& {
-				return *this;
-			}
-
-			public: static constexpr auto retrieveFromHeader(Header const& header_) noexcept -> Self_ const& {
-				return static_cast<Self_ const&>(header_);
-			}
-
-			public: static constexpr auto retrieveFromHeader(Header& header_) noexcept -> Self_& {
-				return static_cast<Self_&>(header_);
+			public: constexpr auto setPreviousHandle(Handle handle_) noexcept {
+				return this->m_previous_ = handle_;
 			}
 		};
+
+		template <
+			typename HandleT_, typename ValueT_, typename DistinguisherT_ = void
+		> using DefaultForwardLinkedNode_ = ::dcool::core::DefaultValueNode<
+			ValueT_, ::dcool::container::detail_::DefaultForwardLinkedNodeHeader_<HandleT_, DistinguisherT_>
+		>;
+
+		template <
+			typename HandleT_, typename ValueT_, typename DistinguisherT_ = void
+		> using DefaultBidirectionalLinkedNode_ = ::dcool::core::DefaultValueNode<
+			ValueT_, ::dcool::container::detail_::DefaultBidirectionalLinkedNodeHeader_<HandleT_, DistinguisherT_>
+		>;
 
 		template <typename ValueT_> struct HandleConverterOfEngineForHelper_ {
 			template <typename EngineT__> static constexpr auto get_(EngineT__& engine_) noexcept {
@@ -146,22 +189,26 @@ namespace dcool::container {
 		};
 
 		template <
-			typename HandleConverterT_, typename EngineT_, typename NodeHeaderT_
-		> struct ForwardLinkedHeaderIteratorBase_ {
-			private: using Self_ = ForwardLinkedHeaderIteratorBase_<HandleConverterT_, EngineT_, NodeHeaderT_>;
+			typename HandleConverterT_, typename EngineT_, typename NodeHeaderT_, ::dcool::core::Boolean reversedC_
+		> struct LinkedHeaderIteratorBase_ {
+			private: using Self_ = LinkedHeaderIteratorBase_<HandleConverterT_, EngineT_, NodeHeaderT_, reversedC_>;
 			public: using HandleConverter = HandleConverterT_;
 			public: using Engine = EngineT_;
 			public: using NodeHeader = NodeHeaderT_;
 
 			public: using Handle = ::dcool::container::detail_::UnifiedHandleOf_<EngineT_, NodeHeaderT_>::Result_;
+			public: static constexpr ::dcool::core::Boolean bidirectional = ::dcool::container::BidirectionalLinkedNodeHeader<
+				NodeHeaderT_, HandleConverterT_
+			>;
+			static_assert(bidirectional || (!reversedC_));
 
 			private: Handle m_handle_;
 
-			public: ForwardLinkedHeaderIteratorBase_() = default;
-			public: constexpr ForwardLinkedHeaderIteratorBase_(Self_ const&) noexcept = default;
-			public: constexpr ForwardLinkedHeaderIteratorBase_(Self_&&) noexcept = default;
+			public: LinkedHeaderIteratorBase_() = default;
+			public: constexpr LinkedHeaderIteratorBase_(Self_ const&) noexcept = default;
+			public: constexpr LinkedHeaderIteratorBase_(Self_&&) noexcept = default;
 
-			public: constexpr explicit ForwardLinkedHeaderIteratorBase_(Handle handle_) noexcept: m_handle_(handle_) {
+			public: constexpr explicit LinkedHeaderIteratorBase_(Handle handle_) noexcept: m_handle_(handle_) {
 			}
 
 			public: constexpr auto operator =(Self_ const&) noexcept -> Self_& = default;
@@ -181,11 +228,33 @@ namespace dcool::container {
 			}
 
 			public: constexpr auto nextHandle(HandleConverter const& converter_) const noexcept -> Handle {
+				if constexpr (reversedC_) {
+					return this->nodeHeader(converter_).previousHandle();
+				}
 				return this->nodeHeader(converter_).nextHandle();
 			}
 
 			public: constexpr auto nextHandle(Engine& engine_) const noexcept -> Handle {
+				if constexpr (reversedC_) {
+					return this->nodeHeader(engine_).previousHandle();
+				}
 				return this->nodeHeader(engine_).nextHandle();
+			}
+
+			public: constexpr auto previousHandle(
+				HandleConverter const& converter_
+			) const noexcept -> Handle requires (bidirectional) {
+				if constexpr (reversedC_) {
+					return this->nodeHeader(converter_).nextHandle();
+				}
+				return this->nodeHeader(converter_).previousHandle();
+			}
+
+			public: constexpr auto previousHandle(Engine& engine_) const noexcept -> Handle requires (bidirectional) {
+				if constexpr (reversedC_) {
+					return this->nodeHeader(engine_).nextHandle();
+				}
+				return this->nodeHeader(engine_).previousHandle();
 			}
 
 			public: constexpr void advance(HandleConverter const& converter_) noexcept {
@@ -196,12 +265,28 @@ namespace dcool::container {
 				this->m_handle_ = this->nextHandle(engine_);
 			}
 
+			public: constexpr void retreat(HandleConverter const& converter_) noexcept requires (bidirectional) {
+				this->m_handle_ = this->previousHandle(converter_);
+			}
+
+			public: constexpr void retreat(Engine& engine_) noexcept requires (bidirectional) {
+				this->m_handle_ = this->previousHandle(engine_);
+			}
+
 			public: constexpr auto next(HandleConverter const& converter_) const noexcept -> Self_ {
 				return Self_(this->nextHandle(converter_));
 			}
 
 			public: constexpr auto next(Engine& engine_) const noexcept -> Self_ {
 				return Self_(this->nextHandle(engine_));
+			}
+
+			public: constexpr auto previous(HandleConverter const& converter_) const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->previousHandle(converter_));
+			}
+
+			public: constexpr auto previous(Engine& engine_) const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->previousHandle(engine_));
 			}
 
 			public: constexpr auto equalsTo(
@@ -230,17 +315,17 @@ namespace dcool::container {
 		};
 
 		template <
-			typename HandleConverterT_, typename EngineT_, typename NodeT_
-		> struct ForwardLinkedIterator_;
+			typename HandleConverterT_, typename EngineT_, typename NodeT_, ::dcool::core::Boolean reversedC_
+		> struct LinkedIterator_;
 
 		template <
-			typename HandleConverterT_, typename EngineT_, typename NodeT_
-		> struct ForwardLinkedLightIterator_: private ::dcool::container::detail_::ForwardLinkedHeaderIteratorBase_<
-			HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>
+			typename HandleConverterT_, typename EngineT_, typename NodeT_, ::dcool::core::Boolean reversedC_
+		> struct LinkedLightIterator_: private ::dcool::container::detail_::LinkedHeaderIteratorBase_<
+			HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>, reversedC_
 		> {
-			private: using Self_ = ForwardLinkedLightIterator_<HandleConverterT_, EngineT_, NodeT_>;
-			private: using Super_ = ::dcool::container::detail_::ForwardLinkedHeaderIteratorBase_<
-				HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>
+			private: using Self_ = LinkedLightIterator_<HandleConverterT_, EngineT_, NodeT_, reversedC_>;
+			private: using Super_ = ::dcool::container::detail_::LinkedHeaderIteratorBase_<
+				HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>, reversedC_
 			>;
 			public: using Node = NodeT_;
 			private: using HandleConverter_ = HandleConverterT_;
@@ -250,23 +335,24 @@ namespace dcool::container {
 			public: using typename Super_::HandleConverter;
 			public: using typename Super_::Engine;
 			public: using typename Super_::Handle;
+			public: using Super_::bidirectional;
 			public: using Super_::nodeHeaderHandle;
 			public: using Super_::nodeHeader;
 			public: using Super_::nextHandle;
+			public: using Super_::previousHandle;
 			public: using Super_::advance;
-			private: using Super_::next;
-			public: using Independent = ::dcool::container::detail_::ForwardLinkedIterator_<HandleConverter, Engine, Node>;
+			public: using Independent = ::dcool::container::detail_::LinkedIterator_<HandleConverter, Engine, Node, reversedC_>;
 
-			public: ForwardLinkedLightIterator_() = default;
-			public: constexpr ForwardLinkedLightIterator_(Self_ const&) noexcept = default;
-			public: constexpr ForwardLinkedLightIterator_(Self_&&) noexcept = default;
+			public: LinkedLightIterator_() = default;
+			public: constexpr LinkedLightIterator_(Self_ const&) noexcept = default;
+			public: constexpr LinkedLightIterator_(Self_&&) noexcept = default;
 
-			public: constexpr explicit ForwardLinkedLightIterator_(Handle handle_) noexcept: Super_(handle_) {
+			public: constexpr explicit LinkedLightIterator_(Handle handle_) noexcept: Super_(handle_) {
 			}
 
 			private: template <
 				::dcool::core::FormOfSame<Super_> SuperT__
-			> constexpr explicit ForwardLinkedLightIterator_(SuperT__&& super_) noexcept: Super_(
+			> constexpr explicit LinkedLightIterator_(SuperT__&& super_) noexcept: Super_(
 				::dcool::core::forward<SuperT__>(super_)
 			) {
 			}
@@ -288,6 +374,14 @@ namespace dcool::container {
 
 			public: constexpr auto next(Engine& engine_) const noexcept -> Self_ {
 				return Self_(this->Super_::next(engine_));
+			}
+
+			public: constexpr auto previous(HandleConverter const& converter_) const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->Super_::previous(converter_));
+			}
+
+			public: constexpr auto previous(Engine& engine_) const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->Super_::previous(engine_));
 			}
 
 			public: constexpr auto dereferenceSelf(HandleConverter const& converter_) const noexcept {
@@ -322,13 +416,13 @@ namespace dcool::container {
 		};
 
 		template <
-			typename HandleConverterT_, typename EngineT_, typename NodeHeaderT_
-		> struct ForwardLinkedHeaderIterator_: private ::dcool::container::detail_::ForwardLinkedHeaderIteratorBase_<
-			HandleConverterT_, EngineT_, NodeHeaderT_
+			typename HandleConverterT_, typename EngineT_, typename NodeHeaderT_, ::dcool::core::Boolean reversedC_
+		> struct LinkedHeaderIterator_: private ::dcool::container::detail_::LinkedHeaderIteratorBase_<
+			HandleConverterT_, EngineT_, NodeHeaderT_, reversedC_
 		> {
-			private: using Self_ = ForwardLinkedHeaderIterator_<HandleConverterT_, EngineT_, NodeHeaderT_>;
-			private: using Super_ = ::dcool::container::detail_::ForwardLinkedHeaderIteratorBase_<
-				HandleConverterT_, EngineT_, NodeHeaderT_
+			private: using Self_ = LinkedHeaderIterator_<HandleConverterT_, EngineT_, NodeHeaderT_, reversedC_>;
+			private: using Super_ = ::dcool::container::detail_::LinkedHeaderIteratorBase_<
+				HandleConverterT_, EngineT_, NodeHeaderT_, reversedC_
 			>;
 			private: using HandleConverter_ = HandleConverterT_;
 			private: using Engine_ = EngineT_;
@@ -338,21 +432,22 @@ namespace dcool::container {
 			public: using typename Super_::Engine;
 			public: using typename Super_::NodeHeader;
 			public: using typename Super_::Handle;
+			public: using Super_::bidirectional;
 
 			private: [[no_unique_address]] HandleConverter m_converter_;
 
-			public: ForwardLinkedHeaderIterator_() = default;
-			public: constexpr ForwardLinkedHeaderIterator_(Self_ const&) noexcept = default;
-			public: constexpr ForwardLinkedHeaderIterator_(Self_&&) noexcept = default;
+			public: LinkedHeaderIterator_() = default;
+			public: constexpr LinkedHeaderIterator_(Self_ const&) noexcept = default;
+			public: constexpr LinkedHeaderIterator_(Self_&&) noexcept = default;
 
-			public: template <::dcool::core::FormOfSame<HandleConverter> ConverterT__> constexpr ForwardLinkedHeaderIterator_(
+			public: template <::dcool::core::FormOfSame<HandleConverter> ConverterT__> constexpr LinkedHeaderIterator_(
 				Handle handle_, ConverterT__&& converter_
 			) noexcept: Super_(handle_), m_converter_(::dcool::core::forward<ConverterT__>(converter_)) {
 			}
 
 			private: template <
 				::dcool::core::FormOfSame<Super_> SuperT__, ::dcool::core::FormOfSame<HandleConverter> ConverterT__
-			> constexpr ForwardLinkedHeaderIterator_(
+			> constexpr LinkedHeaderIterator_(
 				SuperT__&& super_, ConverterT__&& converter_
 			) noexcept:
 				Super_(::dcool::core::forward<SuperT__>(super_)), m_converter_(::dcool::core::forward<ConverterT__>(converter_))
@@ -376,12 +471,24 @@ namespace dcool::container {
 				return this->Super_::nextHandle(this->converter());
 			}
 
+			public: constexpr auto previousHandle() const noexcept -> Handle requires (bidirectional) {
+				return this->Super_::previousHandle(this->converter());
+			}
+
 			public: constexpr void advance() noexcept {
 				this->Super_::advance(this->converter());
 			}
 
+			public: constexpr void retreat() noexcept requires (bidirectional) {
+				this->Super_::retreat(this->converter());
+			}
+
 			public: constexpr auto next() const noexcept -> Self_ {
 				return Self_(this->Super_::next(this->converter()), this->converter());
+			}
+
+			public: constexpr auto previous() const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->Super_::previous(this->converter()), this->converter());
 			}
 
 			public: constexpr auto equalsTo(Self_ const& other_) const noexcept -> ::dcool::core::Boolean {
@@ -400,13 +507,13 @@ namespace dcool::container {
 		};
 
 		template <
-			typename HandleConverterT_, typename EngineT_, typename NodeT_
-		> struct ForwardLinkedIterator_: private ::dcool::container::detail_::ForwardLinkedHeaderIterator_<
-			HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>
+			typename HandleConverterT_, typename EngineT_, typename NodeT_, ::dcool::core::Boolean reversedC_
+		> struct LinkedIterator_: private ::dcool::container::detail_::LinkedHeaderIterator_<
+			HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>, reversedC_
 		> {
-			private: using Self_ = ForwardLinkedIterator_<HandleConverterT_, EngineT_, NodeT_>;
-			private: using Super_ = ::dcool::container::detail_::ForwardLinkedHeaderIterator_<
-				HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>
+			private: using Self_ = LinkedIterator_<HandleConverterT_, EngineT_, NodeT_, reversedC_>;
+			private: using Super_ = ::dcool::container::detail_::LinkedHeaderIterator_<
+				HandleConverterT_, EngineT_, ::dcool::core::NodeHeaderType<NodeT_>, reversedC_
 			>;
 			private: using HandleConverter_ = HandleConverterT_;
 			private: using Engine_ = EngineT_;
@@ -417,28 +524,30 @@ namespace dcool::container {
 			public: using typename Super_::HandleConverter;
 			public: using typename Super_::Engine;
 			public: using typename Super_::Handle;
+			public: using Super_::bidirectional;
 			public: using Super_::converter;
 			public: using Super_::nodeHeaderHandle;
 			public: using Super_::nodeHeader;
 			public: using Super_::nextHandle;
+			public: using Super_::previousHandle;
 			public: using Super_::advance;
-			private: using Super_::next;
-			public: using Light = ::dcool::container::detail_::ForwardLinkedLightIterator_<HandleConverter, EngineT_, Node>;
+			public: using Super_::retreat;
+			public: using Light = ::dcool::container::detail_::LinkedLightIterator_<HandleConverter, EngineT_, Node, reversedC_>;
 
 			// For satisfying standard requirement
 			public: using value_type = Value;
 			public: using difference_type = ::dcool::core::Difference;
 
-			public: ForwardLinkedIterator_() = default;
-			public: constexpr ForwardLinkedIterator_(Self_ const&) noexcept = default;
-			public: constexpr ForwardLinkedIterator_(Self_&&) noexcept = default;
+			public: LinkedIterator_() = default;
+			public: constexpr LinkedIterator_(Self_ const&) noexcept = default;
+			public: constexpr LinkedIterator_(Self_&&) noexcept = default;
 
-			public: template <::dcool::core::FormOfSame<HandleConverter> ConverterT__> constexpr ForwardLinkedIterator_(
+			public: template <::dcool::core::FormOfSame<HandleConverter> ConverterT__> constexpr LinkedIterator_(
 				Handle handle_, ConverterT__&& converter_
 			) noexcept: Super_(handle_, ::dcool::core::forward<ConverterT__>(converter_)) {
 			}
 
-			public: constexpr ForwardLinkedIterator_(Light const& light_, Engine& engine_) noexcept: Self_(
+			public: constexpr LinkedIterator_(Light const& light_, Engine& engine_) noexcept: Self_(
 				light_.nodeHeaderHandle(), ::dcool::container::detail_::HandleConverterOfEngineForHelper_<NodeHeader>::get_(engine_)
 			) {
 			}
@@ -446,7 +555,7 @@ namespace dcool::container {
 			public: constexpr auto operator =(Self_ const&) noexcept -> Self_& = default;
 			public: constexpr auto operator =(Self_&&) noexcept -> Self_& = default;
 
-			private: template <::dcool::core::FormOfSame<Super_> SuperT__> constexpr explicit ForwardLinkedIterator_(
+			private: template <::dcool::core::FormOfSame<Super_> SuperT__> constexpr explicit LinkedIterator_(
 				SuperT__&& super_
 			) noexcept: Super_(::dcool::core::forward<SuperT__>(super_)) {
 			}
@@ -463,12 +572,26 @@ namespace dcool::container {
 				return Self_(this->Super_::next());
 			}
 
+			public: constexpr auto previous() const noexcept -> Self_ requires (bidirectional) {
+				return Self_(this->Super_::previous());
+			}
+
 			public: constexpr auto operator ++() noexcept -> Self_& {
 				this->advance();
 				return *this;
 			}
 
 			public: constexpr auto operator ++(::dcool::core::PostDisambiguator) noexcept -> Self_ {
+				Self_ result_(*this);
+				return *this;
+			}
+
+			public: constexpr auto operator --() noexcept -> Self_& requires (bidirectional) {
+				this->retreat();
+				return *this;
+			}
+
+			public: constexpr auto operator --(::dcool::core::PostDisambiguator) noexcept -> Self_ requires (bidirectional) {
 				Self_ result_(*this);
 				return *this;
 			}
@@ -502,9 +625,18 @@ namespace dcool::container {
 
 		template <
 			typename ValueT_, typename ConfigT_
-		> using ForwardLinkedNodeType_ = ::dcool::container::detail_::ExtractedForwardLinkedNodeType_<
+		> using ForwardLinkedNodeType_ = ::dcool::container::detail_::ExtractedLinkedNodeForLinkedType_<
 			ConfigT_,
 			::dcool::container::detail_::DefaultForwardLinkedNode_<
+				typename ::dcool::resource::PoolType<ConfigT_>::UnifiedHandle, ValueT_, ::dcool::core::Empty<ValueT_, ConfigT_>
+			>
+		>;
+
+		template <
+			typename ValueT_, typename ConfigT_
+		> using BidirectionalLinkedNodeType_ = ::dcool::container::detail_::ExtractedLinkedNodeForLinkedType_<
+			ConfigT_,
+			::dcool::container::detail_::DefaultBidirectionalLinkedNode_<
 				typename ::dcool::resource::PoolType<ConfigT_>::UnifiedHandle, ValueT_, ::dcool::core::Empty<ValueT_, ConfigT_>
 			>
 		>;
@@ -623,8 +755,8 @@ namespace dcool::container {
 			}
 		};
 
-		template <typename ConfigT_, typename ValueT_> struct ForwardLinkedConfigAdaptor_ {
-			private: using Self_ = ForwardLinkedConfigAdaptor_<ConfigT_, ValueT_>;
+		template <typename ConfigT_, typename ValueT_> struct LinkedConfigAdaptor_ {
+			private: using Self_ = LinkedConfigAdaptor_<ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
 			public: using Value = ValueT_;
 
@@ -644,82 +776,105 @@ namespace dcool::container {
 				"User-defined 'Pool' does not match return value of 'Engine::pool'"
 			);
 
-			public: using ForwardLinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
-			public: using ForwardLinkedNodeHeader = ::dcool::core::NodeHeaderType<ForwardLinkedNode>;
-			public: using PoolAdaptorForForwardLinkedNode = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNode>;
-			public: using PoolAdaptorForForwardLinkedNodeHeader = ::dcool::resource::PoolAdaptorFor<Pool, ForwardLinkedNodeHeader>;
-			public: using Handle = PoolAdaptorForForwardLinkedNode::UnifiedHandle;
-			public: using ConstHandle = PoolAdaptorForForwardLinkedNode::UnifiedConstHandle;
-			public: using HandleConverter = PoolAdaptorForForwardLinkedNode::HandleConverter;
-			public: using ConstHandleConverter = PoolAdaptorForForwardLinkedNode::ConstHandleConverter;
-			public: using HeaderHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::HandleConverter;
-			public: using HeaderConstHandleConverter = PoolAdaptorForForwardLinkedNodeHeader::ConstHandleConverter;
-			public: using ForwardLinkedIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
-				HeaderHandleConverter, Engine, ForwardLinkedNode
+			public: using LinkedNode = ::dcool::container::detail_::ForwardLinkedNodeType_<Value, Config>;
+			public: using LinkedNodeHeader = ::dcool::core::NodeHeaderType<LinkedNode>;
+			public: using PoolAdaptorForLinkedNode = ::dcool::resource::PoolAdaptorFor<Pool, LinkedNode>;
+			public: using PoolAdaptorForLinkedNodeHeader = ::dcool::resource::PoolAdaptorFor<Pool, LinkedNodeHeader>;
+			public: using Handle = PoolAdaptorForLinkedNode::UnifiedHandle;
+			public: using ConstHandle = PoolAdaptorForLinkedNode::UnifiedConstHandle;
+			public: using HandleConverter = PoolAdaptorForLinkedNode::HandleConverter;
+			public: using ConstHandleConverter = PoolAdaptorForLinkedNode::ConstHandleConverter;
+			public: using HeaderHandleConverter = PoolAdaptorForLinkedNodeHeader::HandleConverter;
+			public: using HeaderConstHandleConverter = PoolAdaptorForLinkedNodeHeader::ConstHandleConverter;
+			public: using LinkedIterator = ::dcool::container::detail_::LinkedIterator_<
+				HeaderHandleConverter, Engine, LinkedNode, false
 			>;
-			public: using ForwardLinkedConstIterator = ::dcool::container::detail_::ForwardLinkedIterator_<
-				HeaderConstHandleConverter, Engine, ForwardLinkedNode const
+			public: using LinkedConstIterator = ::dcool::container::detail_::LinkedIterator_<
+				HeaderConstHandleConverter, Engine, LinkedNode const, false
 			>;
-			public: using ForwardLinkedLightIterator = ForwardLinkedIterator::Light;
-			public: using ForwardLinkedLightConstIterator = ForwardLinkedConstIterator::Light;
-			public: using SentryHolder = ::dcool::container::detail_::LinkedSentryHolder_<ForwardLinkedNodeHeader, Pool, Engine>;
+			public: using LinkedLightIterator = LinkedIterator::Light;
+			public: using LinkedLightConstIterator = LinkedConstIterator::Light;
+			public: using SentryHolder = ::dcool::container::detail_::LinkedSentryHolder_<LinkedNodeHeader, Pool, Engine>;
 		};
 
 		template <
-			typename T_, typename ValueT_, typename AdaptorHelperT_ = ForwardLinkedConfigAdaptor_<T_, ValueT_>
+			typename T_, typename ValueT_, typename AdaptorHelperT_ = LinkedConfigAdaptor_<T_, ValueT_>
 		> concept ForwardLinkedConfigWithAdaptorHelper_ =
 			::dcool::core::Object<ValueT_> &&
-			::dcool::resource::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNode> &&
-			::dcool::resource::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::ForwardLinkedNodeHeader> &&
+			::dcool::resource::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::LinkedNode> &&
+			::dcool::resource::PoolFor<typename AdaptorHelperT_::Pool, typename AdaptorHelperT_::LinkedNodeHeader> &&
 			::dcool::core::SameAs<
-				typename AdaptorHelperT_::Value, ::dcool::core::NodeValueType<typename AdaptorHelperT_::ForwardLinkedNode>
+				typename AdaptorHelperT_::Value, ::dcool::core::NodeValueType<typename AdaptorHelperT_::LinkedNode>
 			> &&
 			::dcool::core::SameAs<
 				typename AdaptorHelperT_::Handle,
-				::dcool::container::detail_::LinkedNodeHandleType_<typename AdaptorHelperT_::ForwardLinkedNode>
+				::dcool::container::detail_::LinkedNodeHandleType_<typename AdaptorHelperT_::LinkedNode>
 			>
 		;
 	}
 
-	template <typename T_, typename ValueT_> concept ForwardLinkedConfig =
+	template <typename T_, typename ValueT_> concept LinkedConfig =
 		::dcool::container::detail_::ForwardLinkedConfigWithAdaptorHelper_<T_, ValueT_>
+	;
+
+	namespace detail_ {
+		template <typename BaseConfigT_, typename ValueT_> struct BidirectionalLinkedUnderlyingConfig_: public BaseConfigT_ {
+			using LinkedNode = ::dcool::container::detail_::BidirectionalLinkedNodeType_<ValueT_, BaseConfigT_>;
+		};
+
+		template <typename T_, typename ValueT_> concept BidirectionalLinkedConfig_ =
+			::dcool::container::LinkedConfig<T_, ValueT_> &&
+			::dcool::container::BidirectionalLinkedNode<
+				typename ::dcool::container::detail_::LinkedConfigAdaptor_<T_, ValueT_>::LinkedNode,
+				typename ::dcool::container::detail_::LinkedConfigAdaptor_<T_, ValueT_>::HeaderHandleConverter
+			>
+		;
+	}
+
+	template <typename T_, typename ValueT_> concept BidirectionalLinkedConfig =
+		::dcool::container::detail_::BidirectionalLinkedConfig_<
+			::dcool::container::detail_::BidirectionalLinkedUnderlyingConfig_<T_, ValueT_>, ValueT_
+		>
 	;
 
 	template <
 		typename ConfigT_, typename ValueT_
-	> requires ::dcool::container::ForwardLinkedConfig<ConfigT_, ValueT_> using ForwardLinkedConfigAdaptor =
-		::dcool::container::detail_::ForwardLinkedConfigAdaptor_<ConfigT_, ValueT_>
+	> requires ::dcool::container::LinkedConfig<ConfigT_, ValueT_> using LinkedConfigAdaptor =
+		::dcool::container::detail_::LinkedConfigAdaptor_<ConfigT_, ValueT_>
 	;
 
 	template <
-		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
-	> struct ForwardLinkedChassis {
-		private: using Self_ = ForwardLinkedChassis<ValueT_, ConfigT_>;
+		::dcool::core::Object ValueT_, ::dcool::container::LinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+	> struct LinkedChassis {
+		private: using Self_ = LinkedChassis<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Config, Value>;
-		public: using Node = ConfigAdaptor_::ForwardLinkedNode;
-		public: using NodeHeader = ConfigAdaptor_::ForwardLinkedNodeHeader;
+		private: using ConfigAdaptor_ = ::dcool::container::LinkedConfigAdaptor<Config, Value>;
+		public: using Node = ConfigAdaptor_::LinkedNode;
+		public: using NodeHeader = ConfigAdaptor_::LinkedNodeHeader;
 		public: using Pool = ConfigAdaptor_::Pool;
-		private: using PoolAdaptorForNode_ = ConfigAdaptor_::PoolAdaptorForForwardLinkedNode;
-		private: using PoolAdaptorForNodeHeader_ = ConfigAdaptor_::PoolAdaptorForForwardLinkedNodeHeader;
+		private: using PoolAdaptorForNode_ = ConfigAdaptor_::PoolAdaptorForLinkedNode;
+		private: using PoolAdaptorForNodeHeader_ = ConfigAdaptor_::PoolAdaptorForLinkedNodeHeader;
 		public: using ConstHandle = ConfigAdaptor_::ConstHandle;
 		public: using Handle = ConfigAdaptor_::Handle;
 		public: using HandleConverter = ConfigAdaptor_::HandleConverter;
 		public: using HeaderHandleConverter = ConfigAdaptor_::HeaderHandleConverter;
-		public: using Iterator = ConfigAdaptor_::ForwardLinkedIterator;
-		public: using ConstIterator = ConfigAdaptor_::ForwardLinkedConstIterator;
-		public: using LightIterator = ConfigAdaptor_::ForwardLinkedLightIterator;
-		public: using ConstLightIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
+		public: using Iterator = ConfigAdaptor_::LinkedIterator;
+		public: using ConstIterator = ConfigAdaptor_::LinkedConstIterator;
+		public: using LightIterator = ConfigAdaptor_::LinkedLightIterator;
+		public: using ConstLightIterator = ConfigAdaptor_::LinkedLightConstIterator;
 		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
 		public: using Engine = ConfigAdaptor_::Engine;
+		public: static constexpr ::dcool::core::Boolean bidirectional = ::dcool::container::BidirectionalLinkedNodeHeader<
+			NodeHeader, HeaderHandleConverter
+		>;
 		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
 
-		public: constexpr ForwardLinkedChassis() noexcept = default;
-		public: ForwardLinkedChassis(Self_ const&) = delete;
-		public: ForwardLinkedChassis(Self_&&) = delete;
-		public: constexpr ~ForwardLinkedChassis() noexcept = default;
+		public: constexpr LinkedChassis() noexcept = default;
+		public: LinkedChassis(Self_ const&) = delete;
+		public: LinkedChassis(Self_&&) = delete;
+		public: constexpr ~LinkedChassis() noexcept = default;
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
@@ -729,7 +884,7 @@ namespace dcool::container {
 			this->m_sentryHolder_.initialize(engine_);
 			NodeHeader& sentry_ = this->m_sentryHolder_.sentry(engine_);
 			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
-			::dcool::container::detail_::connectForwardNodeHeader_(sentry_, sentry_, headerConverter_);
+			::dcool::container::detail_::connectLinkedNodeHeader_(sentry_, sentry_, headerConverter_);
 		}
 
 		public: constexpr void relocateTo(Self_& other_) noexcept {
@@ -738,14 +893,14 @@ namespace dcool::container {
 
 		public: template <typename ValueT__, typename ConfigT__> constexpr void cloneTo(
 			Engine& engine_,
-			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
-			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>& other_
+			::dcool::container::LinkedChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
+			::dcool::container::LinkedChassis<ValueT__, ConfigT__>& other_
 		) const {
 			other_.initialize(otherEngine_);
 			try {
 				ConstLightIterator begin_ = this->lightBegin(engine_);
 				ConstLightIterator end_ = this->lightEnd(engine_);
-				typename ::dcool::container::ForwardLinkedChassis<
+				typename ::dcool::container::LinkedChassis<
 					ValueT__, ConfigT__
 				>::LightIterator current_ = other_.lightBegin(otherEngine_);
 				for (; !(ConstLightIterator::equal(begin_, end_, engine_)); begin_.advance(engine_)) {
@@ -874,11 +1029,45 @@ namespace dcool::container {
 			destroyNode_(engine_.pool(), nodeHandle_);
 		}
 
+		private: constexpr auto insertNodeHeader_(
+			HeaderHandleConverter const& headerConverter_, LightIterator position_, NodeHeader& headerToInsert_
+		) noexcept -> LightIterator requires (bidirectional) {
+			NodeHeader& tailing_ = position_.nodeHeader(headerConverter_);
+			::dcool::container::detail_::insertLinkedNodeHeaderBefore_(tailing_, headerToInsert_, headerConverter_);
+			return LightIterator(tailing_.previousHandle());
+		}
+
+		private: constexpr auto insertNode_(
+			HeaderHandleConverter const& headerConverter_, LightIterator position_, Node& toInsert_
+		) noexcept -> LightIterator requires (bidirectional) {
+			return this->insertNodeHeader_(headerConverter_, position_, toInsert_.header());
+		}
+
+		public: constexpr auto insertNode(
+			Engine& engine_, LightIterator position_, Node& toInsert_
+		) noexcept -> LightIterator requires (bidirectional) {
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
+			return this->insertNode_(headerConverter_, position_, toInsert_);
+		}
+
+		// Note that 'toInsert_' must point to a node instead of a node header
+		public: constexpr auto insertNode(
+			Engine& engine_, LightIterator position_, Handle toInsert_
+		) noexcept -> LightIterator requires (bidirectional) {
+			return this->insertNode(
+				engine_, position_, *static_cast<Node*>(PoolAdaptorForNode_::fromHandle(engine_.pool(), toInsert_))
+			);
+		}
+
+		public: constexpr auto insertNode(Iterator position_, Node& toInsert_) noexcept -> Iterator requires (bidirectional) {
+			return this->insertNode_(position_.converter(), static_cast<LightIterator>(position_), toInsert_);
+		}
+
 		private: constexpr auto insertNodeHeaderAfter_(
 			HeaderHandleConverter const& headerConverter_, LightIterator position_, NodeHeader& headerToInsert_
 		) noexcept -> LightIterator {
 			NodeHeader& leading_ = position_.nodeHeader(headerConverter_);
-			::dcool::container::detail_::insertForwardNodeHeaderAfter_(leading_, headerToInsert_, headerConverter_);
+			::dcool::container::detail_::insertLinkedNodeHeaderAfter_(leading_, headerToInsert_, headerConverter_);
 			return LightIterator(leading_.nextHandle());
 		}
 
@@ -908,18 +1097,48 @@ namespace dcool::container {
 			return this->insertNodeAfter_(position_.converter(), static_cast<LightIterator>(position_), toInsert_);
 		}
 
+		public: constexpr auto popNode(Engine& engine_, LightIterator position_) noexcept -> Handle requires (bidirectional) {
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
+			return ::dcool::resource::adaptedToHandleFor<Node>(
+				engine_.pool(),
+				static_cast<Node*>(
+					::dcool::core::addressOf(
+						::dcool::container::detail_::popLinkedNodeHeader_(
+							position_.nodeHeader(headerConverter_), headerConverter_
+						)
+					)
+				)
+			);
+		}
+
 		public: constexpr auto popNodeAfter(Engine& engine_, LightIterator positionBefore_) noexcept -> Handle {
 			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
 			return ::dcool::resource::adaptedToHandleFor<Node>(
 				engine_.pool(),
 				static_cast<Node*>(
 					::dcool::core::addressOf(
-						::dcool::container::detail_::popForwardNodeHeaderAfter_(
+						::dcool::container::detail_::popLinkedNodeHeaderAfter_(
 							positionBefore_.nodeHeader(headerConverter_), headerConverter_
 						)
 					)
 				)
 			);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			Engine& engine_, LightIterator position_, ArgumentTs__&&... parameters_
+		) -> LightIterator requires (bidirectional) {
+			Handle nodeHandle_ = createNode_(engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+			return this->insertNode(engine_, position_, nodeHandle_);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator requires (bidirectional) {
+			LightIterator result_ = this->emplace(
+				engine_, this->toLight(engine_, position_), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+			return fromLight(engine_, result_);
 		}
 
 		public: template <typename... ArgumentTs__> constexpr auto emplaceAfter(
@@ -942,9 +1161,35 @@ namespace dcool::container {
 			this->emplaceAfter(engine_, this->beforeBegin(engine_), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
+		public: template <typename... ArgumentTs__> constexpr void emplaceBack(
+			Engine& engine_, ArgumentTs__&&... parameters_
+		) requires (bidirectional) {
+			this->emplace(engine_, this->end(engine_), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: constexpr auto erase_(Pool& pool_, LightIterator position_) noexcept -> LightIterator requires (bidirectional) {
+			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(pool_);
+			NodeHeader& erasedNodeHeader_ = ::dcool::container::detail_::popLinkedNodeHeader_(
+				position_.nodeHeader(headerConverter_), headerConverter_
+			);
+			destroyNode_(
+				pool_, PoolAdaptorForNode_::toHandle(pool_, ::dcool::core::addressOf(Node::retrieveFromHeader(erasedNodeHeader_)))
+			);
+			return position_.next(headerConverter_);
+		}
+
+		public: constexpr auto erase(Engine& engine_, LightIterator position_) noexcept -> LightIterator requires (bidirectional) {
+			return this->erase_(engine_.pool(), position_);
+		}
+
+		public: constexpr auto erase(Engine& engine_, Iterator position_) noexcept -> Iterator requires (bidirectional) {
+			LightIterator result_ = this->erase_(engine_.pool(), this->toLight(engine_, position_));
+			return this->fromLight(engine_, result_);
+		}
+
 		public: constexpr auto eraseAfter_(Pool& pool_, LightIterator positionBefore_) noexcept -> LightIterator {
 			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(pool_);
-			NodeHeader& erasedNodeHeader_ = ::dcool::container::detail_::popForwardNodeHeaderAfter_(
+			NodeHeader& erasedNodeHeader_ = ::dcool::container::detail_::popLinkedNodeHeaderAfter_(
 				positionBefore_.nodeHeader(headerConverter_), headerConverter_
 			);
 			destroyNode_(
@@ -959,43 +1204,44 @@ namespace dcool::container {
 
 		public: constexpr auto eraseAfter(Engine& engine_, Iterator position_) noexcept -> Iterator {
 			LightIterator result_ = this->eraseAfter_(engine_.pool(), this->toLight(engine_, position_));
-			return fromLight(engine_, result_);
+			return this->fromLight(engine_, result_);
 		}
 	};
 
 	template <
-		::dcool::core::Object ValueT_, ::dcool::container::ForwardLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
-	> struct ForwardLinked {
-		private: using Self_ = ForwardLinked<ValueT_, ConfigT_>;
+		::dcool::core::Object ValueT_, ::dcool::container::LinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+	> struct Linked {
+		private: using Self_ = Linked<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::container::ForwardLinkedConfigAdaptor<Config, Value>;
-		public: using Chassis = ::dcool::container::ForwardLinkedChassis<Value, Config>;
-		public: using Node = ConfigAdaptor_::ForwardLinkedNode;
-		public: using NodeHeader = ConfigAdaptor_::ForwardLinkedNodeHeader;
+		private: using ConfigAdaptor_ = ::dcool::container::LinkedConfigAdaptor<Config, Value>;
+		public: using Chassis = ::dcool::container::LinkedChassis<Value, Config>;
+		public: using Node = ConfigAdaptor_::LinkedNode;
+		public: using NodeHeader = ConfigAdaptor_::LinkedNodeHeader;
 		public: using Pool = ConfigAdaptor_::Pool;
-		public: using Iterator = ConfigAdaptor_::ForwardLinkedIterator;
-		public: using ConstIterator = ConfigAdaptor_::ForwardLinkedConstIterator;
-		public: using LightIterator = ConfigAdaptor_::ForwardLinkedLightIterator;
-		public: using ConstLightIterator = ConfigAdaptor_::ForwardLinkedLightConstIterator;
+		public: using Iterator = ConfigAdaptor_::LinkedIterator;
+		public: using ConstIterator = ConfigAdaptor_::LinkedConstIterator;
+		public: using LightIterator = ConfigAdaptor_::LinkedLightIterator;
+		public: using ConstLightIterator = ConfigAdaptor_::LinkedLightConstIterator;
 		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
 		public: using Engine = ConfigAdaptor_::Engine;
+		public: static constexpr ::dcool::core::Boolean bidirectional = Chassis::bidirectional;
 		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
 		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
 
-		public: constexpr ForwardLinked() noexcept(Chassis::noexceptInitializeable) {
+		public: constexpr Linked() noexcept(Chassis::noexceptInitializeable) {
 			this->chassis().initialize(this->engine());
 		}
 
-		public: constexpr ForwardLinked(Self_ const& other_): m_engine_(other_.m_engine_) {
+		public: constexpr Linked(Self_ const& other_): m_engine_(other_.m_engine_) {
 			other_.chassis().cloneTo(other_.engine(), this->engine(), this->chassis());
 		}
 
-		public: constexpr ForwardLinked(Self_&& other_) noexcept(
+		public: constexpr Linked(Self_&& other_) noexcept(
 			Chassis::noexceptInitializeable
 		): m_engine_(::dcool::core::move(other_.m_engine_)) {
 			other_.chassis().relocateTo(this->chassis());
@@ -1007,7 +1253,7 @@ namespace dcool::container {
 			}
 		}
 
-		public: constexpr ~ForwardLinked() noexcept {
+		public: constexpr ~Linked() noexcept {
 			this->chassis().uninitialize(this->engine());
 		}
 
@@ -1088,6 +1334,18 @@ namespace dcool::container {
 			return this->chassis().end(this->engine());
 		}
 
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			LightIterator position_, ArgumentTs__&&... parameters_
+		) -> LightIterator requires (bidirectional) {
+			return this->chassis().emplace(this->engine(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator requires (bidirectional) {
+			return this->chassis().emplace(this->engine(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
 		public: template <typename... ArgumentTs__> constexpr auto emplaceAfter(
 			LightIterator position_, ArgumentTs__&&... parameters_
 		) -> LightIterator {
@@ -1104,6 +1362,18 @@ namespace dcool::container {
 			this->chassis().emplaceFront(this->engine(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
+		public: template <typename... ArgumentTs__> constexpr void emplaceBack(ArgumentTs__&&... parameters_) {
+			this->chassis().emplaceBack(this->engine(), ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: constexpr auto erase(LightIterator position_) noexcept -> LightIterator requires (bidirectional) {
+			return this->chassis().erase(this->engine(), position_);
+		}
+
+		public: constexpr auto erase(Iterator position_) noexcept -> Iterator requires (bidirectional) {
+			return this->chassis().erase(this->engine(), position_);
+		}
+
 		public: constexpr auto eraseAfter(LightIterator position_) noexcept -> LightIterator {
 			return this->chassis().eraseAfter(this->engine(), position_);
 		}
@@ -1111,6 +1381,34 @@ namespace dcool::container {
 		public: constexpr auto eraseAfter(Iterator position_) noexcept -> Iterator {
 			return this->chassis().eraseAfter(this->engine(), position_);
 		}
+	};
+
+	template <
+		typename ValueT_, ::dcool::container::BidirectionalLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+	> struct BidirectionalLinkedChassis: public ::dcool::container::LinkedChassis<
+		ValueT_, ::dcool::container::detail_::BidirectionalLinkedUnderlyingConfig_<ConfigT_, ValueT_>
+	> {
+		public: using Config = ConfigT_;
+
+		private: using Super_ = ::dcool::container::LinkedChassis<
+			ValueT_, ::dcool::container::detail_::BidirectionalLinkedUnderlyingConfig_<ConfigT_, ValueT_>
+		>;
+
+		public: using Super_::Super_;
+	};
+
+	template <
+		typename ValueT_, ::dcool::container::BidirectionalLinkedConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>
+	> struct BidirectionalLinked: public ::dcool::container::Linked<
+		ValueT_, ::dcool::container::detail_::BidirectionalLinkedUnderlyingConfig_<ConfigT_, ValueT_>
+	> {
+		public: using Config = ConfigT_;
+
+		private: using Super_ = ::dcool::container::Linked<
+			ValueT_, ::dcool::container::detail_::BidirectionalLinkedUnderlyingConfig_<ConfigT_, ValueT_>
+		>;
+
+		public: using Super_::Super_;
 	};
 }
 

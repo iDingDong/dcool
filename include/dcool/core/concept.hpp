@@ -140,6 +140,8 @@ namespace dcool::core {
 
 	template <typename T_> concept Final = ::dcool::core::isFinal<T_>;
 
+	template <typename T_> concept StandardLayout = ::std::is_standard_layout_v<T_>;
+
 	template <typename T_> constexpr ::dcool::core::Boolean isPolymorphic = ::std::is_polymorphic_v<T_>;
 
 	template <typename T_> concept Polymorphic = ::dcool::core::isPolymorphic<T_>;
