@@ -106,6 +106,8 @@ namespace dcool::core {
 	};
 
 	using OutOfRange = ::std::out_of_range;
+
+	using RangeError = ::std::range_error;
 }
 
 #endif

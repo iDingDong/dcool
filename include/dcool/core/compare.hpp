@@ -10,7 +10,8 @@
 
 namespace dcool::core {
 	template <typename T_, typename OtherT_ = T_> concept EqualityComparable = ::std::equality_comparable_with<T_, OtherT_>;
-	template <typename T_> concept TotallyOrdered = ::std::totally_ordered<T_>;
+	template <typename T_, typename OtherT_ = T_> concept ThreeWayComparable = ::std::three_way_comparable_with<T_, OtherT_>;
+	template <typename T_, typename OtherT_ = T_> concept TotallyOrdered = ::std::totally_ordered_with<T_, OtherT_>;
 
 	using PartialOrdering = ::std::partial_ordering;
 	using WeakOrdering = ::std::weak_ordering;
@@ -38,6 +39,53 @@ namespace dcool::core {
 		public: friend auto operator >(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend auto operator <=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 		public: friend auto operator >=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+	};
+
+	template <
+		typename OperandT_,
+		typename WrappedT_ = ::std::compare_three_way
+	> struct StandardComparerWrapperFor {
+		private: using Self_ = StandardComparerWrapperFor<OperandT_, WrappedT_>;
+		public: using Operand = OperandT_;
+		public: using Wrapped = WrappedT_;
+
+		[[no_unique_address]] Wrapped underlying;
+
+		constexpr auto operator ()(
+			Operand const& left_, Operand const& right_
+		) const noexcept(noexcept(underlying(left_, right_))) {
+			return underlying(left_, right_);
+		}
+
+		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean {
+			return true;
+		}
+
+		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
+	};
+
+	template <typename OperandT_> using DefaultComparerFor = ::dcool::core::StandardComparerWrapperFor<
+		OperandT_, ::std::compare_three_way
+	>;
+
+	template <typename OperandT_, typename WrappedT_> struct ComparerEqualityWrapperFor {
+		private: using Self_ = ComparerEqualityWrapperFor<OperandT_, WrappedT_>;
+		public: using Operand = OperandT_;
+		public: using Wrapped = WrappedT_;
+
+		[[no_unique_address]] Wrapped underlying;
+
+		constexpr auto operator ()(
+			Operand const& left_, Operand const& right_
+		) const noexcept(noexcept(underlying(left_, right_))) -> ::dcool::core::Boolean {
+			return underlying(left_, right_) == 0;
+		}
+
+		public: friend auto operator ==(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean {
+			return true;
+		}
+
+		public: friend auto operator !=(Self_ const&, Self_ const&) noexcept -> ::dcool::core::Boolean = default;
 	};
 
 	template <

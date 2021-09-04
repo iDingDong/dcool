@@ -201,8 +201,8 @@ namespace dcool::vigor {
 
 		public: template <typename ValueT__, typename ConfigT__> constexpr void cloneTo(
 			Engine& engine_,
-			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
-			::dcool::container::ForwardLinkedChassis<ValueT__, ConfigT__>& other_
+			::dcool::vigor::SealerChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
+			::dcool::vigor::SealerChassis<ValueT__, ConfigT__>& other_
 		) const {
 			other_.initialize(otherEngine_, this->copiedValue(engine_));
 		}
