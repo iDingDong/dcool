@@ -7,6 +7,7 @@
 #	include <dcool/core/raw_pointer_operation.hpp>
 #	include <dcool/core/type_transformer.hpp>
 #	include <dcool/core/type_value_detector.hpp>
+#	include <dcool/core/utility.hpp>
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeHeader, ExtractedHeaderType, Header)
 
@@ -43,7 +44,7 @@ namespace dcool::core {
 		private: Value m_value_;
 
 		public: template <typename... ArgumentTs__> constexpr DefaultValueNode(
-			ArgumentTs__&&... parameters_
+			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
 		) noexcept(noexcept(Value(::dcool::core::forward<ArgumentTs__>(parameters_)...))): m_value_(
 			::dcool::core::forward<ArgumentTs__>(parameters_)...
 		) {
