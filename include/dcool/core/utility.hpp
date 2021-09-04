@@ -56,6 +56,12 @@ namespace dcool::core {
 	};
 
 	template <typename T_> constexpr ::dcool::core::TypedTag<T_> typed = ::dcool::core::TypedTag<T_>();
+
+	struct ReservationTag {
+		constexpr explicit ReservationTag() noexcept = default;
+	};
+
+	constexpr ::dcool::core::ReservationTag reservation = ::dcool::core::ReservationTag();
 }
 
 #endif
