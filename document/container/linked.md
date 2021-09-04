@@ -219,6 +219,7 @@ Handle handle = /* unspecified */;
 
 The following requirements need to be satisfied:
 
+- Constructor call `LinkedNode(dcool::core::inPlace, arguments_...)` constructs a node with value constructed by `Value(arguments_...)` for any `arguments_...`.
 - Has a member type `Header`;
 - `node.header()` evaluates to a `Header&` that refers to the header of the node.
 - `cnode.header()` evaluates to a `Header const&` that refers to the header of the node.
