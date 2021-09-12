@@ -5,24 +5,40 @@
 #	include <dcool/core/concept.hpp>
 #	include <dcool/core/type_transformer.hpp>
 
+#	include <cstdint>
 #	include <cstring>
 
 namespace dcool::core {
-	template <typename T_> constexpr auto stepByByte(
-		T_* pointer_, ::dcool::core::Difference step_
-	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, T_>* {
-		auto generalPointer_ = static_cast<::dcool::core::IdenticallyQualifiedType<void, T_>*>(pointer_);
-		return static_cast<::dcool::core::IdenticallyQualifiedType<::dcool::core::Byte, T_>*>(generalPointer_) + step_;
+	template <typename ValueT_> constexpr auto toPointerInteger(ValueT_* pointer_) noexcept -> ::dcool::core::PointerInteger {
+		::dcool::core::IdenticallyQualifiedType<void, ValueT_>* universalPointer_ = pointer_;
+		return reinterpret_cast<::dcool::core::PointerInteger>(universalPointer_);
 	}
 
-	template <typename T_> constexpr auto stepOver(T_* pointer_) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, T_>* {
+
+	template <typename ValueT_> constexpr auto fromPointerInteger(
+		::dcool::core::PointerInteger integer_
+	) noexcept -> ValueT_* {
+		auto universalPointer_ = reinterpret_cast<::dcool::core::IdenticallyQualifiedType<void, ValueT_>*>(integer_);
+		return reinterpret_cast<ValueT_*>(universalPointer_);
+	}
+
+	template <typename ValueT_> constexpr auto stepByByte(
+		ValueT_* pointer_, ::dcool::core::Difference step_
+	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, ValueT_>* {
+		auto generalPointer_ = static_cast<::dcool::core::IdenticallyQualifiedType<void, ValueT_>*>(pointer_);
+		return static_cast<::dcool::core::IdenticallyQualifiedType<::dcool::core::Byte, ValueT_>*>(generalPointer_) + step_;
+	}
+
+	template <typename ValueT_> constexpr auto stepOver(
+		ValueT_* pointer_
+	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, ValueT_>* {
 		return ::dcool::core::stepByByte(pointer_, sizeof(*pointer_));
 	}
 
-	template <typename T_> constexpr auto stepOver(
-		::dcool::core::IdenticallyQualifiedType<void, T_>* pointer_
-	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, T_>* {
-		return ::dcool::core::stepByByte(pointer_, sizeof(T_));
+	template <typename ValueT_> constexpr auto stepOver(
+		::dcool::core::IdenticallyQualifiedType<void, ValueT_>* pointer_
+	) noexcept -> ::dcool::core::IdenticallyQualifiedType<void, ValueT_>* {
+		return ::dcool::core::stepByByte(pointer_, sizeof(ValueT_));
 	}
 
 	inline constexpr auto differenceByByte(
@@ -34,12 +50,14 @@ namespace dcool::core {
 		;
 	}
 
-	template <::dcool::core::TriviallyCopyable T_> constexpr void writeToBuffer(T_ const& value_, void* buffer_) noexcept {
+	template <::dcool::core::TriviallyCopyable ValueT_> constexpr void writeToBuffer(
+		ValueT_ const& value_, void* buffer_
+	) noexcept {
 		::std::memcpy(buffer_, ::dcool::core::addressOf(value_), sizeof(value_));
 	}
 
-	template <::dcool::core::TriviallyCopyable T_> constexpr auto readFromBuffer(void const* buffer_) noexcept -> T_ {
-		T_ result_;
+	template <::dcool::core::TriviallyCopyable ValueT_> constexpr auto readFromBuffer(void const* buffer_) noexcept -> ValueT_ {
+		ValueT_ result_;
 		::std::memcpy(::dcool::core::addressOf(result_), buffer_, sizeof(result_));
 		return result_;
 	}

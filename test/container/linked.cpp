@@ -2,8 +2,6 @@
 #include <dcool/resource.hpp>
 #include <dcool/test.hpp>
 
-#include <iostream>
-
 DCOOL_TEST_CASE(dcoolContainer, linkedBasics) {
 	struct Traced {
 		static auto livingCount() -> dcool::core::Length& {
