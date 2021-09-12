@@ -1,8 +1,8 @@
 #ifndef DCOOL_CORE_BASIC_HPP_INCLUDED_
 #	define DCOOL_CORE_BASIC_HPP_INCLUDED_ 1
 
-#	include <cstdint>
 #	include <cstddef>
+#	include <cstdint>
 #	include <new>
 #	include <typeinfo>
 #	include <utility>
@@ -18,12 +18,17 @@ namespace dcool::core {
 	using Length = ::dcool::core::Size;
 	using ForwardOffset = ::dcool::core::Size;
 	using Index = ::dcool::core::Length;
+	using PointerInteger = ::std::uintptr_t;
 	using SignedMaxInteger = ::std::intmax_t;
 	using	UnsignedMaxInteger = ::std::uintmax_t;
 	using NullPointer = decltype(nullptr);
 	using TypeInfo = ::std::type_info;
 
+	template <typename ValueT_> using PointerFor = ValueT_*;
+
 	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
+
+	template <typename ValueT_> constexpr ::dcool::core::PointerFor<ValueT_> nullPointerFor = ::dcool::core::nullPointer;
 
 	template <typename T_> constexpr auto constantize(T_& input_) -> T_ const& {
 		return input_;
@@ -81,6 +86,10 @@ namespace dcool::core {
 
 	template <typename T_> constexpr auto addressOf(T_& toPoint_) noexcept {
 		return ::std::addressof(toPoint_);
+	}
+
+	template <typename T_> constexpr auto referenceToSame(T_ const& left_, T_ const& right_) {
+		return ::dcool::core::addressOf(left_) == ::dcool::core::addressOf(right_);
 	}
 
 	using ::std::launder;

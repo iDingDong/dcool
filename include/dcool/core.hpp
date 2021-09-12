@@ -12,6 +12,7 @@
 #	include <dcool/core/destruct.hpp>
 #	include <dcool/core/exception.hpp>
 #	include <dcool/core/execution.hpp>
+#	include <dcool/core/folded_pointer.hpp>
 #	include <dcool/core/functional.hpp>
 #	include <dcool/core/hash.hpp>
 #	include <dcool/core/integer.hpp>
@@ -27,6 +28,7 @@
 #	include <dcool/core/range.hpp>
 #	include <dcool/core/raw_pointer_operation.hpp>
 #	include <dcool/core/relay.hpp>
+#	include <dcool/core/replicator.hpp>
 #	include <dcool/core/select.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>

@@ -6,6 +6,7 @@
 #	include <type_traits>
 
 namespace dcool::core {
+	template <typename T_> using LvalueReferenceAddedType = ::std::add_lvalue_reference_t<T_>;
 	template <typename T_> using ReferenceRemovedType = ::std::remove_reference_t<T_>;
 	template <typename T_> using ConstRemovedType = ::std::remove_const_t<T_>;
 	template <typename T_> using VolatileRemovedType = ::std::remove_volatile_t<T_>;

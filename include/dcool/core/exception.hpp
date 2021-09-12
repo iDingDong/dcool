@@ -15,7 +15,7 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 namespace dcool::core {
 #	if defined(__GNUC__)
 	// Workaround for a compiler bug.
-	// See document/dependency_bugs#Bug_1 for mor details.
+	// See document/dependency_bugs#Bug_1 for more details.
 	using ExceptionSafetyStrategy = unsigned char;
 
 	constexpr auto atAnyCost(::dcool::core::ExceptionSafetyStrategy strategy_) noexcept -> ::dcool::core::Boolean {
