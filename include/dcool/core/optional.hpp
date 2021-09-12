@@ -176,8 +176,8 @@ namespace dcool::core {
 			public: constexpr Optional_(): m_value_(ConfigAdaptor_::invalidValue()) {
 			}
 
-			// A bug prevent us from using 'Self_' or 'Optional_<ValueT_, ConfigT_>' in the copy constructor.
-			// See document/dependency_bugs#Bug_3 for mor details.
+			// A bug prevent us from using 'Self_' or 'Optional_<ValueT_, ConfigT_>' for the copy constructor.
+			// See document/dependency_bugs#Bug_3 for more details.
 			public: constexpr Optional_(Optional_ const& other_) = default;
 			public: constexpr Optional_(Self_&& other_) = default;
 
@@ -194,8 +194,8 @@ namespace dcool::core {
 			}
 
 			public: constexpr ~Optional_() noexcept = default;
-			// A bug prevent us from using 'Self_' or 'Optional_<ValueT_, ConfigT_>' in the copy assignment operator.
-			// See document/dependency_bugs#Bug_3 for mor details.
+			// A bug prevent us from using 'Self_' or 'Optional_<ValueT_, ConfigT_>' for the copy assignment operator.
+			// See document/dependency_bugs#Bug_3 for more details.
 			public: constexpr auto operator =(Optional_ const& other_) -> Self_& = default;
 			public: constexpr auto operator =(Self_&& other_) -> Self_& = default;
 
@@ -272,8 +272,8 @@ namespace dcool::core {
 		private: Underlying_ m_underlying_;
 
 		public: constexpr Optional() noexcept = default;
-		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' in the copy assignment operator.
-		// See document/dependency_bugs#Bug_3 for mor details.
+		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' for the copy assignment operator.
+		// See document/dependency_bugs#Bug_3 for more details.
 		public: constexpr Optional(Optional const& other_) = default;
 		public: constexpr Optional(Self_&& other_) = default;
 
@@ -290,8 +290,8 @@ namespace dcool::core {
 		}
 
 		public: constexpr ~Optional() noexcept = default;
-		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' in the copy assignment operator.
-		// See document/dependency_bugs#Bug_3 for mor details.
+		// A bug prevent us from using 'Self_' or 'Optional<ValueT_, ConfigT_>' for the copy assignment operator.
+		// See document/dependency_bugs#Bug_3 for more details.
 		public: constexpr auto operator =(Optional const& other_) noexcept -> Self_& = default;
 		public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& = default;
 

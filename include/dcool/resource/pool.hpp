@@ -1114,6 +1114,96 @@ namespace dcool::resource {
 
 	// using DefaultPool = ::dcool::resource::PoolFromClassic<::dcool::resource::DefaultClassicPool>;
 	using DefaultPool = ::dcool::resource::PoolFromStandardAllocator<::std::allocator<::dcool::core::Byte>>;
+
+	template <typename ValueT_, ::dcool::resource::PoolFor<ValueT_> PoolT_> struct HandleReferenceable {
+		private: using Self_ = HandleReferenceable<ValueT_, PoolT_>;
+		public: using Value = ValueT_;
+		public: using Pool = PoolT_;
+
+		private: using PoolAdaptor_ = ::dcool::resource::PoolAdaptorFor<Pool, Value>;
+		public: using Handle = PoolAdaptor_::Handle;
+		public: using ConstHandle = PoolAdaptor_::ConstHandle;
+		public: static constexpr ::dcool::core::Boolean compact = ::dcool::resource::PoolWithBijectiveHandleConverterFor<
+			Pool, Value
+		>;
+
+		private: using Underlying_ = ::dcool::core::ConditionalType<compact, ::dcool::core::StorageFor<Value>, Handle>;
+
+		private: Underlying_ m_underlying_;
+
+		public: template <typename... ArgumentTs__> constexpr void initialize(
+			Pool& pool_, ArgumentTs__&&... parameters_
+		) {
+			if constexpr (compact) {
+				new (::dcool::core::addressOf(this->m_underlying_)) Value(::dcool::core::forward<ArgumentTs__>(parameters_)...);
+			} else {
+				this->m_underlying_ = ::dcool::resource::createHandleByPoolFor<Value>(
+					pool_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+				);
+			}
+		}
+
+		public: constexpr void uninitialize(Pool& pool_) noexcept {
+			if constexpr (compact) {
+				::dcool::core::destruct(this->value(pool_));
+			} else {
+				::dcool::resource::destroyHandleByPoolFor<Value>(pool_, this->m_underlying_);
+			}
+		}
+
+		public: constexpr void relocateTo(Pool& pool_, Self_& other_) {
+			if constexpr (compact) {
+				other_.initialize(pool_, ::dcool::core::move(this->value(pool_)));
+				this->uninitialize(pool_);
+			} else {
+				other_.m_underlying_ = this->m_underlying_;
+			}
+		}
+
+		public: constexpr auto value(Pool& pool_) const noexcept -> Value const& {
+			void const* result_;
+			if constexpr (compact) {
+				result_ = ::dcool::core::addressOf(this->m_underlying_);
+			} else {
+				result_ = ::dcool::resource::adaptedFromHandleFor<Value>(pool_, this->m_underlying_);
+			}
+			return *::dcool::core::launder(reinterpret_cast<Value const*>(result_));
+		}
+
+		public: constexpr auto value(Pool& pool_) noexcept -> Value& {
+			void* result_;
+			if constexpr (compact) {
+				result_ = ::dcool::core::addressOf(this->m_underlying_);
+			} else {
+				result_ = ::dcool::resource::adaptedFromHandleFor<Value>(pool_, this->m_underlying_);
+			}
+			return *::dcool::core::launder(reinterpret_cast<Value*>(result_));
+		}
+
+		public: constexpr auto handle(Pool& pool_) const noexcept -> ConstHandle {
+			ConstHandle result_;
+			if constexpr (compact) {
+				result_ = ::dcool::resource::adaptedToConstHandleFor<Value>(
+					pool_, static_cast<void const*>(::dcool::core::addressOf(this->m_underlying_))
+				);
+			} else {
+				result_ = this->m_underlying_;
+			}
+			return result_;
+		}
+
+		public: constexpr auto handle(Pool& pool_) noexcept -> Handle {
+			Handle result_;
+			if constexpr (compact) {
+				result_ = ::dcool::resource::adaptedToHandleFor<Value>(
+					pool_, static_cast<void*>(::dcool::core::addressOf(this->m_underlying_))
+				);
+			} else {
+				result_ = this->m_underlying_;
+			}
+			return result_;
+		}
+	};
 }
 
 DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::resource, HasTypePool, ExtractedPoolType, Pool)

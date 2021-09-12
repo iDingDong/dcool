@@ -641,120 +641,6 @@ namespace dcool::container {
 			>
 		>;
 
-		template <typename NodeHeaderT_, typename PoolT_, typename EngineT_> struct LinkedSentryHolder_ {
-			private: using Self_ = LinkedSentryHolder_<NodeHeaderT_, PoolT_, EngineT_>;
-			public: using Pool = PoolT_;
-			public: using NodeHeader = NodeHeaderT_;
-			public: using Engine = EngineT_;
-
-			private: using PoolAdaptor_ = ::dcool::resource::PoolAdaptorFor<Pool, NodeHeader>;
-			public: using Handle = PoolAdaptor_::UnifiedHandle;
-			public: using ConstHandle = PoolAdaptor_::UnifiedConstHandle;
-			public: using HandleConverter = PoolAdaptor_::HandleConverter;
-			public: using ConstHandleConverter = PoolAdaptor_::ConstHandleConverter;
-			public: static constexpr ::dcool::core::Boolean noexceptInitializeable = false;
-
-			private: Handle m_sentry_;
-
-			public: constexpr LinkedSentryHolder_() noexcept = default;
-			public: LinkedSentryHolder_(Self_ const&) = delete;
-			public: LinkedSentryHolder_(Self_&&) = delete;
-			public: constexpr ~LinkedSentryHolder_() noexcept = default;
-			public: auto operator =(Self_ const&) -> Self_& = delete;
-			public: auto operator =(Self_&&) -> Self_& = delete;
-
-			public: constexpr void initialize(Engine& engine_) {
-				this->m_sentry_ = ::dcool::resource::createHandleByPoolFor<NodeHeader>(engine_.pool());
-			}
-
-			public: constexpr void relocateTo(Self_& other_) {
-				other_.m_sentry_ = this->m_sentry_;
-			}
-
-			public: constexpr void uninitialize(Engine& engine_) noexcept {
-				::dcool::resource::destroyHandleByPoolFor<NodeHeader>(engine_.pool(), this->m_sentry_);
-			}
-
-			public: constexpr auto sentryHandle(Engine& engine_) const noexcept -> ConstHandle {
-				return this->m_sentry_;
-			}
-
-			public: constexpr auto sentryHandle(Engine& engine_) noexcept -> Handle {
-				return this->m_sentry_;
-			}
-
-			private: constexpr auto sentryAddress_(Engine& engine_) const noexcept -> NodeHeader const* {
-				return ::dcool::core::launder(
-					static_cast<NodeHeader const*>(PoolAdaptor_::constHandleConverter(engine_.pool())(this->m_sentry_))
-				);
-			}
-
-			private: constexpr auto sentryAddress_(Engine& engine_) noexcept -> NodeHeader* {
-				return ::dcool::core::launder(
-					static_cast<NodeHeader*>(PoolAdaptor_::handleConverter(engine_.pool())(this->m_sentry_))
-				);
-			}
-
-			public: constexpr auto sentry(Engine& engine_) const noexcept -> NodeHeader const& {
-				return *(this->sentryAddress_(engine_));
-			}
-
-			public: constexpr auto sentry(Engine& engine_) noexcept -> NodeHeader& {
-				return *(this->sentryAddress_(engine_));
-			}
-		};
-
-		template <
-			typename NodeHeaderT_, ::dcool::resource::PoolWithBijectiveHandleConverterFor<NodeHeaderT_> PoolT_, typename EngineT_
-		> struct LinkedSentryHolder_<NodeHeaderT_, PoolT_, EngineT_> {
-			private: using Self_ = LinkedSentryHolder_<NodeHeaderT_, PoolT_, EngineT_>;
-			public: using Pool = PoolT_;
-			public: using NodeHeader = NodeHeaderT_;
-			public: using Engine = EngineT_;
-
-			private: using PoolAdaptor_ = ::dcool::resource::PoolAdaptorFor<Pool, NodeHeader>;
-			public: using Handle = PoolAdaptor_::UnifiedHandle;
-			public: using ConstHandle = PoolAdaptor_::UnifiedConstHandle;
-			public: using HandleConverter = PoolAdaptor_::HandleConverter;
-			public: using ConstHandleConverter = PoolAdaptor_::ConstHandleConverter;
-			public: static constexpr ::dcool::core::Boolean noexceptInitializeable = true;
-
-			private: NodeHeader m_sentry_;
-
-			public: constexpr LinkedSentryHolder_() noexcept = default;
-			public: LinkedSentryHolder_(Self_ const&) = delete;
-			public: LinkedSentryHolder_(Self_&&) = delete;
-			public: constexpr ~LinkedSentryHolder_() noexcept = default;
-			public: auto operator =(Self_ const&) -> Self_& = delete;
-			public: auto operator =(Self_&&) -> Self_& = delete;
-
-			public: constexpr void initialize(Engine& engine_) noexcept {
-			}
-
-			public: constexpr void uninitialize(Engine& engine_) noexcept {
-			}
-
-			public: constexpr void relocateTo(Self_& other_) noexcept {
-				other_.m_sentry_ = this->m_sentry_;
-			}
-
-			public: constexpr auto sentryHandle(Engine& engine_) const noexcept -> ConstHandle {
-				return PoolAdaptor_::constHandleConverter(engine_.pool())(static_cast<void const*>(&(this->m_sentry_)));
-			}
-
-			public: constexpr auto sentryHandle(Engine& engine_) noexcept -> Handle {
-				return PoolAdaptor_::handleConverter(engine_.pool())(static_cast<void*>(&(this->m_sentry_)));
-			}
-
-			public: constexpr auto sentry(Engine& engine_) const noexcept -> NodeHeader const& {
-				return this->m_sentry_;
-			}
-
-			public: constexpr auto sentry(Engine& engine_) noexcept -> NodeHeader& {
-				return this->m_sentry_;
-			}
-		};
-
 		template <typename ConfigT_, typename ValueT_> struct LinkedConfigAdaptor_ {
 			private: using Self_ = LinkedConfigAdaptor_<ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
@@ -794,7 +680,6 @@ namespace dcool::container {
 			>;
 			public: using LinkedLightIterator = LinkedIterator::Light;
 			public: using LinkedLightConstIterator = LinkedConstIterator::Light;
-			public: using SentryHolder = ::dcool::container::detail_::LinkedSentryHolder_<LinkedNodeHeader, Pool, Engine>;
 		};
 
 		template <
@@ -864,12 +749,11 @@ namespace dcool::container {
 		public: using ConstIterator = ConfigAdaptor_::LinkedConstIterator;
 		public: using LightIterator = ConfigAdaptor_::LinkedLightIterator;
 		public: using ConstLightIterator = ConfigAdaptor_::LinkedLightConstIterator;
-		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
+		public: using SentryHolder_ = ::dcool::resource::HandleReferenceable<NodeHeader, Pool>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::Boolean bidirectional = ::dcool::container::BidirectionalLinkedNodeHeader<
 			NodeHeader, HeaderHandleConverter
 		>;
-		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
 
 		public: constexpr LinkedChassis() noexcept = default;
 		public: LinkedChassis(Self_ const&) = delete;
@@ -878,17 +762,17 @@ namespace dcool::container {
 		public: auto operator =(Self_ const&) -> Self_& = delete;
 		public: auto operator =(Self_&&) -> Self_& = delete;
 
-		private: SentryHolder m_sentryHolder_;
+		private: SentryHolder_ m_sentryHolder_;
 
-		public: constexpr void initialize(Engine& engine_) noexcept(noexceptInitializeable) {
-			this->m_sentryHolder_.initialize(engine_);
-			NodeHeader& sentry_ = this->m_sentryHolder_.sentry(engine_);
+		public: constexpr void initialize(Engine& engine_) noexcept {
+			this->m_sentryHolder_.initialize(engine_.pool());
+			NodeHeader& sentry_ = this->m_sentryHolder_.value(engine_.pool());
 			HeaderHandleConverter headerConverter_ = PoolAdaptorForNodeHeader_::handleConverter(engine_.pool());
 			::dcool::container::detail_::connectLinkedNodeHeader_(sentry_, sentry_, headerConverter_);
 		}
 
-		public: constexpr void relocateTo(Self_& other_) noexcept {
-			this->m_sentryHolder_.relocateTo(other_.m_sentryHolde_);
+		public: constexpr void relocateTo(Engine& engine_, Self_& other_) noexcept {
+			this->m_sentryHolder_.relocateTo(engine_.pool(), other_.m_sentryHolder_);
 		}
 
 		public: template <typename ValueT__, typename ConfigT__> constexpr void cloneTo(
@@ -923,22 +807,22 @@ namespace dcool::container {
 				begin_.advance(headerConverter_);
 				destroyNode_(engine_, nodeHandle_);
 			}
-			this->m_sentryHolder_.uninitialize(engine_);
+			this->m_sentryHolder_.uninitialize(engine_.pool());
 		}
 
-		public: constexpr void swapWith(Self_& other_) noexcept {
+		public: constexpr void swapWith(Engine engine_, Engine& otherEngine_, Self_& other_) noexcept {
 			Self_ middleMan_;
-			this->relocateTo(middleMan_);
-			other_.relocateTo(*this);
-			middleMan_.relocateTo(other_);
+			this->relocateTo(engine_, middleMan_);
+			other_.relocateTo(otherEngine_, *this);
+			middleMan_.relocateTo(engine_, other_);
 		}
 
 		public: constexpr auto lightBeforeBegin(Engine& engine_) const noexcept -> ConstLightIterator {
-			return ConstLightIterator(this->m_sentryHolder_.sentryHandle(engine_));
+			return ConstLightIterator(this->m_sentryHolder_.handle(engine_.pool()));
 		}
 
 		public: constexpr auto lightBeforeBegin(Engine& engine_) noexcept -> LightIterator {
-			return LightIterator(this->m_sentryHolder_.sentryHandle(engine_));
+			return LightIterator(this->m_sentryHolder_.handle(engine_.pool()));
 		}
 
 		public: constexpr auto lightBegin(Engine& engine_) const noexcept -> ConstLightIterator {
@@ -1224,16 +1108,14 @@ namespace dcool::container {
 		public: using ConstIterator = ConfigAdaptor_::LinkedConstIterator;
 		public: using LightIterator = ConfigAdaptor_::LinkedLightIterator;
 		public: using ConstLightIterator = ConfigAdaptor_::LinkedLightConstIterator;
-		public: using SentryHolder = ConfigAdaptor_::SentryHolder;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: static constexpr ::dcool::core::Boolean bidirectional = Chassis::bidirectional;
-		public: static constexpr ::dcool::core::Boolean noexceptInitializeable = SentryHolder::noexceptInitializeable;
 
 		private: Chassis m_chassis_;
 		private: [[no_unique_address]] mutable Engine m_engine_;
 		private: [[no_unique_address]] ::dcool::core::StandardLayoutBreaker<Self_> m_standardLayoutBreaker_;
 
-		public: constexpr Linked() noexcept(Chassis::noexceptInitializeable) {
+		public: constexpr Linked() noexcept {
 			this->chassis().initialize(this->engine());
 		}
 
@@ -1241,14 +1123,12 @@ namespace dcool::container {
 			other_.chassis().cloneTo(other_.engine(), this->engine(), this->chassis());
 		}
 
-		public: constexpr Linked(Self_&& other_) noexcept(
-			Chassis::noexceptInitializeable
-		): m_engine_(::dcool::core::move(other_.m_engine_)) {
-			other_.chassis().relocateTo(this->chassis());
+		public: constexpr Linked(Self_&& other_) noexcept: m_engine_(other_.m_engine_) {
+			other_.chassis().relocateTo(other_.engine(), this->chassis());
 			try {
-				other_.initialize();
+				other_.initialize(other_.engine());
 			} catch (...) {
-				this->chassis().relocateTo(other_.chassis());
+				this->chassis().relocateTo(this->engine(), other_.chassis());
 				throw;
 			}
 		}
@@ -1259,19 +1139,19 @@ namespace dcool::container {
 
 		public: constexpr auto operator =(Self_ const& other_) -> Self_& {
 			Self_ middleMan_(other_);
-			this->swapWith(other_);
+			this->swapWith(this->engine(), other_.engine(), other_);
 			return *this;
 		}
 
 		public: constexpr auto operator =(Self_&& other_) -> Self_& {
 			this->engine() = other_.engine();
-			other_.chassis().relocateTo(this->chassis());
+			other_.chassis().relocateTo(other_.engine(), this->chassis());
 			return *this;
 		}
 
 		public: constexpr void swapWith(Self_& other_) noexcept {
 			::dcool::core::intelliSwap(this->engine(), other_.engine());
-			::dcool::core::intelliSwap(this->chassis(), other_.chassis());
+			this->chassis().swapWith(other_.engine(), this->engine(), other_.chassis());
 		}
 
 		public: constexpr auto chassis() const noexcept -> Chassis const& {

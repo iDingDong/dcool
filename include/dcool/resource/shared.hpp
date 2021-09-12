@@ -676,7 +676,7 @@ namespace dcool::resource {
 
 	namespace detail_ {
 		// Workaround for a compiler bug.
-	// See document/dependency_bugs#Bug_2 for mor details.
+		// See document/dependency_bugs#Bug_2 for more details.
 		template <typename DismissorT_> struct AgentConfigForWrapToShare_ {
 			using Dismissor = DismissorT_;
 		};
@@ -709,7 +709,7 @@ namespace dcool::resource {
 
 	namespace detail_ {
 		// Workaround for a compiler bug.
-	// See document/dependency_bugs#Bug_2 for mor details.
+		// See document/dependency_bugs#Bug_2 for more details.
 		template <typename BaseConfigT_, typename ValueT_> struct CompactSharedAgentConfig_ {
 			private: using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<BaseConfigT_, ValueT_>;
 			public: static constexpr ::dcool::core::Boolean compact = true;
