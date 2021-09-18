@@ -10,7 +10,6 @@
 #	include <dcool/core/range.hpp>
 
 #	include <algorithm>
-#	include <cstring>
 
 namespace dcool::core {
 	template <
@@ -56,6 +55,27 @@ namespace dcool::core {
 		}
 	}
 
+	template <
+		::dcool::core::ExceptionSafetyStrategy strategyC_,typename ValueT_,::dcool::core::ForwardIterator DestinationIteratorT_
+	> constexpr void batchFill(ValueT_&& value_, DestinationIteratorT_ begin_, DestinationIteratorT_ end_) {
+		if constexpr (::dcool::core::atAnyCost(strategyC_) && !::dcool::core::ConstReference<ValueT_&&>) {
+			::dcool::core::batchFill<strategyC_>(::dcool::core::constantize(value_), begin_, end_);
+		} else {
+			while (begin_ != end_) {
+				*begin_ = value_;
+				++begin_;
+			}
+		}
+	}
+
+	template <typename ValueT_, ::dcool::core::ForwardIterator DestinationIteratorT_> constexpr void batchFill(
+		ValueT_&& value_, DestinationIteratorT_ begin_, DestinationIteratorT_ end_
+	) {
+		::dcool::core::batchFill<::dcool::core::defaultExceptionSafetyStrategy>(
+			::dcool::core::forward<ValueT_>(value_), begin_, end_
+		);
+	}
+
 	template <::dcool::core::ForwardIterator IteratorT_> struct OverlappedResult {
 		::dcool::core::Optional<::dcool::core::IteratorDifferenceType<IteratorT_>> countBeforeOverlap;
 		IteratorT_ destinationEnd;
@@ -77,8 +97,7 @@ namespace dcool::core {
 				::dcool::core::ContiguousIterator<SourceIteratorT_> && ::dcool::core::ContiguousIterator<DestinationIteratorT_>
 			) {
 				auto length_ = end_ - begin_;
-				::dcool::core::Size size_ = sizeof(SourceValue_) * length_;
-				::std::memcpy(::dcool::core::rawPointerOf(destination_), ::dcool::core::rawPointerToLivingOf(begin_), size_);
+				::std::copy_n(::dcool::core::rawPointerToLivingOf(begin_), length_, ::dcool::core::rawPointerOf(destination_));
 				DestinationIteratorT_ destinationEnd_ = destination_ + length_;
 				return destinationEnd_;
 			}
@@ -90,9 +109,8 @@ namespace dcool::core {
 				if (length_ <= 0) {
 					return destination_;
 				}
-				::dcool::core::Size size_ = sizeof(SourceValue_) * length_;
 				DestinationIteratorT_ destinationEnd_ = destination_ + length_;
-				::std::memcpy(::dcool::core::rawPointerOf(destinationEnd_ - 1), ::dcool::core::rawPointerToLivingOf(end_ - 1), size_);
+				::std::copy_n(::dcool::core::rawPointerToLivingOf(end_ - 1), length_, ::dcool::core::rawPointerOf(destinationEnd_ - 1));
 				return destinationEnd_;
 			}
 		}

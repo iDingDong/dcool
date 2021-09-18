@@ -14,7 +14,6 @@ namespace dcool::core {
 		return reinterpret_cast<::dcool::core::PointerInteger>(universalPointer_);
 	}
 
-
 	template <typename ValueT_> constexpr auto fromPointerInteger(
 		::dcool::core::PointerInteger integer_
 	) noexcept -> ValueT_* {
