@@ -55,7 +55,7 @@ namespace dcool::test {
 
 	auto Case::ActiveRecord::snapshot() const -> Case::Record {
 		core::PhoneySharedLockGuard locker(this->m_mutex_);
-		return Case::Record {
+		return Case::Record{
 			.checkCount = this->m_checkCount_.load(::std::memory_order::consume),
 			.failures = this->m_failures_
 		};
