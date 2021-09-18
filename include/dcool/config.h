@@ -1,6 +1,7 @@
 #ifndef DCOOL_CONFIG_H_INCLUDED_
 #	define DCOOL_CONFIG_H_INCLUDED_ 1
 
+#	include <dcool/basic.h>
 #	include <dcool/version.h>
 
 #	define DCOOL_MACRO_DESCRIPTION(macroName_) #macroName_ " = " DCOOL_TO_STR_(macroName_)

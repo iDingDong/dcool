@@ -43,7 +43,7 @@ namespace dcool::concurrency {
 					extraData,
 					result
 				);
-				thread->holder_ = new DCOOL_CONCURRENCY_DETAIL_ThreadHolder_ {
+				thread->holder_ = new DCOOL_CONCURRENCY_DETAIL_ThreadHolder_{
 					.result = dcool::core::move(result),
 					.thread = dcool::core::move(createdThread)
 				};

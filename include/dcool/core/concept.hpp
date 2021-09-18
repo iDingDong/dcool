@@ -124,7 +124,9 @@ namespace dcool::core {
 		::dcool::core::Reference<T_> && ::dcool::core::SameAs<::dcool::core::ReferenceRemovedType<T_>, ReferedT_>
 	;
 
-	template <typename T_> concept ConstReference = ::dcool::core::Const<::dcool::core::ReferenceRemovedType<T_>> && Reference<T_>;
+	template <
+		typename T_
+	> concept ConstReference = ::dcool::core::Const<::dcool::core::ReferenceRemovedType<T_>> && Reference<T_>;
 
 	template <typename T_> concept Pointer = ::std::is_pointer_v<T_>;
 
