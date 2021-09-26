@@ -20,7 +20,7 @@ typedef enum {
 	DCOOL_CORE_Unsupported
 } DCOOL_CORE_Result;
 
-#	define DCOOL_CORE_FLAG_ENABLED(value, flag) (((value) & (flag)) != 0)
+#	define DCOOL_CORE_FLAG_ENABLED(value, flag) (((value)& (flag)) != 0)
 
 typedef struct {
 	::std::time_t seconds;

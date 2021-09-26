@@ -13,6 +13,6 @@ add_library(
 
 target_enable_pedantic(dcool_test PRIVATE)
 
-target_link_libraries(dcool_test PUBLIC dcool_header)
+target_link_libraries(dcool_test PUBLIC dcool_base)
 
-set_target_properties(dcool_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${DCOOL_OUTPUT_DIRECTORY}")
+set_target_properties(dcool_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${dcool_output_directory}")
