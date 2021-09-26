@@ -32,6 +32,7 @@
 #	include <dcool/core/select.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>
+#	include <dcool/core/time_conversion.hpp>
 #	include <dcool/core/tuple.hpp>
 #	include <dcool/core/type_difference_detector.hpp>
 #	include <dcool/core/type_engine_detector.hpp>

@@ -4,10 +4,8 @@
 #	include <dcool/config.h>
 #	include <dcool/config.h>
 
-#	ifdef __cplusplus
+#	if DCOOL_DEBUG_ENABLED
 #		include <cassert>
-#	else
-#		include <assert.h>
 #	endif
 
 #	if DCOOL_DEBUG_ENABLED

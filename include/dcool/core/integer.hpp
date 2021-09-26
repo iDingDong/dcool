@@ -241,23 +241,23 @@ namespace dcool::core {
 
 		template <
 			::dcool::core::Length widthC_, typename FirstT_, typename... CandidatesT_
-		> struct SingleUnitIntegerUnderlying_ {
-			using Result_ = ::dcool::core::detail_::SingleUnitIntegerUnderlying_<widthC_, CandidatesT_...>::Result_;
+		> struct SingleLimbIntegerUnderlying_ {
+			using Result_ = ::dcool::core::detail_::SingleLimbIntegerUnderlying_<widthC_, CandidatesT_...>::Result_;
 		};
 
 		template <
 			::dcool::core::Length widthC_,
 			::dcool::core::detail_::DigitsHoldable_<widthC_> FirstT_,
 			typename... CandidatesT_
-		> struct SingleUnitIntegerUnderlying_<widthC_, FirstT_, CandidatesT_...> {
+		> struct SingleLimbIntegerUnderlying_<widthC_, FirstT_, CandidatesT_...> {
 			using Result_ = FirstT_;
 		};
 
 		template <
 			::dcool::core::Boolean hasSignessC_, ::dcool::core::Length widthC_
-		> using SingleUnitIntegerUnderlyingType_ = ::dcool::core::ConditionalType<
+		> using SingleLimbIntegerUnderlyingType_ = ::dcool::core::ConditionalType<
 			hasSignessC_,
-			typename ::dcool::core::detail_::SingleUnitIntegerUnderlying_<
+			typename ::dcool::core::detail_::SingleLimbIntegerUnderlying_<
 				widthC_,
 				signed char,
 				signed short,
@@ -266,7 +266,7 @@ namespace dcool::core {
 				signed long long,
 				::dcool::core::SignedMaxInteger
 			>::Result_,
-			typename ::dcool::core::detail_::SingleUnitIntegerUnderlying_<
+			typename ::dcool::core::detail_::SingleLimbIntegerUnderlying_<
 				widthC_,
 				unsigned char,
 				unsigned short,
@@ -481,7 +481,7 @@ namespace dcool::core {
 	> constexpr ::dcool::core::Length generalWidthOfInteger<T_> = ::dcool::core::widthOfInteger<T_>;
 
 	template <::dcool::core::Length widthC_> constexpr ::dcool::core::Length recommendedExtendedIntegerFoldedWidth =
-		::dcool::core::generalWidthOfInteger<::dcool::core::detail_::SingleUnitIntegerUnderlyingType_<false, widthC_>> -
+		::dcool::core::generalWidthOfInteger<::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<false, widthC_>> -
 		widthC_
 	;
 
@@ -682,8 +682,11 @@ namespace dcool::core {
 		public: using SignedSuper = ::dcool::core::SignedInteger<width + (hasSigness ? 0 : 1), Config>;
 		public: using ShiftStepType = ::dcool::core::ExtendedShiftStepType<Self_>;
 		public: using Str = ::std::array<char, width>;
-		private: using Unit_ = ::dcool::core::UnsignedMaxInteger;
-		private: using UnitShiftStepType_ = Unit_;
+		private: using Limb_ = ::dcool::core::UnsignedMaxInteger;
+		private: using HalfLimb_ = ::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<
+			false, ::dcool::core::widthOfInteger<Limb_> / 2
+		>;
+		private: using LimbShiftStepType_ = Limb_;
 		private: using SignificantPart_ = Super_;
 		public: static constexpr ::dcool::core::Boolean negatable = ConfigAdaptor_::negatable;
 		public: template <
@@ -691,22 +694,28 @@ namespace dcool::core {
 		> static constexpr ::dcool::core::Boolean canRepresent = ::dcool::core::canRepresent<Self_, ToRepresentT__>;
 		private: static constexpr ::dcool::core::Boolean usingBuiltInUnderlying = false;
 		private: static constexpr ::dcool::core::Length significantWidth_ = Super_::width;
-		private: static constexpr ::dcool::core::Length unitWidth_ = ::dcool::core::generalWidthOfInteger<Unit_>;
-		private: static constexpr ::dcool::core::Length unitCount_ = (width - significantWidth_) / unitWidth_;
+		private: static constexpr ::dcool::core::Length limbWidth_ = ::dcool::core::generalWidthOfInteger<Limb_>;
+		private: static constexpr ::dcool::core::Length halfLimbWidth_ = ::dcool::core::generalWidthOfInteger<HalfLimb_>;
+		private: static constexpr Limb_ limbLowMask_ = ((~Limb_(0)) >> halfLimbWidth_);
+		private: static constexpr ::dcool::core::Length limbsWidth_ = width - significantWidth_;
+		private: static constexpr ::dcool::core::Length limbCount_ = limbsWidth_ / limbWidth_;
+		static_assert(limbCount_ > 0);
 
-		public: using Units = ::std::array<Unit_, unitCount_>;
+		static_assert(::dcool::core::widthOfInteger<Limb_> % 2 == 0, "Max integer of odd width is not yet supported.");
 
-		private: Units m_units_ = {};
+		private: using Limbs_ = ::std::array<Limb_, limbCount_>;
+
+		private: Limbs_ m_limbs_;
 
 		public: constexpr Integer() noexcept = default;
 		public: constexpr Integer(Integer const& other_) noexcept = default;
 
 		public: template <::dcool::core::Integral ValueT__> constexpr explicit(!canRepresent<ValueT__>) Integer(
 			ValueT__ const& initialValue_
-		) noexcept: m_units_ { Unit_(initialValue_) } {
+		) noexcept: Super_(0), m_limbs_ { Limb_(initialValue_) } {
 			// Check for absurd implementation like libstdc++'s zero digit `__int128` before 10.3 with `-std=gnu++*`,
 			// or libc++'s integral `__int128`.
-			static_assert(sizeof(ValueT__) <= sizeof(Unit_));
+			static_assert(sizeof(ValueT__) <= sizeof(Limb_));
 		}
 
 		public: template <
@@ -725,23 +734,23 @@ namespace dcool::core {
 			if constexpr (ValueT__::usingBuiltInUnderlying) {
 				return Self_(value_.underlying_());
 			}
-			Self_ result_;
-			::dcool::core::Length commonUnitCount_;
-			if constexpr (unitCount_ < ValueT__::unitCount_) {
-				commonUnitCount_ = unitCount_;
-				result_.mutableSignificantPart_() = SignificantPart_(value_.units_()[unitCount_]);
+			Self_ result_(0);
+			::dcool::core::Length commonLimbCount_;
+			if constexpr (limbCount_ < ValueT__::limbCount_) {
+				commonLimbCount_ = limbCount_;
+				result_.mutableSignificantPart_() = SignificantPart_(value_.limbs_()[limbCount_]);
 			} else {
-				commonUnitCount_ = ValueT__::unitCount_;
-				if constexpr (unitCount_ > ValueT__::unitCount_) {
+				commonLimbCount_ = ValueT__::limbCount_;
+				if constexpr (limbCount_ > ValueT__::limbCount_) {
 					if (value_.significantPart_() < 0) {
 						result_.mutableSignificantPart_() = ~SignificantPart_(0);
-						::dcool::core::batchFill(~Unit_(0), result_.m_units_.begin() + commonUnitCount_, result_.m_units_.end());
+						::dcool::core::batchFill(~Limb_(0), result_.m_limbs_.begin() + commonLimbCount_, result_.m_limbs_.end());
 					}
 				} else {
 					result_.mutableSignificantPart_() = SignificantPart_(value_.significantPart_());
 				}
 			}
-			::dcool::core::batchCopyN(value_.units_().begin(), commonUnitCount_, result_.m_units_.begin());
+			::dcool::core::batchCopyN(value_.limbs_().begin(), commonLimbCount_, result_.m_limbs_.begin());
 			return result_;
 		}
 
@@ -753,8 +762,113 @@ namespace dcool::core {
 			return *this;
 		}
 
-		private: constexpr auto units_() const noexcept -> Units const& {
-			return this->m_units_;
+		private: constexpr auto limbs_() const noexcept -> Limbs_ const& {
+			return this->m_limbs_;
+		}
+
+		public: constexpr auto hasSingleBit() const noexcept -> ::dcool::core::Boolean requires (!hasSigness) {
+			auto current_ = this->limbs_().begin();
+			if (this->significantPart_() == 0) {
+				for (; ; ++current_) {
+					if (current_ == this->limbs_().end()) {
+						return false;
+					}
+					if (*current_ != 0) {
+						if (::std::has_single_bit(*current_)) {
+							break;
+						}
+						return false;
+					}
+					++current_;
+				}
+			} else if (!(this->significantPart_().hasSingleBit())) {
+				return false;
+			}
+			while (++current_ != this->limbs_().end()) {
+				if (*current_ != 0) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		public: constexpr auto leftZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			if (this->significantPart_() != 0) {
+				return this->significantPart_().leftZeroCount();
+			}
+			for (auto current_ = this->limbs_().rbegin(); current_ != this->limbs_().rend(); ++current_) {
+				if (*current_ != 0) {
+					return significantWidth_ + limbWidth_ * (current_ - this->limbs_().rbegin()) + ::std::countl_zero(*current_);
+				}
+			}
+			return width;
+		}
+
+		public: constexpr auto leftOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			if (this->significantPart_() != ~SignificantPart_(0)) {
+				return this->significantPart_().leftOneCount();
+			}
+			for (auto current_ = this->limbs_().rbegin(); current_ != this->limbs_().rend(); ++current_) {
+				if (*current_ != ~Limb_(0)) {
+					return significantWidth_ + limbWidth_ * (current_ - this->limbs_().rbegin()) + ::std::countl_one(*current_);
+				}
+			}
+			return width;
+		}
+
+		public: constexpr auto rightZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			for (auto current_ = this->limbs_().begin(); current_ != this->limbs_().end(); ++current_) {
+				if (*current_ != 0) {
+					return limbWidth_ * (current_ - this->limbs_().begin()) + ::std::countr_zero(*current_);
+				}
+			}
+			return limbsWidth_ + this->significantPart_().rightZeroCount();
+		}
+
+		public: constexpr auto rightOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			for (auto current_ = this->limbs_().begin(); current_ != this->limbs_().end(); ++current_) {
+				if (*current_ != ~Limb_(0)) {
+					return limbWidth_ * (current_ - this->limbs_().begin()) + ::std::countr_one(*current_);
+				}
+			}
+			return limbsWidth_ + this->significantPart_().rightOneCount();
+		}
+
+		public: constexpr auto popCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			::dcool::core::Length result_ = this->significantPart_().popCount();
+			for (auto const& limb_: this->limbs_()) {
+				result_ += ::std::popcount(limb_);
+			}
+			return result_;
+		}
+
+		public: constexpr auto valueWidth() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			if (this->significantPart_() != 0) {
+				return this->significantPart_().valueWidth() + limbsWidth_;
+			}
+			for (auto current_ = this->limbs_().rbegin(); current_ != this->limbs_().rend(); ++current_) {
+				if (*current_ != 0) {
+					return limbWidth_ * (current_ - this->limbs_().begin()) + ::std::bit_width(*current_);
+				}
+			}
+			return 0;
+		}
+
+		public: constexpr auto bitCeil() const noexcept -> Self_ requires (!hasSigness) {
+			Self_ floor_ = this->bitFloor();
+			if (*this == floor_) [[unlikely]] {
+				return floor_;
+			}
+			DCOOL_CORE_ASSERT(this->valueWidth() < width);
+			return floor_ << 1;
+		}
+
+		public: constexpr auto bitFloor() const noexcept -> Self_ requires (!hasSigness) {
+			::dcool::core::Length valueWidth_ = this->valueWidth();
+			if (valueWidth_ == 0) {
+				return Self_(0);
+			}
+			return Self_(1) << ShiftStepType(valueWidth_ - 1);
 		}
 
 		public: static constexpr auto compare(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::StrongOrdering {
@@ -762,10 +876,10 @@ namespace dcool::core {
 			if (significantResult_ != 0) {
 				return significantResult_;
 			}
-			auto current_ = unitCount_;
+			auto current_ = limbCount_;
 			while (current_ > 0) {
 				--current_;
-				auto currentResult_ = (left_.units_()[current_] <=> right_.units_()[current_]);
+				auto currentResult_ = (left_.limbs_()[current_] <=> right_.limbs_()[current_]);
 				if (currentResult_ != 0) {
 					return significantResult_;
 				}
@@ -785,17 +899,17 @@ namespace dcool::core {
 
 		public: constexpr auto operator ~() const noexcept -> Self_ {
 			Self_ result_;
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				result_.m_units_[i_] = ~(this->units_()[i_]);
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				result_.m_limbs_[i_] = ~(this->limbs_()[i_]);
 			}
 			result_.mutableSignificantPart_() = ~(this->significantPart_());
 			return result_;
 		}
 
-		public: constexpr auto operator ++() noexcept -> Self_& {
-			for (Unit_& unit_: this->m_units_) {
-				++unit_;
-				if (unit_ != 0) [[likely]] {
+		public: constexpr auto operator ++()& noexcept -> Self_& {
+			for (Limb_& limb_: this->m_limbs_) {
+				++limb_;
+				if (limb_ != 0) [[likely]] {
 					return *this;
 				}
 			}
@@ -809,10 +923,10 @@ namespace dcool::core {
 			return result_;
 		}
 
-		public: constexpr auto operator --() noexcept -> Self_& {
-			for (Unit_& unit_: this->m_units_) {
-				--unit_;
-				if (unit_ != ::std::numeric_limits<Unit_>::max()) [[likely]] {
+		public: constexpr auto operator --()& noexcept -> Self_& {
+			for (Limb_& limb_: this->m_limbs_) {
+				--limb_;
+				if (limb_ != ::std::numeric_limits<Limb_>::max()) [[likely]] {
 					return *this;
 				}
 			}
@@ -826,10 +940,18 @@ namespace dcool::core {
 			return result_;
 		}
 
-		public: constexpr auto operator +=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr void rotateLeft(ShiftStepType step_)& noexcept {
+			*this = ((*this << step_) | (*this >> static_cast<ShiftStepType>(width - step_)));
+		}
+
+		public: constexpr void rotateRight(ShiftStepType step_)& noexcept {
+			*this = ((*this >> step_) | (*this << static_cast<ShiftStepType>(width - step_)));
+		}
+
+		public: constexpr auto operator +=(Self_ const& right_)& noexcept -> Self_& {
 			::dcool::core::Boolean carrying_ = false;
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				carrying_ = ::dcool::core::addAssignToCarry(this->m_units_[i_], right_.units_()[i_], carrying_);
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				carrying_ = ::dcool::core::addAssignToCarry(this->m_limbs_[i_], right_.limbs_()[i_], carrying_);
 			}
 			if (carrying_) {
 				if constexpr (hasSigness) {
@@ -844,10 +966,10 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator -=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator -=(Self_ const& right_)& noexcept -> Self_& {
 			::dcool::core::Boolean carrying_ = false;
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				carrying_ = ::dcool::core::subtractAssignToCarry(this->m_units_[i_], right_.units_()[i_], carrying_);
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				carrying_ = ::dcool::core::subtractAssignToCarry(this->m_limbs_[i_], right_.limbs_()[i_], carrying_);
 			}
 			if (carrying_) {
 				if constexpr (hasSigness) {
@@ -862,53 +984,54 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator &=(Self_ const& right_) noexcept -> Self_& {
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				this->m_units_[i_] &= right_.units_()[i_];
+		public: constexpr auto operator &=(Self_ const& right_)& noexcept -> Self_& {
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				this->m_limbs_[i_] &= right_.limbs_()[i_];
 			}
-			this->mutableSignificantPart_() &= right_.significantPart_();
+			this->mutableSignificantPart_()&= right_.significantPart_();
 			return *this;
 		}
 
-		public: constexpr auto operator |=(Self_ const& right_) noexcept -> Self_& {
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				this->m_units_[i_] |= right_.units_()[i_];
+		public: constexpr auto operator |=(Self_ const& right_)& noexcept -> Self_& {
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				this->m_limbs_[i_] |= right_.limbs_()[i_];
 			}
 			this->mutableSignificantPart_() |= right_.significantPart_();
 			return *this;
 		}
 
-		public: constexpr auto operator ^=(Self_ const& right_) noexcept -> Self_& {
-			for (::dcool::core::Length i_ = 0; i_ < unitCount_; ++i_) {
-				this->m_units_[i_] ^= right_.units_()[i_];
+		public: constexpr auto operator ^=(Self_ const& right_)& noexcept -> Self_& {
+			for (::dcool::core::Length i_ = 0; i_ < limbCount_; ++i_) {
+				this->m_limbs_[i_] ^= right_.limbs_()[i_];
 			}
 			this->mutableSignificantPart_() ^= right_.significantPart_();
 			return *this;
 		}
 
-		public: constexpr auto operator <<=(ShiftStepType const& right_) noexcept -> Self_& {
-			ShiftStepType unitStep_ = right_ / unitWidth_;
-			auto effectiveBegin_ = this->m_units_.begin() + static_cast<::dcool::core::Difference>(unitStep_);
-			if (unitStep_ > 0) {
+		public: constexpr auto operator <<=(ShiftStepType const& right_)& noexcept -> Self_& {
+			DCOOL_CORE_ASSERT(right_ < width);
+			ShiftStepType limbStep_ = right_ / limbWidth_;
+			auto effectiveBegin_ = this->m_limbs_.begin() + static_cast<::dcool::core::Difference>(limbStep_);
+			if (limbStep_ > 0) {
 				this->mutableSignificantPart_() = SignificantPart_(0);
 				this->mutableSignificantPart_() |= SignificantPart_(
-					*(this->m_units_.end() - static_cast<::dcool::core::Difference>(unitStep_))
+					*(this->m_limbs_.end() - static_cast<::dcool::core::Difference>(limbStep_))
 				);
 				::dcool::core::batchCopyForward(
-					this->m_units_.begin(), this->m_units_.end() - static_cast<::dcool::core::Difference>(unitStep_), effectiveBegin_
+					this->m_limbs_.begin(), this->m_limbs_.end() - static_cast<::dcool::core::Difference>(limbStep_), effectiveBegin_
 				);
-				::dcool::core::batchFill(Unit_(0), this->m_units_.begin(), effectiveBegin_);
+				::dcool::core::batchFill(Limb_(0), this->m_limbs_.begin(), effectiveBegin_);
 			}
-			auto subStep_ = UnitShiftStepType_(right_ % unitWidth_);
+			auto subStep_ = LimbShiftStepType_(right_ % limbWidth_);
 			if (subStep_ == 0) {
 				return *this;
 			}
-			auto carriedToRetreat_ = unitWidth_ - subStep_;
-			Unit_ maskToReserve_ = ~(Unit_(0)) >> subStep_;
-			Unit_ maskToCarry_ = ~maskToReserve_;
-			Unit_ carried_ = Unit_(0);
-			for (auto current_ = effectiveBegin_; current_ != this->m_units_.end(); ++current_) {
-				Unit_ toCarry_ = (*current_ & maskToCarry_);
+			auto carriedToRetreat_ = limbWidth_ - subStep_;
+			Limb_ maskToReserve_ = ~(Limb_(0)) >> subStep_;
+			Limb_ maskToCarry_ = ~maskToReserve_;
+			Limb_ carried_ = Limb_(0);
+			for (auto current_ = effectiveBegin_; current_ != this->m_limbs_.end(); ++current_) {
+				Limb_ toCarry_ = (*current_ & maskToCarry_);
 				*current_ <<= subStep_;
 				*current_ |= carried_;
 				carried_ = (toCarry_ >> carriedToRetreat_);
@@ -922,37 +1045,38 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator >>=(ShiftStepType const& right_) noexcept -> Self_& {
+		public: constexpr auto operator >>=(ShiftStepType const& right_)& noexcept -> Self_& {
+			DCOOL_CORE_ASSERT(right_ < width);
 			::dcool::core::Boolean negative_ = this->significantPart_() < 0;
-			ShiftStepType unitStep_ = right_ / unitWidth_;
-			auto subStep_ = UnitShiftStepType_(right_ % unitWidth_);
-			auto carriedToRetreat_ = unitWidth_ - subStep_;
-			Unit_ maskToReserve_ = ~(Unit_(0)) << subStep_;
-			Unit_ maskToCarry_ = ~maskToReserve_;
-			Unit_ carried_ = (negative_ ? ((~Unit_(0) & maskToCarry_) << carriedToRetreat_) : Unit_(0));
-			auto effectiveReverseBegin_ = this->m_units_.rbegin() + static_cast<::dcool::core::Difference>(unitStep_);
-			if (unitStep_ > 0) {
+			ShiftStepType limbStep_ = right_ / limbWidth_;
+			auto subStep_ = LimbShiftStepType_(right_ % limbWidth_);
+			auto carriedToRetreat_ = limbWidth_ - subStep_;
+			Limb_ maskToReserve_ = ~(Limb_(0)) << subStep_;
+			Limb_ maskToCarry_ = ~maskToReserve_;
+			Limb_ carried_ = (negative_ ? ((~Limb_(0)& maskToCarry_) << carriedToRetreat_) : Limb_(0));
+			auto effectiveReverseBegin_ = this->m_limbs_.rbegin() + static_cast<::dcool::core::Difference>(limbStep_);
+			if (limbStep_ > 0) {
 				::dcool::core::batchCopyForward(
-					this->m_units_.rbegin(),
-					this->m_units_.rend() - static_cast<::dcool::core::Difference>(unitStep_),
+					this->m_limbs_.rbegin(),
+					this->m_limbs_.rend() - static_cast<::dcool::core::Difference>(limbStep_),
 					effectiveReverseBegin_
 				);
 				--effectiveReverseBegin_;
-				*effectiveReverseBegin_ = static_cast<Unit_>(this->significantPart_().underlying_());
+				*effectiveReverseBegin_ = static_cast<Limb_>(this->significantPart_().underlying_());
 				if (negative_) {
 					this->mutableSignificantPart_() = ~SignificantPart_(0);
-					::dcool::core::batchFill(~Unit_(0), this->m_units_.rbegin(), effectiveReverseBegin_);
+					::dcool::core::batchFill(~Limb_(0), this->m_limbs_.rbegin(), effectiveReverseBegin_);
 				} else {
 					this->mutableSignificantPart_() = SignificantPart_(0);
-					::dcool::core::batchFill(Unit_(0), this->m_units_.rbegin(), effectiveReverseBegin_);
+					::dcool::core::batchFill(Limb_(0), this->m_limbs_.rbegin(), effectiveReverseBegin_);
 				}
 			} else if (right_ < significantWidth_) {
-				carried_ = ((static_cast<Unit_>(this->significantPart_()) & maskToCarry_) << carriedToRetreat_);
+				carried_ = ((static_cast<Limb_>(this->significantPart_())& maskToCarry_) << carriedToRetreat_);
 				this->mutableSignificantPart_() >>= typename SignificantPart_::ShiftStepType(subStep_);
 			}
-			for (auto current_ = effectiveReverseBegin_; current_ != this->m_units_.rend(); ++current_) {
-				Unit_ toCarry_ = (*current_ & maskToCarry_);
-				*current_ >>= UnitShiftStepType_(subStep_);
+			for (auto current_ = effectiveReverseBegin_; current_ != this->m_limbs_.rend(); ++current_) {
+				Limb_ toCarry_ = (*current_ & maskToCarry_);
+				*current_ >>= LimbShiftStepType_(subStep_);
 				*current_ |= carried_;
 				carried_ = (toCarry_ << carriedToRetreat_);
 			}
@@ -965,15 +1089,15 @@ namespace dcool::core {
 		) const noexcept {
 			// Check for absurd implementation like libstdc++'s zero digit `__int128` before 10.3 with `-std=gnu++*`,
 			// or libc++'s integral `__int128`.
-			static_assert(sizeof(ToT_) <= sizeof(Unit_), "Integral type that does not fit into `*intmax_t` is not supported.");
-			return ToT_(this->units_()[0]);
+			static_assert(sizeof(ToT_) <= sizeof(Limb_), "Integral type that does not fit into `*intmax_t` is not supported.");
+			return ToT_(this->limbs_()[0]);
 		}
 
 		public: template <typename IteratorT_> constexpr auto writeToBinaryStr(
 			IteratorT_ destination_
 		) const noexcept -> IteratorT_ {
 			destination_ = this->significantPart_().writeToBinaryStr(destination_);
-			for (auto current_ = this->units_().crbegin(); current_ != this->units_().crend(); ++current_) {
+			for (auto current_ = this->limbs_().crbegin(); current_ != this->limbs_().crend(); ++current_) {
 				destination_ = ::dcool::core::writeToBinaryStr(*current_, destination_);
 			}
 			return destination_;
@@ -1028,15 +1152,51 @@ namespace dcool::core {
 		) noexcept: Self_() {
 		}
 
+		public: constexpr auto hasSingleBit() const noexcept -> ::dcool::core::Boolean requires (!hasSigness) {
+			return false;
+		}
+
+		public: constexpr auto leftZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto leftOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto rightZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto rightOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto popCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto valueWidth() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return 0;
+		}
+
+		public: constexpr auto bitCeil() const noexcept -> Self_ requires (!hasSigness) {
+			return Self_(0);
+		}
+
+		public: constexpr auto bitFloor() const noexcept -> Self_ requires (!hasSigness) {
+			return Self_(0);
+		}
+
 		public: static constexpr auto compare(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::StrongOrdering {
 			return ::dcool::core::StrongOrdering::equal;
 		}
 
-		public: constexpr auto operator =(Self_ const& other_) noexcept -> Self_& = default;
+		public: constexpr auto operator =(Self_ const& other_)& noexcept -> Self_& = default;
 
 		public: template <typename ValueT__> requires (canRepresent<ValueT__>) constexpr auto operator =(
 			ValueT__ newValue_
-		) noexcept -> Self_& {
+		)& noexcept -> Self_& {
 			return *this;
 		}
 
@@ -1052,7 +1212,7 @@ namespace dcool::core {
 			return Self_();
 		}
 
-		public: constexpr auto operator ++() noexcept -> Self_& {
+		public: constexpr auto operator ++()& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
 			}
@@ -1066,7 +1226,7 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator --() noexcept -> Self_& {
+		public: constexpr auto operator --()& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
 			}
@@ -1080,23 +1240,23 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator +=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator +=(Self_ const& right_)& noexcept -> Self_& {
 			return *this;
 		}
 
-		public: constexpr auto operator -=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator -=(Self_ const& right_)& noexcept -> Self_& {
 			return *this;
 		}
 
-		public: constexpr auto operator *=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator *=(Self_ const& right_)& noexcept -> Self_& {
 			return *this;
 		}
 
-		public: constexpr auto operator /=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator /=(Self_ const& right_)& noexcept -> Self_& {
 			return *this;
 		}
 
-		public: constexpr auto operator %=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator %=(Self_ const& right_)& noexcept -> Self_& {
 			return *this;
 		}
 
@@ -1115,8 +1275,8 @@ namespace dcool::core {
 			public: using Underlying_ = UnderlyingT_;
 			public: static constexpr ::dcool::core::Length foldedWidth = foldedWidthC_;
 
-			public: Underlying_ m_underlying_: widthC_ { 0 };
-			public: Underlying_ folded: foldedWidth { 0 };
+			public: Underlying_ m_underlying_: widthC_;
+			public: Underlying_ folded: foldedWidth;
 		};
 
 		template <::dcool::core::Integral UnderlyingT_, ::dcool::core::Length widthC_> struct IntegerBase_<
@@ -1125,7 +1285,7 @@ namespace dcool::core {
 			public: using Underlying_ = UnderlyingT_;
 			public: static constexpr ::dcool::core::Length foldedWidth = 0;
 
-			public: Underlying_ m_underlying_: widthC_ { 0 };
+			public: Underlying_ m_underlying_: widthC_;
 			public: [[no_unique_address]] ::dcool::core::Empty<> folded;
 		};
 	}
@@ -1137,13 +1297,15 @@ namespace dcool::core {
 	> requires (
 		widthC_ > 0 && widthC_ <= ::dcool::core::builtInIntegerUnderlyingLimit
 	) struct Integer<hasSignessC_, widthC_, ConfigT_>: private ::dcool::core::detail_::IntegerBase_<
-		::dcool::core::detail_::SingleUnitIntegerUnderlyingType_<hasSignessC_, widthC_>,
+		::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<
+			hasSignessC_, widthC_ + ::dcool::core::IntegerConfigAtaptor<ConfigT_, hasSignessC_, widthC_>::foldedWidth
+		>,
 		widthC_,
 		::dcool::core::IntegerConfigAtaptor<ConfigT_, hasSignessC_, widthC_>::foldedWidth
 	> {
 		private: using Self_ = Integer<hasSignessC_, widthC_, ConfigT_>;
 		private: using Super_ = ::dcool::core::detail_::IntegerBase_<
-			::dcool::core::detail_::SingleUnitIntegerUnderlyingType_<hasSignessC_, widthC_>,
+			::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<hasSignessC_, widthC_>,
 			widthC_,
 			::dcool::core::IntegerConfigAtaptor<ConfigT_, hasSignessC_, widthC_>::foldedWidth
 		>;
@@ -1199,11 +1361,11 @@ namespace dcool::core {
 
 		// A bug prevent us from using 'Self_' or 'UnsignedInteger<widthC_, ConfigT_>' for the copy assignment operator.
 		// See document/dependency_bugs#Bug_3 for more details.
-		public: constexpr auto operator =(Integer const& other_) noexcept -> Self_& = default;
+		public: constexpr auto operator =(Integer const& other_)& noexcept -> Self_& = default;
 
 		public: template <typename ValueT__> requires (canRepresent<ValueT__>) constexpr auto operator =(
 			ValueT__ newValue_
-		) noexcept -> Self_& {
+		)& noexcept -> Self_& {
 			if constexpr (::dcool::core::ExtendedInteger<ValueT__>) {
 				this->m_underlying_ = newValue_->underlying_();
 			} else {
@@ -1231,6 +1393,43 @@ namespace dcool::core {
 			return this->m_underlying_;
 		}
 
+		public: constexpr auto hasSingleBit() const noexcept -> ::dcool::core::Boolean requires (!hasSigness) {
+			return ::std::has_single_bit(this->underlying_());
+		}
+
+		public: constexpr auto leftZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return width - this->valueWidth();
+		}
+
+		public: constexpr auto leftOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return (~*this).leftZeroCount();
+		}
+
+		public: constexpr auto rightZeroCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return static_cast<::dcool::core::Length>(::std::countr_zero(this->underlying_()));
+		}
+
+		public: constexpr auto rightOneCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return static_cast<::dcool::core::Length>(::std::countr_one(this->underlying_()));
+		}
+
+		public: constexpr auto popCount() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return static_cast<::dcool::core::Length>(::std::popcount(this->underlying_()));
+		}
+
+		public: constexpr auto valueWidth() const noexcept -> ::dcool::core::Length requires (!hasSigness) {
+			return static_cast<::dcool::core::Length>(::std::bit_width(this->underlying_()));
+		}
+
+		public: constexpr auto bitCeil() const noexcept -> Self_ requires (!hasSigness) {
+			DCOOL_CORE_ASSERT(*this <= (Self_(1) << ShiftStepType(width - 1)));
+			return Self_(::std::bit_ceil(this->underlying_()));
+		}
+
+		public: constexpr auto bitFloor() const noexcept -> Self_ requires (!hasSigness) {
+			return Self_(::std::bit_floor(this->underlying_()));
+		}
+
 		public: static constexpr auto compare(Self_ const& left_, Self_ const& right_) noexcept -> ::dcool::core::StrongOrdering {
 			return left_.underlying_() <=> right_.underlying_();
 		}
@@ -1252,7 +1451,7 @@ namespace dcool::core {
 			return Self_(~(this->underlying_()));
 		}
 
-		public: constexpr auto operator ++() noexcept -> Self_& {
+		public: constexpr auto operator ++()& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (this->underlying_() < underlyingMax_) {
 					::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
@@ -1268,7 +1467,7 @@ namespace dcool::core {
 			return result_;
 		}
 
-		public: constexpr auto operator --() noexcept -> Self_& {
+		public: constexpr auto operator --()& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (this->underlying_() > underlyingMin_) {
 					::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
@@ -1284,7 +1483,15 @@ namespace dcool::core {
 			return result_;
 		}
 
-		public: constexpr auto operator +=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr void rotateLeft(ShiftStepType step_)& noexcept {
+			*this = ((*this << step_) | (*this >> static_cast<ShiftStepType>(width - step_)));
+		}
+
+		public: constexpr void rotateRight(ShiftStepType step_)& noexcept {
+			*this = ((*this >> step_) | (*this << static_cast<ShiftStepType>(width - step_)));
+		}
+
+		public: constexpr auto operator +=(Self_ const& right_)& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (!::dcool::core::bitFieldAdditionResultWithinRange<Underlying_, width>(this->underlying_(), right_.underlying_())) {
 					::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
@@ -1294,7 +1501,7 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator -=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator -=(Self_ const& right_)& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (
 					!::dcool::core::bitFieldSubtractionResultWithinRange<Underlying_, width>(this->underlying_(), right_.underlying_())
@@ -1306,7 +1513,7 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator *=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator *=(Self_ const& right_)& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (
 					!::dcool::core::bitFieldMultiplicationResultWithinRange<Underlying_, width>(this->underlying_(), right_.underlying_())
@@ -1318,7 +1525,7 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator /=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator /=(Self_ const& right_)& noexcept -> Self_& {
 			if constexpr (outOfRangeDisallowed_) {
 				if (!::dcool::core::bitFieldDivisionResultWithinRange<Underlying_, width>(this->underlying_(), right_.underlying_())) {
 					::dcool::core::detail_::handleExtendedIntegerOutOfRange_<outOfRangeStrategy>();
@@ -1328,34 +1535,36 @@ namespace dcool::core {
 			return *this;
 		}
 
-		public: constexpr auto operator %=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator %=(Self_ const& right_)& noexcept -> Self_& {
 			this->m_underlying_ %= right_.underlying_();
 			return *this;
 		}
 
-		public: constexpr auto operator &=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator &=(Self_ const& right_)& noexcept -> Self_& {
 			this->m_underlying_ &= right_.underlying_();
 			return *this;
 		}
 
-		public: constexpr auto operator |=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator |=(Self_ const& right_)& noexcept -> Self_& {
 			this->m_underlying_ |= right_.underlying_();
 			return *this;
 		}
 
-		public: constexpr auto operator ^=(Self_ const& right_) noexcept -> Self_& {
+		public: constexpr auto operator ^=(Self_ const& right_)& noexcept -> Self_& {
 			this->m_underlying_ ^= right_.underlying_();
 			return *this;
 		}
 
-		public: constexpr auto operator <<=(ShiftStepType const& right_) noexcept -> Self_& {
+		public: constexpr auto operator <<=(ShiftStepType const& right_)& noexcept -> Self_& {
+			DCOOL_CORE_ASSERT(right_ < width);
 			if constexpr (width > 1) {
 				this->m_underlying_ <<= right_.underlying_();
 			}
 			return *this;
 		}
 
-		public: constexpr auto operator >>=(ShiftStepType const& right_) noexcept -> Self_& {
+		public: constexpr auto operator >>=(ShiftStepType const& right_)& noexcept -> Self_& {
+			DCOOL_CORE_ASSERT(right_ < width);
 			if constexpr (width > 1) {
 				this->m_underlying_ >>= right_.underlying_();
 			}
@@ -1459,117 +1668,6 @@ DCOOL_CORE_DEFINE_EXTENDED_INTEGER_ARITHMETIC_OPERATOR_(^)
 DCOOL_CORE_DEFINE_EXTENDED_INTEGER_SHIFT_OPERATOR_(<<)
 DCOOL_CORE_DEFINE_EXTENDED_INTEGER_SHIFT_OPERATOR_(>>)
 
-#	define DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(width_) \
-		static_assert( \
-			width_ <= ::dcool::core::widthOfInteger<unsigned long long>, \
-			"Unable to provide `dcool::core::UnsignedInteger<" DCOOL_TO_STR_(width_) ">` literal." \
-		); \
-		namespace dcool::core::extendedIntegerLiteral { \
-			consteval auto operator "" DCOOL_GLUE_(_UI, width_)( \
-				unsigned long long value_ \
-			) noexcept -> ::dcool::core::UnsignedInteger<width_> { \
-				if (::std::bit_width(value_) > width_) { \
-					::dcool::core::terminate(); \
-				} \
-				return ::dcool::core::UnsignedInteger<width_>(value_); \
-			} \
-		}
-
-#	define DCOOL_CORE_DEFINE_SIGNED_EXTENDED_INTEGER_LITERAL(width_) \
-		static_assert( \
-			width_ <= ::dcool::core::widthOfInteger<unsigned long long>, \
-			"Unable to provide `dcool::core::SignedInteger<" DCOOL_TO_STR_(width_) ">` literal." \
-		); \
-		namespace dcool::core::extendedIntegerLiteral { \
-			consteval auto operator "" DCOOL_GLUE_(_SI, width_)( \
-				unsigned long long value_ \
-			) noexcept -> ::dcool::core::SignedInteger<width_> { \
-				if (::std::bit_width(value_) > width_) { \
-					::dcool::core::terminate(); \
-				} \
-				return ::dcool::core::SignedInteger<width_>(value_); \
-			} \
-		}
-
-#	define DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(width_) \
-		DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(width_) \
-		DCOOL_CORE_DEFINE_SIGNED_EXTENDED_INTEGER_LITERAL(width_)
-
-DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(0)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(1)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(2)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(3)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(4)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(5)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(6)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(7)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(8)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(9)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(10)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(11)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(12)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(13)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(14)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(15)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(16)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(17)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(18)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(19)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(20)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(21)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(22)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(23)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(24)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(25)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(26)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(27)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(28)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(29)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(30)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(31)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(32)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(33)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(34)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(35)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(36)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(37)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(38)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(39)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(40)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(41)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(42)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(43)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(44)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(45)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(46)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(47)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(48)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(49)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(50)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(51)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(52)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(53)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(54)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(55)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(56)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(57)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(58)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(59)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(60)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(61)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(62)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(63)
-DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(64)
-
-#	define DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH 64
-
-#	define DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL(width_) \
-	static_assert( \
-		width_ > DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH, \
-		"Extended " DCOOL_TO_STR_(width_) "-bit integer literal is already provided by `dcool`." \
-	); \
-	DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(width_);
-
 namespace dcool::core {
 	namespace detail_ {
 		template <unsigned baseC_ = 0> constexpr auto toDigit_(char digit_) noexcept -> unsigned {
@@ -1646,7 +1744,7 @@ namespace dcool::core {
 			::std::array<decltype(baseC_), digitCountC_> const& from_
 		) noexcept -> ::dcool::core::UnsignedInteger<::std::bit_width(baseC_ - 1) * digitCountC_> {
 			using ResultType_ = ::dcool::core::UnsignedInteger<::std::bit_width(baseC_ - 1) * digitCountC_>;
-			ResultType_ result_ = {};
+			auto result_ = ResultType_(0);
 			auto digitWidth_ = static_cast<typename ResultType_::ShiftStepType>(::std::bit_width(baseC_ - 1));
 			for (::dcool::core::Length i_ = 0; i_ < digitCountC_; ++i_) {
 				result_ <<= digitWidth_;
@@ -1697,5 +1795,116 @@ namespace dcool::core {
 		}
 	}
 }
+
+#	define DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(namespaceName_, width_) \
+		static_assert( \
+			width_ <= ::dcool::core::widthOfInteger<unsigned long long>, \
+			"Unable to provide `dcool::core::UnsignedInteger<" DCOOL_TO_STR_(width_) ">` literal." \
+		); \
+		namespace namespaceName_ { \
+			consteval auto operator "" DCOOL_GLUE_(_UI, width_)( \
+				unsigned long long value_ \
+			) noexcept -> ::dcool::core::UnsignedInteger<width_> { \
+				if (::std::bit_width(value_) > width_) { \
+					::dcool::core::terminate(); \
+				} \
+				return ::dcool::core::UnsignedInteger<width_>(value_); \
+			} \
+		}
+
+#	define DCOOL_CORE_DEFINE_SIGNED_EXTENDED_INTEGER_LITERAL(namespaceName_, width_) \
+		static_assert( \
+			width_ <= ::dcool::core::widthOfInteger<unsigned long long>, \
+			"Unable to provide `dcool::core::SignedInteger<" DCOOL_TO_STR_(width_) ">` literal." \
+		); \
+		namespace namespaceName_ { \
+			consteval auto operator "" DCOOL_GLUE_(_SI, width_)( \
+				unsigned long long value_ \
+			) noexcept -> ::dcool::core::SignedInteger<width_> { \
+				if (::std::bit_width(value_) > width_) { \
+					::dcool::core::terminate(); \
+				} \
+				return ::dcool::core::SignedInteger<width_>(value_); \
+			} \
+		}
+
+#	define DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(namespaceName_, width_) \
+		DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(namespaceName_, width_) \
+		DCOOL_CORE_DEFINE_SIGNED_EXTENDED_INTEGER_LITERAL(namespaceName_, width_)
+
+DCOOL_CORE_DEFINE_UNSIGNED_EXTENDED_INTEGER_LITERAL(dcool::core::extendedIntegerLiteral, 0)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 1)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 2)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 3)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 4)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 5)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 6)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 7)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 8)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 9)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 10)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 11)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 12)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 13)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 14)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 15)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 16)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 17)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 18)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 19)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 20)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 21)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 22)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 23)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 24)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 25)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 26)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 27)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 28)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 29)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 30)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 31)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 32)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 33)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 34)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 35)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 36)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 37)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 38)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 39)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 40)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 41)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 42)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 43)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 44)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 45)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 46)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 47)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 48)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 49)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 50)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 51)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 52)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 53)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 54)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 55)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 56)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 57)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 58)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 59)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 60)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 61)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 62)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 63)
+DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(dcool::core::extendedIntegerLiteral, 64)
+
+#	define DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH 64
+
+#	define DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL(namespaceName_, width_) \
+	static_assert( \
+		width_ > DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH, \
+		"Extended " DCOOL_TO_STR_(width_) "-bit integer literal is already provided by `dcool`." \
+	); \
+	DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL_(namespaceName_, width_);
 
 #endif

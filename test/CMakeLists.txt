@@ -1,10 +1,9 @@
 set(
 	test_dcool_sources
-	"./test.cpp"
-	"./core/integer.cpp"
-	"./core/layout.cpp"
 	"./concurrency/latch.cpp"
 	"./concurrency/semaphore.cpp"
+	"./core/integer.cpp"
+	"./core/layout.cpp"
 	"./coroutine/async_mutex.cpp"
 	"./coroutine/generator.cpp"
 	"./coroutine/task.cpp"
@@ -19,6 +18,7 @@ set(
 	"./utility/function.cpp"
 	"./utility/overloaded_function.cpp"
 	"./vigor/sealer.cpp"
+	"./test.cpp"
 )
 
 add_executable(
@@ -26,7 +26,10 @@ add_executable(
 	${test_dcool_sources}
 )
 
+target_link_libraries(test_dcool PRIVATE dcool_core)
 target_link_libraries(test_dcool PRIVATE dcool_coroutine)
 target_link_libraries(test_dcool PRIVATE dcool_test)
 
-set_target_properties(test_dcool PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${DCOOL_OUTPUT_DIRECTORY}")
+set_target_properties(test_dcool PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${dcool_output_directory}")
+
+add_test(NAME test_dcool_all COMMAND test_dcool)

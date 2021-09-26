@@ -2,6 +2,33 @@
 #include <dcool/test.hpp>
 
 DCOOL_TEST_CASE(dcoolCore, integerBasics) {
+	static_assert(::dcool::core::Trivial<dcool::core::UnsignedInteger<0>>);
+	static_assert(::dcool::core::Trivial<dcool::core::UnsignedInteger<1>>);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::UnsignedInteger<dcool::core::widthOfInteger<dcool::core::UnsignedMaxInteger>>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::UnsignedInteger<dcool::core::widthOfInteger<dcool::core::UnsignedMaxInteger> + 1>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::UnsignedInteger<dcool::core::widthOfInteger<dcool::core::UnsignedMaxInteger> * 2>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::UnsignedInteger<dcool::core::widthOfInteger<dcool::core::UnsignedMaxInteger> * 2 + 1>>
+	);
+	static_assert(::dcool::core::Trivial<dcool::core::SignedInteger<1>>);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::SignedInteger<dcool::core::widthOfInteger<dcool::core::SignedMaxInteger>>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::SignedInteger<dcool::core::widthOfInteger<dcool::core::SignedMaxInteger> + 1>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::SignedInteger<dcool::core::widthOfInteger<dcool::core::SignedMaxInteger> * 2>>
+	);
+	static_assert(
+		::dcool::core::Trivial<dcool::core::SignedInteger<dcool::core::widthOfInteger<dcool::core::SignedMaxInteger> * 2 + 1>>
+	);
 	using namespace dcool::core::extendedIntegerLiteral;
 	auto ui1 = 0_UI1;
 	DCOOL_TEST_EXPECT(ui1 == 0);
