@@ -42,7 +42,7 @@ namespace dcool::core {
 			return this->m_underlying_;
 		}
 
-		public: constexpr auto value() && noexcept -> Value {
+		public: constexpr auto value()&& noexcept -> Value {
 			if constexpr (storingReference_) {
 				return static_cast<Value>(*(this->m_underlying_));
 			}

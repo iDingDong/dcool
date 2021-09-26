@@ -2,7 +2,6 @@
 
 #include <dcool/core.hpp>
 #include <dcool/resource.hpp>
-#include <dcool/utility.hpp>
 
 #include <chrono>
 #include <thread>
@@ -82,7 +81,7 @@ namespace dcool::concurrency {
 		static auto sleepCurrentCThreadUntil(DCOOL_CORE_TimePoint const* deadline) noexcept -> DCOOL_CORE_Result {
 			DCOOL_CORE_ASSERT(deadline != dcool::core::nullPointer);
 			try {
-				std::this_thread::sleep_until(utility::toClockTimePoint(*deadline));
+				std::this_thread::sleep_until(core::toClockTimePoint(*deadline));
 			} catch (...) {
 				return DCOOL_CORE_Error;
 			}
@@ -91,7 +90,7 @@ namespace dcool::concurrency {
 
 		static auto sleepCurrentCThreadFor(DCOOL_CORE_Duration const* duration) noexcept -> DCOOL_CORE_Result {
 			try {
-				std::this_thread::sleep_for(utility::toDuration(*duration));
+				std::this_thread::sleep_for(core::toDuration(*duration));
 			} catch (...) {
 				return DCOOL_CORE_Error;
 			}

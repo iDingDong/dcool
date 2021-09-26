@@ -63,5 +63,5 @@ int main() {
 		std::cout << "All " << suiteCount << " suites passed";
 	}
 	std::cout << " in " << executionDurationString(result.finishTime - result.startTime) << std::endl;
-	return 0;
+	return static_cast<int>(result.suiteStatistics.failureCount);
 }

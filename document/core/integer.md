@@ -27,7 +27,7 @@ Its member shall customize the list as decribed:
 | Member | Default | Behavior |
 | - | - | - |
 | `static constexpr dcool::core::Boolean negatable` | `true` | The extended integer supports `operator -` if it takes value `true`; otherwise not. |
-| `static constexpr dcool::core::Length foldedWidth` | 0 | The extended integer will have a `foldedWidth`-bit non-static bit-field member `folded` which is signed if `hasSigness`; Otherwise the member `folded` would be an object of unspecified type. |
+| `static constexpr dcool::core::Length foldedWidth` | 0 | The extended integer will have a `foldedWidth`-bit non-static bit-field member `folded` which is signed if `hasSigness`; Otherwise the member `folded` would be an object of unspecified type. `foldedWidth` should be greater than width of neither `std::uintmax_t` nor `std::intmax_t`. |
 | `static constexpr dcool::core::SusbicionStrategy outOfRangeStrategy` | `hasSigness ?dcool::core::SusbicionStrategy::undefined : dcool::core::SusbicionStrategy::ignore` | Determine the behavior when out of range value is produced by certain arithmetic operation which would be an undefined overflow on fundamental signed integers. Value `dcool::core::SusbicionStrategy::ignore` shall not be taken if `hasSigness`. |
 
 ## Member types
@@ -97,7 +97,7 @@ For example, literal `123_SI7` has type `dcool::core::SignedInteger<7>`.
 
 Designated width literals can only be used with *m* no greater than the width of `unsigned long long`.
 
-This library only defines *m* from 0 (1 for signed) to `DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH` (which is defined to be no less than 64, the least width of `unsigned long long` required by ISO/IEC 14882:2020). If your implementation provides `unsigned long long` of greater width than `DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH`, you may define the corresponding literal by writing `DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL(m)` in the global namespace before use.
+This library only defines *m* from 0 (1 for signed) to `DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH` (which is defined to be no less than 64, the least width of `unsigned long long` required by ISO/IEC 14882:2020). If your implementation provides `unsigned long long` of greater width than `DCOOL_CORE_PROVIDED_EXTENDED_INTEGER_LITERAL_MAX_WIDTH`, you may define the corresponding literal by writing `DCOOL_CORE_DEFINE_EXTENDED_INTEGER_LITERAL(namespaceName, m)` (where `namespace` name is the possibly nested user-defined namespace where the lieral is to be defined) in the global namespace before use.
 
 ### Deduced width literal
 

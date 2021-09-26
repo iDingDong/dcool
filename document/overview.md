@@ -41,6 +41,10 @@ Unless otherwise specified, source-code compatibility is preserved within the sa
 
 ## Notes
 
+### Consider any headers unstable
+
+Headers might be removed or suffers breaking changes once we have better modules support from compilers and build tools.
+
 ### Consider any undocumented behavior related to this library unstable
 
 In addition, unless otherwise specified, consider inheriting any class type (documented to be class or not) defined by this library undefined behavior.

@@ -102,7 +102,7 @@ namespace dcool::concurrency {
 			DCOOL_CONCURRENCY_Mutex* mutex, DCOOL_CORE_TimePoint const* time
 		) noexcept -> DCOOL_CORE_Result {
 			try {
-				if (!(mutex->holder_->mutex.tryLockUntil(utility::toClockTimePoint(*time)))) {
+				if (!(mutex->holder_->mutex.tryLockUntil(core::toClockTimePoint(*time)))) {
 					return DCOOL_CORE_Busy;
 				}
 			} catch (...) {
