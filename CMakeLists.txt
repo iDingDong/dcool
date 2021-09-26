@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(dcool VERSION 0.12.0 LANGUAGES "CXX")
+project(dcool VERSION 0.12.1 LANGUAGES "CXX")
 
 enable_testing()
 
