@@ -692,8 +692,8 @@ namespace dcool::resource {
 		using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<AgentConfig_, ValueT_>;
 		using Engine_ = ConfigAdaptor_::Engine;
 		auto agentPointer_ = ::dcool::resource::createPointerByPoolFor<::dcool::resource::SharedAgent<ValueT_, AgentConfig_>>(
-			agentPool_, value_, Engine_{
-				.dismissor = Dismissor_{
+			agentPool_, value_, Engine_ {
+				.dismissor = Dismissor_ {
 					.valueDismissor = valueDismissor_,
 					.agentDismissor = ::dcool::resource::PoolDestroyer<AgentPoolT_>{ .pool = agentPool_ }
 				}

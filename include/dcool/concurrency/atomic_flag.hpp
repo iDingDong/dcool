@@ -19,12 +19,18 @@ namespace dcool::concurrency {
 			}
 		}
 
-		public: auto testAndSet() noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_.test_and_set();
+#	if DCOOL_CPP_ATOMIC_FLAG_TEST_VERSION >= DCOOL_CPP_ATOMIC_FLAG_TEST_VERSION_FOR_P1135R6
+		public: auto test(::std::memory_order order_ = ::std::memory_order::seq_cst) const noexcept -> ::dcool::core::Boolean {
+			return this->m_underlying_.test(order_);
+		}
+#	endif
+
+		public: auto testAndSet(::std::memory_order order_ = ::std::memory_order::seq_cst) noexcept -> ::dcool::core::Boolean {
+			return this->m_underlying_.test_and_set(order_);
 		}
 
-		public: void clear() noexcept {
-			this->m_underlying_.clear();
+		public: void clear(::std::memory_order order_ = ::std::memory_order::seq_cst) noexcept {
+			this->m_underlying_.clear(order_);
 		}
 	};
 
@@ -41,12 +47,12 @@ namespace dcool::concurrency {
 			}
 		}
 
-		public: void set() noexcept {
-			this->m_underlying_.clear();
+		public: void set(::std::memory_order order_ = ::std::memory_order::seq_cst) noexcept {
+			this->m_underlying_.clear(order_);
 		}
 
-		public: auto testAndClear() noexcept -> ::dcool::core::Boolean {
-			return !(this->m_underlying_.testAndSet());
+		public: auto testAndClear(::std::memory_order order_ = ::std::memory_order::seq_cst) noexcept -> ::dcool::core::Boolean {
+			return !(this->m_underlying_.testAndSet(order_));
 		}
 	};
 }

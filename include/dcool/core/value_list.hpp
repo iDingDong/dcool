@@ -98,6 +98,17 @@ namespace dcool::core {
 		> using RemoveAllFromValueListType_ = ::dcool::core::detail_::RemoveAllFromValueListHelper_<
 			::dcool::core::Values<>, ListT_, toRemoveC_
 		>::Result_;
+
+		template <auto expectedC_, auto... valueCs_> constexpr ::dcool::core::Boolean expectedRepeated_ = false;
+		template <
+			auto expectedC_, auto firstC_, auto... restCs_
+		> constexpr ::dcool::core::Boolean expectedRepeated_<expectedC_, firstC_, restCs_...> =
+			::dcool::core::detail_::expectedRepeated_<expectedC_, restCs_...>
+		;
+
+		template <auto expectedC_, auto... valueCs_> constexpr ::dcool::core::Boolean expectedRepeated_<
+			expectedC_, expectedC_, valueCs_...
+		> = false;
 	}
 
 	template <
@@ -110,6 +121,10 @@ namespace dcool::core {
 		public: template <auto... cs__> using PushFront = ::dcool::core::Values<cs_..., cs__...>;
 		public: template <auto... cs__> using PushBack = ::dcool::core::Values<cs__..., cs_...>;
 		public: template <auto c__> using RemoveAll = ::dcool::core::detail_::RemoveAllFromValueListType_<Self_, c__>;
+
+		public: template <auto c__> static constexpr ::dcool::core::Boolean staticallyContains =
+			::dcool::core::detail_::expectedRepeated_<c__, cs_...>
+		;
 	};
 }
 

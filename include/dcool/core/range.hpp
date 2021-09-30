@@ -322,7 +322,7 @@ namespace dcool::core {
 
 		public: constexpr PlacementOutputIterator() noexcept = default;
 
-		public: constexpr explicit PlacementOutputIterator(Iterator iterator_) noexcept: m_iterator_{ .iterator = iterator_ } {
+		public: constexpr explicit PlacementOutputIterator(Iterator iterator_) noexcept: m_iterator_ { .iterator = iterator_ } {
 		}
 
 		public: constexpr auto operator ++() noexcept -> Self_& {

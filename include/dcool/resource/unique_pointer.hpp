@@ -26,7 +26,7 @@ namespace dcool::resource {
 
 		public: template <::dcool::core::FormOfSame<Dismissor> DismissorT__> constexpr UniquePointer(
 			ValueT_* pointer_, DismissorT__&& dismissor_
-		) noexcept: m_underlying_(pointer_, UnderlyingDeleter_{ .dismissor = ::dcool::core::forward<DismissorT__>(dismissor_) }) {
+		) noexcept: m_underlying_(pointer_, UnderlyingDeleter_ { .dismissor = ::dcool::core::forward<DismissorT__>(dismissor_) }) {
 		}
 
 		public: constexpr auto operator =(Self_ const&) noexcept -> Self_& = delete;

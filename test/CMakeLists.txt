@@ -1,6 +1,7 @@
 set(
 	test_dcool_sources
 	"./concurrency/latch.cpp"
+	"./concurrency/mutex.cpp"
 	"./concurrency/semaphore.cpp"
 	"./core/integer.cpp"
 	"./core/layout.cpp"
