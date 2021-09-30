@@ -14,12 +14,12 @@ namespace dcool::test {
 	Case::Case(Case::Executor executor) noexcept: m_executor_(executor) {
 	}
 
-	auto Case::execute() const -> Case::Result {
+	auto Case::execute(Name suiteName, Name caseName) const -> Case::Result {
 		Result result = {};
 		result.startTime = Clock::now();
 		try {
 			Case::ActiveRecord activeRecord;
-			this->m_executor_(activeRecord);
+			this->m_executor_(activeRecord, suiteName, caseName);
 			result.record = activeRecord.snapshot();
 			result.endedByFatal = false;
 		} catch (FatalCaseFailure const&) {
@@ -55,14 +55,14 @@ namespace dcool::test {
 
 	auto Case::ActiveRecord::snapshot() const -> Case::Record {
 		core::PhoneySharedLockGuard locker(this->m_mutex_);
-		return Case::Record{
+		return Case::Record {
 			.checkCount = this->m_checkCount_.load(::std::memory_order::consume),
 			.failures = this->m_failures_
 		};
 	}
 
 	void Case::ActiveRecord::recordSuccess() {
-		static_cast<void>(this->m_checkCount_.fetch_add(1, ::std::memory_order::acq_rel));
+		static_cast<void>(this->m_checkCount_.fetch_add(1, ::std::memory_order::release));
 	}
 
 	void Case::ActiveRecord::recordFailure(Case::Failure failure) {

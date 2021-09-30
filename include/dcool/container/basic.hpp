@@ -117,7 +117,7 @@ namespace dcool::container {
 
 		public: constexpr BackPushIterator(
 			Container& container_
-		) noexcept: m_holder_{ .container = ::dcool::core::addressOf(container_) } {
+		) noexcept: m_holder_ { .container = ::dcool::core::addressOf(container_) } {
 		}
 
 		public: constexpr auto operator *() const noexcept -> AssignmentHijacker_& {

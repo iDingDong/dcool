@@ -59,7 +59,7 @@ namespace dcool::test {
 		> auto executeAll(SuitePolicyT_&& suitePolicy_, CasePolicyT_&& casePolicy_) const -> Result {
 			Result result_ = {};
 			for (auto const& suite_: this->m_suites_) {
-				result_.details.insert(::std::make_pair(suite_.first, Suite::Result{}));
+				result_.details.insert(::std::make_pair(suite_.first, Suite::Result {}));
 			}
 			result_.startTime = Clock::now();
 			this->setUpBeforeFullExecution_();
@@ -69,7 +69,7 @@ namespace dcool::test {
 				this->m_suites_.end(),
 				[this, &result_, &casePolicy_](auto& suite_) {
 					this->setUpBeforeSuite_(suite_.first);
-					::dcool::test::Suite::Result suiteResult_ = suite_.second.executeAll(casePolicy_);
+					::dcool::test::Suite::Result suiteResult_ = suite_.second.executeAll(casePolicy_, suite_.first);
 					this->tearDownAfterSuite_(suite_.first);
 					::dcool::core::dereference(result_.details.find(suite_.first)).second = suiteResult_;
 				}

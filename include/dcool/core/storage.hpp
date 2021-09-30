@@ -56,7 +56,7 @@ namespace dcool::core {
 	}
 
 	constexpr auto makeStorageRequirement(::dcool::core::Size size_, ::dcool::core::Alignment alignment_) noexcept {
-		return ::dcool::core::StorageRequirement{
+		return ::dcool::core::StorageRequirement {
 			.size = size_,
 			.alignment = alignment_
 		};

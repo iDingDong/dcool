@@ -43,19 +43,21 @@ namespace dcool::test {
 		public: auto getPointer(::dcool::test::Name caseName) const -> ::dcool::test::Case const*;
 		public: auto getPointer(::dcool::test::Name caseName) -> ::dcool::test::Case*;
 
-		public: template <::dcool::core::FormOfExecutionPolicy PolicyT_> auto executeAll(PolicyT_&& policy_) const -> Result {
+		public: template <::dcool::core::FormOfExecutionPolicy PolicyT_> auto executeAll(
+			PolicyT_&& policy_, ::dcool::test::Name suiteName_
+		) const -> Result {
 			Result result_ = {};
 			for (auto const& case_: this->m_cases_) {
-				result_.details.insert(::std::make_pair(case_.first, Case::Result{}));
+				result_.details.insert(::std::make_pair(case_.first, Case::Result {}));
 			}
 			result_.startTime = Clock::now();
 			::dcool::algorithm::forEach(
 				::dcool::core::forward<PolicyT_>(policy_),
 				this->m_cases_.begin(),
 				this->m_cases_.end(),
-				[this, &result_](auto& case_) {
+				[this, &suiteName_, &result_](auto& case_) {
 					this->setUpBeforeCase_(case_.first);
-					::dcool::test::Case::Result caseResult_ = case_.second.execute();
+					::dcool::test::Case::Result caseResult_ = case_.second.execute(suiteName_, case_.first);
 					this->tearDownAfterCase_(case_.first);
 					::dcool::core::dereference(result_.details.find(case_.first)).second = caseResult_;
 				}
@@ -73,8 +75,8 @@ namespace dcool::test {
 			return result_;
 		}
 
-		public: auto executeAll() const -> Result;
-		public: auto executeOne(::dcool::test::Name caseName_) const -> ::dcool::test::Case::Result;
+		public: auto executeAll(::dcool::test::Name suiteName_) const -> Result;
+		public: auto executeOne(::dcool::test::Name suiteName_, ::dcool::test::Name caseName_) const -> ::dcool::test::Case::Result;
 	};
 }
 

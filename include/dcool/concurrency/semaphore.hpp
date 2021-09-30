@@ -37,7 +37,7 @@ namespace dcool::concurrency {
 		::dcool::concurrency::SemaphoreConfig ConfigT_
 	> using SemaphoreConfigAdaptor = ::dcool::concurrency::detail_::SemaphoreConfigAdaptor_<ConfigT_>;
 
-	template <::dcool::concurrency::SemaphoreConfig ConfigT_> struct Semaphore {
+	template <::dcool::concurrency::SemaphoreConfig ConfigT_ = ::dcool::core::Empty<>> struct Semaphore {
 		private: using Self_ = Semaphore<ConfigT_>;
 		public: using Config = ConfigT_;
 
@@ -130,7 +130,7 @@ namespace dcool::concurrency {
 			[[maybe_unused]] auto token_ = this->onOperationBegin_();
 			if constexpr (atomicOnly_) {
 				for (; ; ) {
-					Count current_ = this->m_underlying_.load();
+					Count current_ = this->m_underlying_.load(::std::memory_order::relaxed);
 					if (current_ < n_) {
 						break;
 					}
@@ -173,7 +173,7 @@ namespace dcool::concurrency {
 			[[maybe_unused]] auto token_ = this->onOperationBegin_();
 			if constexpr (atomicOnly_) {
 				for (; ; ) {
-					Count current_ = this->m_underlying_.load();
+					Count current_ = this->m_underlying_.load(::std::memory_order::relaxed);
 					if (current_ < n_) {
 						this->m_underlying_.wait(current_);
 					} else if (this->m_underlying_.compare_exchange_weak(current_, current_ - n_)) {

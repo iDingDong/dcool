@@ -10,7 +10,11 @@
 #define DCOOL_TEST_CASE(suiteName_, caseName_) \
 		static void DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)(::dcool::test::Case::ActiveRecord& dcoolTestRecord_); \
+		)( \
+			::dcool::test::Case::ActiveRecord& dcoolTestRecord_, \
+			::dcool::test::Name dcoolTestSuiteName_, \
+			::dcool::test::Name dcoolTestCaseName_ \
+		); \
 		static int DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutorTestCaseHelper, suiteName_, caseName_ \
 		) = ::dcool::test::detail_::registerCase_( \
@@ -18,9 +22,11 @@
 		); \
 		static void DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)(::dcool::test::Case::ActiveRecord& dcoolTestRecord_)
-
-#define DCOOL_TEST_CAPTURE_CONTEXT &dcoolTestRecord_
+		)( \
+			::dcool::test::Case::ActiveRecord& dcoolTestRecord_, \
+			::dcool::test::Name dcoolTestSuiteName_, \
+			::dcool::test::Name dcoolTestCaseName_ \
+		)
 
 #define DCOOL_TEST_BEFORE_FULL_EXECUTION \
 		static void dcoolImplementationTestBeforeFullExecution_(); \
