@@ -15,7 +15,7 @@ Its member shall customize the list as decribed:
 | Member | Default | Behavior |
 | - | - | - |
 | `static constexpr dcool::core::Boolean spinnable` | `false` | The mutex will not block on any actions if it takes value `true`; otherwise not. |
-| `static constexpr dcool::core::Boolean timed` | `false` | Certain mutex actions requires this to take value `true`. |
+| `static constexpr dcool::core::Boolean timed` | `false` | Certain mutex actions requires this to take value `true`. This option is not stable. |
 | `static constexpr dcool::core::UnsignedMaxInteger maxShare` | `0` | Indicates the maximum shared owners allowed at the same time. |
 | `static constexpr dcool::core::Boolean downgradeable` | `false` | Certain mutex actions requires this to take value `true`. |
 | `static constexpr dcool::core::Boolean upgradeable` | `false` | Certain mutex actions requires this to take value `true`. |
@@ -126,6 +126,8 @@ Release shared ownership.
 
 Behavior is undefined if shared ownership is not possessed by the current thread.
 
+Behavior is undefined if any type of active order is already placed the current thread.
+
 ### `tryUpgrade`
 
 ```cpp
@@ -138,6 +140,8 @@ This function will return as soon as possible once other ownership (possibly pen
 
 Behavior is undefined if shared ownership is not possessed by the current thread.
 
+Behavior is undefined if any type of active order is already placed the current thread.
+
 ### `upgrade`
 
 ```cpp
@@ -147,6 +151,8 @@ void upgrade() noexcept(spinnable) requires (upgradeable);
 Convert shared ownership to exclusive ownership. Wait indefinitely until success.
 
 Behavior is undefined if shared ownership is not possessed by the current thread.
+
+Behavior is undefined if any type of active order is already placed the current thread.
 
 Behavior is undefined if another thread is waiting indefinitely to upgrade.
 
@@ -232,6 +238,8 @@ This function will return as soon as possible once other exclusive ownership (po
 
 Behavior is undefined if no shared ownership is possessed by current thread.
 
+Behavior is undefined if any type of active order is already placed the current thread.
+
 ### `tryCompleteUpgradeOrder`
 
 ```cpp
@@ -253,6 +261,8 @@ void orderUpgrade() noexcept(spinnable) requires (upgradeable && preferExclusive
 Place an upgrade order that prevents all subsequent ownership request when active. Wait indefinately until success.
 
 Behavior is undefined if no shared ownership is possessed by current thread.
+
+Behavior is undefined if any type of active order is already placed the current thread.
 
 ### `completeUpgradeOrder`
 
@@ -337,6 +347,34 @@ template <typename DurationT> auto try_lock_shared_for(
 ```
 
 Equivalent to `this->tryLockSharedUntil(std::chrono::steady_clock::now() + duration)`.
+
+### `tryUpgradeUntil`
+
+```cpp
+template <typename TimePointT> auto tryUpgradeUntil(
+	TimePointT const deadline
+) noexcept -> dcool::core::Boolean requires (timed && shareable);
+```
+
+`TimePointT` should be instanitiated from template `std::chrono::time_point`.
+
+Attempt to convert shared ownership to exclusive ownership. Returns true if success, otherwise returns false.
+
+This function will return as soon as possible once `deadline` is reached.
+
+Behavior is undefined if shared ownership is not possessed by the current thread.
+
+Behavior is undefined if any type of active order is already placed the current thread.
+
+### `tryUpgradeFor`
+
+```cpp
+template <typename DurationT> auto tryUpgradeFor(
+	DurationT const duration
+) noexcept -> dcool::core::Boolean requires (timed && shareable);
+```
+
+Equivalent to `this->tryUpgradeUntil(std::chrono::steady_clock::now() + duration)`.
 
 ## Note
 
