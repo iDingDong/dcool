@@ -132,80 +132,81 @@ namespace dcool::concurrency {
 		private: Underlying_ m_underlying_;
 
 		public: auto tryLock()& noexcept -> ::dcool::core::Boolean {
-			::dcool::core::Boolean result_;
 			if constexpr (spinnable) {
 				if constexpr (shareable) {
 					ShareCount_ expected_ = 0;
-					result_ = this->m_underlying_.compare_exchange_strong(
-						expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-					);
+					if (
+						!(
+							this->m_underlying_.compare_exchange_strong(
+								expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
+							)
+						)
+					) {
+						return false;
+					}
 				} else {
-					result_ = !(this->m_underlying_.testAndSet(::std::memory_order::acquire));
+					if (this->m_underlying_.testAndSet(::std::memory_order::acquire)) {
+						return false;
+					}
 				}
 			} else {
 				if constexpr (flexibleShareRequired_) {
 					::std::unique_lock locker_(this->m_underlying_.mutex_, ::std::try_to_lock);
 					if ((!(locker_.owns_lock())) || this->m_underlying_.shareCount_ != 0) {
-						result_ = false;
-					} else {
-						this->m_underlying_.shareCount_ = exclusive_;
-						result_ = true;
+						return false;
 					}
+					this->m_underlying_.shareCount_ = exclusive_;
 				} else {
-					result_ = this->m_underlying_.try_lock();
+					if (!(this->m_underlying_.try_lock())) {
+						return false;
+					}
 				}
 			}
-			return result_;
+			return true;
 		}
 
 		public: template <typename ::dcool::core::Boolean strongAttemptC_ = true> auto tryLockShared(
 		)& noexcept -> ::dcool::core::Boolean requires (shareable) {
-			::dcool::core::Boolean result_;
 			if constexpr (spinnable) {
 				ShareCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-				for (; ; ) {
+				do {
 					if (old_ >= exclusive_) {
-						result_ = false;
-						break;
+						return false;
 					}
-					if (
+				} while (
+					!(
 						this->m_underlying_.compare_exchange_weak(
 							old_, old_ + 1, ::std::memory_order::acquire, ::std::memory_order::relaxed
 						)
-					) {
-						result_ = true;
-						break;
-					}
-				}
+					)
+				);
 			} else {
 				if constexpr (flexibleShareRequired_) {
 					if constexpr (strongAttemptC_) {
 						::std::lock_guard guard_(this->m_underlying_.mutex_);
 						if (this->m_underlying_.shareCount_ >= exclusive_) {
-							result_ = false;
-						} else {
-							++(this->m_underlying_.shareCount_);
-							result_ = true;
+							return false;
 						}
+						++(this->m_underlying_.shareCount_);
 					} else {
 						// May fail spuriously.
 						::std::unique_lock locker_(this->m_underlying_.mutex_, ::std::try_to_lock);
 						if ((!(locker_.owns_lock())) || this->m_underlying_.shareCount_ >= exclusive_) {
-							result_ = false;
-						} else {
-							++(this->m_underlying_.shareCount_);
-							result_ = true;
+							return false;
 						}
+						++(this->m_underlying_.shareCount_);
 					}
 				} else {
-					result_ = this->m_underlying_.try_lock_shared();
+					if (!(this->m_underlying_.try_lock_shared())) {
+						return false;
+					}
 				}
 			}
-			return result_;
+			return true;
 		}
 
-		public: template <typename TimePointT_> auto tryLockUntil(
-			TimePointT_ const& deadline_
+		public: template <typename TimePointT__> auto tryLockUntil(
+			TimePointT__ const& deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (timed) {
 			if constexpr (spinnable) {
 				if constexpr (shareable) {
@@ -213,7 +214,7 @@ namespace dcool::concurrency {
 					ShareCount_ nextValue_;
 					do {
 						while (old_ >= exclusive_) {
-							if (TimePointT_::clock::now() > deadline_) {
+							if (TimePointT__::clock::now() > deadline_) {
 								return false;
 							}
 							::std::this_thread::yield();
@@ -228,7 +229,7 @@ namespace dcool::concurrency {
 						)
 					);
 					while (nextValue_ != exclusive_) {
-						if (TimePointT_::clock::now() > deadline_) {
+						if (TimePointT__::clock::now() > deadline_) {
 							ShareCount_ previousCount_ = this->m_underlying_.fetch_sub(exclusive_, ::std::memory_order::relaxed);
 							DCOOL_CORE_ASSERT(previousCount_ >= exclusive_);
 							return false;
@@ -239,13 +240,13 @@ namespace dcool::concurrency {
 					}
 				} else {
 					while (!(this->tryLock())) {
-						if (TimePointT_::clock::now() > deadline_) {
+						if (TimePointT__::clock::now() > deadline_) {
 							return false;
 						}
 						::std::this_thread::yield();
 #		if DCOOL_CPP_ATOMIC_FLAG_TEST_VERSION >= DCOOL_CPP_ATOMIC_FLAG_TEST_VERSION_FOR_P1135R6
 						while (this->m_locked_.test(::std::memory_order::relaxed)) {
-							if (TimePointT_::clock::now() > deadline_) {
+							if (TimePointT__::clock::now() > deadline_) {
 								return false;
 							}
 							::std::this_thread::yield();
@@ -316,13 +317,13 @@ namespace dcool::concurrency {
 			return true;
 		}
 
-		public: template <typename TimePointT_> auto tryLockSharedUntil(
-			TimePointT_ const& deadline_
+		public: template <typename TimePointT__> auto tryLockSharedUntil(
+			TimePointT__ const& deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (timed && shareable) {
 			if constexpr (spinnable) {
 				while (!(this->tryLockShared())) {
 					do {
-						if (TimePointT_::clock::now() > deadline_) {
+						if (TimePointT__::clock::now() > deadline_) {
 							return false;
 						}
 						::std::this_thread::yield();
@@ -529,24 +530,146 @@ namespace dcool::concurrency {
 		}
 
 		public: auto tryUpgrade()& noexcept(spinnable) -> ::dcool::core::Boolean requires (upgradeable) {
-			::dcool::core::Boolean result_;
 			if constexpr (spinnable) {
 				ShareCount_ expected_ = 1;
-				result_ = this->m_underlying_.compare_exchange_strong(
-					expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-				);
+				if (
+					!(
+						this->m_underlying_.compare_exchange_strong(
+							expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
+						)
+					)
+				) {
+					return false;
+				}
 				DCOOL_CORE_ASSERT(expected_ >= 1);
 			} else {
 				::std::unique_lock locker_(this->m_underlying_.mutex_, ::std::try_to_lock);
 				if ((!(locker_.owns_lock())) || this->m_underlying_.shareCount_ != 1) {
-					result_ = false;
 					DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= 1);
+					return false;
+				}
+				this->m_underlying_.shareCount_ = exclusive_;
+			}
+			return true;
+		}
+
+		public: template <typename TimePointT__> auto tryUpgradeUntil(
+			TimePointT__ const& deadline_
+		)& noexcept(spinnable) -> ::dcool::core::Boolean requires (timed && upgradeable) {
+			if constexpr (spinnable) {
+				if constexpr (preferExclusive.isDeterminateTrue()) {
+					ShareCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+					ShareCount_ newValue_;
+					do {
+						// Another thread is locking. This would be a deadlock.
+						DCOOL_CORE_ASSERT(old_ <= exclusive_);
+						while (old_ >= exclusive_) {
+							if (TimePointT__::clock::now() > deadline_) {
+								return false;
+							}
+							::std::this_thread::yield();
+							old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+						}
+						DCOOL_CORE_ASSERT(old_ >= 1);
+						newValue_ = old_ + (exclusive_ - 1);
+					} while (
+						!(this->m_underlying_.compare_exchange_weak(
+							old_, newValue_, ::std::memory_order::acquire, ::std::memory_order::relaxed
+							)
+						)
+					);
+					while (newValue_ != exclusive_) {
+						if (TimePointT__::clock::now() > deadline_) {
+							ShareCount_ previousCount_ = this->m_underlying_.fetch_sub(::std::memory_order::relaxed);
+							DCOOL_CORE_ASSERT(previousCount_ >= exclusive_);
+							return false;
+						}
+						DCOOL_CORE_ASSERT(newValue_ > exclusive_);
+						::std::this_thread::yield();
+						newValue_ = this->m_underlying_.load(::std::memory_order::acquire);
+					}
 				} else {
+					for (; ; ) {
+						ShareCount_ expected_ = 1;
+						if (
+							this->m_underlying_.compare_exchange_weak(
+								expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
+							)
+						) {
+							DCOOL_CORE_ASSERT(expected_ >= 1);
+							break;
+						}
+						if (TimePointT__::clock::now() > deadline_) {
+							return false;
+						}
+						::std::this_thread::yield();
+						while (this->m_underlying_.load(::std::memory_order::relaxed) > 1) {
+							if (TimePointT__::clock::now() > deadline_) {
+								return false;
+							}
+							::std::this_thread::yield();
+						}
+					}
+				}
+			} else {
+				::std::unique_lock locker_(this->m_underlying_.mutex_);
+				if constexpr (preferExclusive.isDeterminateTrue()) {
+					if (
+						!(
+							this->m_underlying_.blocker_.wait_until(
+								locker_,
+								deadline_,
+								[this]() {
+									DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= 1);
+									// Another thread is locking. This would be a deadlock.
+									DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ <= exclusive_);
+									return this->m_underlying_.shareCount_ < exclusive_;
+								}
+							)
+						)
+					) {
+						return false;
+					}
+					this->m_underlying_.shareCount_ += (exclusive_ - 1);
+					if (
+						!(
+							this->m_underlying_.blocker_.wait_until(
+								locker_,
+								deadline_,
+								[this]() {
+									DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= exclusive_);
+									return this->m_underlying_.shareCount_ == exclusive_;
+								}
+							)
+						)
+					) {
+						return false;
+					}
+				} else {
+					if (
+						!(
+							this->m_underlying_.blocker_.wait_until(
+								locker_,
+								deadline_,
+								[this]() {
+									DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= 1);
+									return this->m_underlying_.shareCount_ == 1;
+								}
+							)
+						)
+					) {
+						return false;
+					}
 					this->m_underlying_.shareCount_ = exclusive_;
-					result_ = true;
 				}
 			}
-			return result_;
+			return true;
+		}
+
+		public: template <typename DurationT_> auto tryUpgradeFor(
+			DurationT_ const& duration_
+		) noexcept -> ::dcool::core::Boolean requires (timed && upgradeable) {
+			return this->tryUpgradeUntil(::std::chrono::steady_clock::now() + duration_);
 		}
 
 		public: void upgrade()& noexcept(spinnable) requires (upgradeable) {
@@ -646,33 +769,27 @@ namespace dcool::concurrency {
 		}
 
 		public: auto tryOrderLock()& noexcept -> ::dcool::core::Boolean requires (preferExclusive.isDeterminateTrue()) {
-			::dcool::core::Boolean result_;
 			if constexpr (spinnable) {
 				ShareCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-				for (; ; ) {
+				do {
 					if (old_ >= exclusive_) {
-						result_ = false;
-						break;
+						return false;
 					}
-					if (
+				} while (
+					!(
 						this->m_underlying_.compare_exchange_weak(
 							old_, old_ + exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
 						)
-					) {
-						result_ = true;
-						break;
-					}
-				}
+					)
+				);
 			} else {
 				::std::lock_guard guard_(this->m_underlying_.mutex_);
 				if (this->m_underlying_.shareCount_ >= exclusive_) {
-					result_ = false;
-				} else {
-					this->m_underlying_.shareCount_ += exclusive_;
-					result_ = true;
+					return false;
 				}
+				this->m_underlying_.shareCount_ += exclusive_;
 			}
-			return result_;
+			return true;
 		};
 
 		public: auto tryCompleteLockOrder()& noexcept -> ::dcool::core::Boolean requires (preferExclusive.isDeterminateTrue()) {
@@ -727,35 +844,29 @@ namespace dcool::concurrency {
 
 		public: auto tryOrderUpgrade(
 		)& noexcept -> ::dcool::core::Boolean requires (upgradeable && preferExclusive.isDeterminateTrue()) {
-			::dcool::core::Boolean result_;
 			if constexpr (spinnable) {
 				ShareCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
 				for (; ; ) {
 					if (old_ >= exclusive_) {
-						result_ = false;
-						break;
+						return false;
 					}
 					DCOOL_CORE_ASSERT(old_ >= 1);
-					if (
+				} while (
+					!(
 						this->m_underlying_.compare_exchange_weak(
 							old_, old_ + (exclusive_ - 1), ::std::memory_order::acquire, ::std::memory_order::relaxed
 						)
-					) {
-						result_ = true;
-						break;
-					}
-				}
+					)
+				);
 			} else {
 				::std::lock_guard guard_(this->m_underlying_.mutex_);
 				if (this->m_underlying_.shareCount_ >= exclusive_) {
-					result_ = false;
-				} else {
-					DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= 1);
-					this->m_underlying_.shareCount_ += (exclusive_ - 1);
-					result_ = true;
+					return false;
 				}
+				DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= 1);
+				this->m_underlying_.shareCount_ += (exclusive_ - 1);
 			}
-			return result_;
+			return true;
 		};
 
 		public: auto tryCompleteUpgradeOrder(
@@ -813,17 +924,15 @@ namespace dcool::concurrency {
 
 		private: auto tryCompleteExclusiveOrder_(
 		)& noexcept -> ::dcool::core::Boolean requires (preferExclusive.isDeterminateTrue()) {
-			::dcool::core::Boolean result_;
+			ShareCount_ currentShareCount_;
 			if constexpr (spinnable) {
-				ShareCount_ current_ = this->m_underlying_.load(::std::memory_order::acquire);
-				DCOOL_CORE_ASSERT(current_ >= exclusive_);
-				result_ = (current_ == exclusive_);
+				currentShareCount_ = this->m_underlying_.load(::std::memory_order::acquire);
 			} else {
 				::std::lock_guard guard_(this->m_underlying_.mutex_);
-				DCOOL_CORE_ASSERT(this->m_underlying_.shareCount_ >= exclusive_);
-				result_ = (this->m_underlying_.shareCount_ == exclusive_);
+				currentShareCount_ = this->m_underlying_.shareCount_;
 			}
-			return result_;
+			DCOOL_CORE_ASSERT(currentShareCount_ >= exclusive_);
+			return currentShareCount_ == exclusive_;
 		}
 
 		private: void completeExclusiveOrder_()& noexcept requires (preferExclusive.isDeterminateTrue()) {
@@ -851,14 +960,14 @@ namespace dcool::concurrency {
 			return this->tryLockShared();
 		}
 
-		public: template <typename TimePointT_> auto try_lock_until(
-			TimePointT_ const deadline_
+		public: template <typename TimePointT__> auto try_lock_until(
+			TimePointT__ const deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (timed) {
 			return this->tryLockUntil(deadline_);
 		}
 
-		public: template <typename TimePointT_> auto try_lock_shared_until(
-			TimePointT_ const deadline_
+		public: template <typename TimePointT__> auto try_lock_shared_until(
+			TimePointT__ const deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (timed && shareable) {
 			return this->tryLockSharedUntil(deadline_);
 		}
