@@ -57,12 +57,14 @@ namespace dcool::test {
 			Record record;
 		};
 
-		public: using Executor = void(*)(ActiveRecord& dcoolTestRecord_);
+		public: using Executor = void(*)(
+			ActiveRecord& dcoolTestRecord_, ::dcool::test::Name suiteName_, ::dcool::test::Name caseName
+		);
 
 		private: Executor m_executor_;
 
 		public: explicit Case(Executor executor_) noexcept;
-		public: auto execute() const -> Result;
+		public: auto execute(::dcool::test::Name suiteName_, ::dcool::test::Name caseName_) const -> Result;
 	};
 
 	namespace detail_ {

@@ -417,7 +417,6 @@ namespace dcool::core {
 		typename T_, ::dcool::core::Length widthC_
 	> concept UnsignedIntegerConfig = ::dcool::core::IntegerConfig<T_, false, widthC_>;
 
-
 	template <
 		typename T_, ::dcool::core::Length widthC_
 	> concept SignedIntegerConfig = ::dcool::core::IntegerConfig<T_, true, widthC_>;

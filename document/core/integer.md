@@ -1,4 +1,4 @@
-# Integer
+# Class template `dcool::core::Integer`
 
 Include <dcool/core.hpp> to use.
 
@@ -8,7 +8,7 @@ template <
 > requires (widthC > 0 || (!hasSignessC)) struct dcool::core::Integer;
 ```
 
-A customized width integer-like extended integer type that can perform limited integral arithmetic operations with.
+A customizeable width integer-like extended integer type that can perform limited integral arithmetic operations with.
 
 ## Terms
 
@@ -40,8 +40,8 @@ Its member shall customize the list as decribed:
 
 | Name | Definition |
 | - | - |
-| `hasSigness` | Defined by `static constexpr dcool::core::Boolean hasSigness = hasSignessC`. |
-| `width` | Defined by `static constexpr dcool::core::Length width = widthC`. |
+| `hasSigness` | Defined by `static constexpr dcool::core::Boolean hasSigness = hasSignessC;`. |
+| `width` | Defined by `static constexpr dcool::core::Length width = widthC;`. |
 | `outOfRangeStrategy` | Determined by configuration. |
 
 ## Mimicked behaviors

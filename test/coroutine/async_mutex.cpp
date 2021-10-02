@@ -34,7 +34,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	dcool::container::List<int> results;
 	std::atomic_flag occupied;
 	// We cannot capture any variables because the coroutines can be resumed after the thread ends the lifetime of this callable.
-	auto coroutine = [DCOOL_TEST_CAPTURE_CONTEXT](auto asyncMutex, auto results, auto occupied, int i) -> Returned {
+	auto coroutine = [](DCOOL_TEST_CONTEXT_PARAMETER, auto asyncMutex, auto results, auto occupied, int i) -> Returned {
 		DCOOL_TEST_EXPECT(!(asyncMutex->tryLock()));
 		std::this_thread::sleep_for(10ms);
 		auto locker_ = co_await asyncMutex->guardedLockAsync();
@@ -49,6 +49,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	results.emplaceBack(1);
 	std::jthread task1(
 		coroutine,
+		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
 		dcool::core::addressOf(results),
 		dcool::core::addressOf(occupied),
@@ -56,6 +57,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	);
 	std::jthread task2(
 		coroutine,
+		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
 		dcool::core::addressOf(results),
 		dcool::core::addressOf(occupied),
@@ -63,6 +65,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	);
 	std::jthread task3(
 		coroutine,
+		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
 		dcool::core::addressOf(results),
 		dcool::core::addressOf(occupied),
@@ -76,6 +79,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	results.emplaceBack(3);
 	std::jthread finalTask(
 		coroutine,
+		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
 		dcool::core::addressOf(results),
 		dcool::core::addressOf(occupied),

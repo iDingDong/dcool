@@ -38,29 +38,29 @@ namespace dcool::concurrency {
 				}
 				if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexTimed)) {
 					if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexShareable)) {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::shared_timed_mutex>)
 						};
 					} else if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexRecursive)) {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::recursive_timed_mutex>)
 						};
 					} else {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::timed_mutex>)
 						};
 					}
 				} else {
 					if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexShareable)) {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::shared_mutex>)
 						};
 					} else if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexRecursive)) {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::recursive_mutex>)
 						};
 					} else {
-						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_{
+						mutex->holder_ = new DCOOL_CONCURRENCY_DETAIL_MutexHolder_ {
 							.mutex = CMutexUnderlying(core::typedInPlace<std::mutex>)
 						};
 					}

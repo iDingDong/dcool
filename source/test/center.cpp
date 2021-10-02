@@ -69,7 +69,7 @@ namespace dcool::test {
 			throw SuiteNotFound("Suite does not exist.");
 		}
 		this->setUpBeforeSuite_(suiteName);
-		Suite::Result result = current->executeAll();
+		Suite::Result result = current->executeAll(suiteName);
 		this->tearDownAfterSuite_(suiteName);
 		return result;
 	}

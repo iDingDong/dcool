@@ -237,7 +237,7 @@ namespace dcool::container {
 		public: constexpr IndexableChassisIterator(
 			RangeChassis& range_, Engine& engine_, Index index_
 		) noexcept:
-			Super_(index_), m_range_(::dcool::core::addressOf(range_)), m_engine_{ .value = ::dcool::core::addressOf(engine_) }
+			Super_(index_), m_range_(::dcool::core::addressOf(range_)), m_engine_ { .value = ::dcool::core::addressOf(engine_) }
 		{
 		}
 

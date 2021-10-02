@@ -34,7 +34,7 @@ namespace dcool::coroutine {
 
 				private: template <typename ValueT__> constexpr YieldAwaiter_(
 					ValueT__&& value_
-				): m_result_{ .value = ::dcool::core::forward<ValueT__>(value_) } {
+				): m_result_ { .value = ::dcool::core::forward<ValueT__>(value_) } {
 				}
 
 				public: constexpr auto await_ready() const noexcept {

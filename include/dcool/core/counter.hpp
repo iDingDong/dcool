@@ -157,7 +157,7 @@ namespace dcool::core {
 					return true;
 				}
 			} else {
-				Underlying previousValue_ = this->value();
+				Underlying previousValue_ = this->m_value_.load(::std::memory_order::relaxed);
 				while (::dcool::core::invoke(predicator_, previousValue_)) {
 					if (
 						this->m_value_.compare_exchange_weak(previousValue_, previousValue_ + difference_, readWriteOrder_, readOrder_)
@@ -193,7 +193,7 @@ namespace dcool::core {
 					return true;
 				}
 			} else {
-				Underlying previousValue_ = this->value();
+				Underlying previousValue_ = this->m_value_(::std::memory_order::relaxed);
 				while (::dcool::core::invoke(predicator_, previousValue_)) {
 					if (
 						this->m_value_.compare_exchange_weak(previousValue_, previousValue_ - difference_, readWriteOrder_, readOrder_)

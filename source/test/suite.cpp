@@ -40,17 +40,17 @@ namespace dcool::test {
 		return ::dcool::core::addressOf(current->second);
 	}
 
-	auto Suite::executeAll() const -> Suite::Result {
-		return this->executeAll(::dcool::core::serialExecution);
+	auto Suite::executeAll(Name suiteName) const -> Suite::Result {
+		return this->executeAll(::dcool::core::serialExecution, suiteName);
 	}
 
-	auto Suite::executeOne(Name caseName) const -> Case::Result {
+	auto Suite::executeOne(Name suiteName, Name caseName) const -> Case::Result {
 		Case const* current = this->getPointer(caseName);
 		if (current == ::dcool::core::nullPointer) {
 			throw CaseNotFound("Case does not exist.");
 		}
 		this->setUpBeforeCase_(caseName);
-		Case::Result result = current->execute();
+		Case::Result result = current->execute(suiteName, caseName);
 		this->tearDownAfterCase_(caseName);
 		return result;
 	}
