@@ -15,8 +15,11 @@
 
 #	include <condition_variable>
 #	include <mutex>
+#	include <thread>
 
 namespace dcool::concurrency {
+	const ::std::thread::id nullThreadId = ::std::thread::id();
+
 	template <typename PredicateT_> constexpr void permissiveWait(
 		::std::condition_variable& blocker_, ::std::unique_lock<::std::mutex>& locker_, PredicateT_&& predicate_
 	) {

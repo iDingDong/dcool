@@ -2,8 +2,6 @@
 #include <dcool/test.hpp>
 #include <dcool/vigor.hpp>
 
-#include <iostream>
-
 DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	struct Axception {
 	};
