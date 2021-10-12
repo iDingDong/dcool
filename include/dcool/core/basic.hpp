@@ -93,8 +93,6 @@ namespace dcool::core {
 	}
 
 	using ::std::launder;
-
-	template <typename T_> using UndeducedType = T_;
 }
 
 #endif

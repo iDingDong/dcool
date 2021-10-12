@@ -50,12 +50,82 @@ namespace dcool::core {
 	template <typename T_, typename FunctorT_> concept UnaryArgumentFor = ::dcool::core::Invocable<FunctorT_, T_>;
 
 	template <auto resultC_> class ResultFixedFunctor {
-		public: template <typename... ArgumentTs__> constexpr auto operator ()(ArgumentTs__&&...) {
+		public: template <typename... ArgumentTs__> constexpr auto operator ()(ArgumentTs__&&...) noexcept {
 			return resultC_;
 		}
 	};
 
 	template <auto resultC_> constexpr ::dcool::core::ResultFixedFunctor<resultC_> resultFixedFunctor;
+
+	template <typename OperandT_> struct AddTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ + operand)) -> ValueT__ {
+			return value_ + operand;
+		}
+	};
+
+	template <typename OperandT_> struct SubtractTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ - operand)) -> ValueT__ {
+			return value_ - operand;
+		}
+	};
+
+	template <typename OperandT_> struct MultiplyTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ * operand)) -> ValueT__ {
+			return value_ * operand;
+		}
+	};
+
+	template <typename OperandT_> struct DivideTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ / operand)) -> ValueT__ {
+			return value_ / operand;
+		}
+	};
+
+	template <typename OperandT_> struct BitwiseAndTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ & operand)) -> ValueT__ {
+			return value_ & operand;
+		}
+	};
+
+	template <typename OperandT_> struct BitwiseOrTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ | operand)) -> ValueT__ {
+			return value_ | operand;
+		}
+	};
+
+	template <typename OperandT_> struct BitwiseExclusiveOrTransformer {
+		OperandT_ operand;
+
+		template <typename ValueT__> constexpr auto operator ()(
+			ValueT__ const& value_
+		) const noexcept(noexcept(value_ ^ operand)) -> ValueT__ {
+			return value_ ^ operand;
+		}
+	};
 }
 
 #endif

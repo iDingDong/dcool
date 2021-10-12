@@ -1559,9 +1559,9 @@ namespace dcool::container {
 			);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
-		> constexpr auto emplace(Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_) -> Iterator {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__> constexpr auto emplace(
+			Engine& engine_, Iterator position_, ArgumentTs__&&... parameters_
+		) -> Iterator {
 			DCOOL_CORE_ASSERT(this->begin(engine_) <= position_ && position_ <= this->end(engine_));
 			if (this->full(engine_)) {
 				if constexpr (!squeezedOnly) {
@@ -1628,6 +1628,20 @@ namespace dcool::container {
 			return this->emplace<exceptionSafetyStrategy>(engine_, position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__> constexpr auto emplace(
+			Engine& engine_, Index index_, ArgumentTs__&&... parameters_
+		) -> Index {
+			Iterator resultPosition_ = this->emplace<strategyC__>(
+				engine_, this->position(engine_, index_), ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+			return resultPosition_ - this->begin(engine_);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			Engine& engine_, Index index_, ArgumentTs__&&... parameters_) -> Index {
+			return this->emplace<exceptionSafetyStrategy>(engine_, index_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
 		> constexpr void braveEmplaceFront(Engine& engine_, ArgumentTs__&&... parameters_) {
@@ -1672,27 +1686,51 @@ namespace dcool::container {
 			this->emplaceBack<exceptionSafetyStrategy>(engine_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void pushFront(Engine& engine_, Value const& value_) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Engine& engine_, Iterator position_, Value const& value_
+		) -> Iterator {
+			return this->emplace<strategyC__>(engine_, position_, value_);
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Engine& engine_, Iterator position_, Value&& value_
+		) -> Iterator {
+			return this->emplace<strategyC__>(engine_, position_, ::dcool::core::move(value_));
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Engine& engine_, Index index_, Value const& value_
+		) -> Index {
+			return this->emplace<strategyC__>(engine_, index_, value_);
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Engine& engine_, Index index_, Value&& value_
+		) -> Index {
+			return this->emplace<strategyC__>(engine_, index_, ::dcool::core::move(value_));
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void pushFront(
+			Engine& engine_, Value const& value_
+		) {
 			this->emplaceFront(engine_, value_);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void pushFront(Engine& engine_, Value&& value_) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void pushFront(
+			Engine& engine_, Value&& value_
+		) {
 			this->emplaceFront(engine_, ::dcool::core::move(value_));
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void pushBack(Engine& engine_, Value const& value_) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void pushBack(
+			Engine& engine_, Value const& value_
+		) {
 			this->emplaceBack(engine_, value_);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void pushBack(Engine& engine_, Value&& value_) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void pushBack(
+			Engine& engine_, Value&& value_
+		) {
 			this->emplaceBack(engine_, ::dcool::core::move(value_));
 		}
 
@@ -1726,9 +1764,9 @@ namespace dcool::container {
 			this->m_storage_.setBeginOffset(engine_, newBeginOffset_);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void popFront(Engine& engine_) noexcept(!stuffed) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void popFront(
+			Engine& engine_
+		) noexcept(!stuffed) {
 			if (stuffed) {
 				this->eraseAndShrink<strategyC__>(engine_, this->begin(engine_));
 			} else {
@@ -1736,9 +1774,9 @@ namespace dcool::container {
 			}
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void popFront(Engine& engine_, Iterator newBegin_) noexcept(!stuffed) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void popFront(
+			Engine& engine_, Iterator newBegin_
+		) noexcept(!stuffed) {
 			if (stuffed) {
 				this->eraseAndShrink<strategyC__>(engine_, this->begin(engine_), newBegin_);
 			} else {
@@ -1770,9 +1808,9 @@ namespace dcool::container {
 			}
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void popBack(Engine& engine_) noexcept(!stuffed) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void popBack(
+			Engine& engine_
+		) noexcept(!stuffed) {
 			if constexpr (stuffed) {
 				this->eraseAndShrink<strategyC__>(engine_, this->end(engine_) - 1);
 			} else {
@@ -1780,9 +1818,9 @@ namespace dcool::container {
 			}
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void popBack(Engine& engine_, Iterator newEnd_) noexcept(!stuffed) {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr void popBack(
+			Engine& engine_, Iterator newEnd_
+		) noexcept(!stuffed) {
 			if constexpr (stuffed) {
 				this->eraseAndShrink<strategyC__>(engine_, newEnd_, this->end(engine_));
 			} else {
@@ -1951,9 +1989,9 @@ namespace dcool::container {
 			return this->inPlaceErase_<strategyC__>(engine_, position_);
 		}
 
-		public: template <
-			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr auto erase(Engine& engine_, Iterator begin_, Iterator end_) -> Iterator {
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto erase(
+			Engine& engine_, Iterator begin_, Iterator end_
+		) -> Iterator {
 			if constexpr (reallocationMightRequiredToErase_(strategyC__)) {
 				return this->eraseAndShrink<strategyC__>(engine_, begin_, end_);
 			} else {
@@ -2220,7 +2258,45 @@ namespace dcool::container {
 		public: template <typename... ArgumentTs__> constexpr auto emplace(
 			Iterator position_, ArgumentTs__&&... parameters_
 		) -> Iterator {
-			return this->emplace<exceptionSafetyStrategy>(position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+			return this->chassis().emplace(this->engine_(), position_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <
+			::dcool::core::ExceptionSafetyStrategy strategyC__, typename... ArgumentTs__
+		> constexpr auto emplace(Index index_, ArgumentTs__&&... parameters_) -> Iterator {
+			return this->chassis().template emplace<strategyC__>(
+				this->engine_(), index_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			);
+		}
+
+		public: template <typename... ArgumentTs__> constexpr auto emplace(
+			Index index_, ArgumentTs__&&... parameters_
+		) -> Iterator {
+			return this->chassis().emplace(this->engine_(), index_, ::dcool::core::forward<ArgumentTs__>(parameters_)...);
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Iterator position_, Value const& value_
+		) -> Iterator {
+			return this->chassis().template insert<strategyC__>(this->engine_(), position_, value_);
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Iterator position_, Value&& value_
+		) -> Iterator {
+			return this->chassis().template insert<strategyC__>(this->engine_(), position_, ::dcool::core::move(value_));
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Index index_, Value const& value_
+		) -> Index {
+			return this->chassis().template insert<strategyC__>(this->engine_(), index_, value_);
+		}
+
+		public: template <::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy> constexpr auto insert(
+			Index index_, Value&& value_
+		) -> Index {
+			return this->chassis().template insert<strategyC__>(this->engine_(), index_, ::dcool::core::move(value_));
 		}
 
 		public: template <

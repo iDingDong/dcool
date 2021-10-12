@@ -9,6 +9,7 @@
 #	include <dcool/core/min_max.hpp>
 #	include <dcool/core/range_operation.hpp>
 #	include <dcool/core/storage.hpp>
+#	include <dcool/core/type_transformer.hpp>
 #	include <dcool/core/value_list.hpp>
 
 #	include <dcool/basic.hpp>
