@@ -19,7 +19,7 @@ namespace dcool::core {
 		::std::aligned_storage_t<sizeC_>
 	);
 
-#	if defined(__GNUC__)
+#	if DCOOL_DEPENDENCY_BUG_1
 	// Workaround for a compiler bug.
 	// See document/dependency_bugs#Bug_1 for more details.
 	__extension__ using StorageRequirement = unsigned __int128;

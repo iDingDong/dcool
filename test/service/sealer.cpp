@@ -1,8 +1,8 @@
 #include <dcool/container.hpp>
 #include <dcool/test.hpp>
-#include <dcool/vigor.hpp>
+#include <dcool/service.hpp>
 
-DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
+DCOOL_TEST_CASE(dcoolService, sealerBasic) {
 	struct Axception {
 	};
 
@@ -44,7 +44,7 @@ DCOOL_TEST_CASE(dcoolVigor, sealerBasic) {
 	SealedValue la;
 	la.emplaceBack();
 	la.emplaceBack();
-	dcool::vigor::Sealer<SealedValue> sealer(dcool::core::inPlace, dcool::core::move(la));
+	dcool::service::Sealer<SealedValue> sealer(dcool::core::inPlace, dcool::core::move(la));
 	auto observer = [DCOOL_TEST_CAPTURE_CONTEXT](SealedValue const& value) {
 		DCOOL_TEST_EXPECT(value.length() == 2);
 	};

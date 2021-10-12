@@ -136,14 +136,20 @@ namespace dcool::concurrency {
 		private: static constexpr StatusCount_ exclusive_ = static_cast<StatusCount_>(exclusiveValue_);
 		private: static constexpr StatusCount_ maxStatus_ = static_cast<StatusCount_>(maxStatusValue_);
 
-		private: struct RecursiveSpinnableSharedAtomicUnderlying_ {
+		private: struct RecursiveSpinnableSharedAtomUnderlying_ {
 			StatusCount_ statusCount_;
 			::std::thread::id exclusiveOwner_;
 		};
 
+		private: struct RecursiveSpinnableSharedAtomAlignedUnderlying_ {
+			alignas(
+				::dcool::concurrency::requiredAtomAlignment<RecursiveSpinnableSharedAtomUnderlying_>
+			) RecursiveSpinnableSharedAtomUnderlying_ value_;
+		};
+
 		private: using SpinnableUnderlying_ = ::dcool::core::ConditionalType<
 			recursive,
-			::std::atomic<RecursiveSpinnableSharedAtomicUnderlying_>,
+			RecursiveSpinnableSharedAtomAlignedUnderlying_,
 			::dcool::core::ConditionalType<
 				shareable, ::std::atomic<StatusCount_>, ::dcool::concurrency::AtomicFlag
 			>
@@ -176,16 +182,17 @@ namespace dcool::concurrency {
 		private: Underlying_ m_underlying_;
 
 		private: auto tryRecursiveSpinningLock_()& noexcept -> ::dcool::core::Boolean requires (spinnable && recursive) {
-			RecursiveSpinnableSharedAtomicUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			RecursiveSpinnableSharedAtomicUnderlying_ new_ = {
+			RecursiveSpinnableSharedAtomUnderlying_ old_ = ::dcool::concurrency::atomicallyLoad(
+				this->m_underlying_.value_, ::std::memory_order::relaxed
+			);
+			RecursiveSpinnableSharedAtomUnderlying_ new_ = {
 				.exclusiveOwner_ = ::std::this_thread::get_id()
 			};
 			if (old_.exclusiveOwner_ == new_.exclusiveOwner_) {
 				if (old_.statusCount_ == maxRecursion) {
 					return false;
 				}
-				new_.statusCount_ = old_.statusCount_ + 1;
-				this->m_underlying_.store(new_, ::std::memory_order::relaxed);
+				++(this->m_underlying_.value_.statusCount_);
 			} else {
 				for (; ; ) {
 					if (old_.exclusiveOwner_ != ::dcool::concurrency::nullThreadId) {
@@ -196,7 +203,9 @@ namespace dcool::concurrency {
 						return false;
 					}
 					if (
-						this->m_underlying_.compare_exchange_weak(old_, new_, ::std::memory_order::acquire, ::std::memory_order::relaxed)
+						::dcool::concurrency::atomicallyCompareExchangeWeak(
+							old_, new_, ::std::memory_order::acquire, ::std::memory_order::relaxed
+						)
 					) {
 						break;
 					}
@@ -261,8 +270,8 @@ namespace dcool::concurrency {
 
 		private: auto tryRecursiveSpinningLockShared_(
 		)& noexcept -> ::dcool::core::Boolean requires (spinnable && recursive && shareable) {
-			RecursiveSpinnableSharedAtomicUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			RecursiveSpinnableSharedAtomicUnderlying_ new_ {
+			RecursiveSpinnableSharedAtomUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+			RecursiveSpinnableSharedAtomUnderlying_ new_ {
 				.exclusiveOwner_ = ::dcool::concurrency::nullThreadId
 			};
 			do {
@@ -339,8 +348,8 @@ namespace dcool::concurrency {
 		private: template <typename TimePointT__> auto tryRecursiveSpinningLockUntil_(
 			TimePointT__ const& deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (spinnable && timed && recursive) {
-			RecursiveSpinnableSharedAtomicUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			RecursiveSpinnableSharedAtomicUnderlying_ new_ = {
+			RecursiveSpinnableSharedAtomUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+			RecursiveSpinnableSharedAtomUnderlying_ new_ = {
 				.exclusiveOwner_ = ::std::this_thread::get_id()
 			};
 			for (; ; ) {
@@ -364,7 +373,7 @@ namespace dcool::concurrency {
 						) {
 							while (new_.statusCount_ != 0) {
 								if (TimePointT__::clock::now() > deadline_) {
-									RecursiveSpinnableSharedAtomicUnderlying_ reverted_ = {
+									RecursiveSpinnableSharedAtomUnderlying_ reverted_ = {
 										.exclusiveOwner_ = ::dcool::concurrency::nullThreadId,
 										.statusCount_ = new_.statusCount_
 									};
@@ -623,7 +632,7 @@ namespace dcool::concurrency {
 			TimePointT__ const& deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (spinnable && timed && recursive && shareable) {
 			while (!(this->tryLockShared())) {
-				RecursiveSpinnableSharedAtomicUnderlying_ old_;
+				RecursiveSpinnableSharedAtomUnderlying_ old_;
 				for (; ; ) {
 					if (TimePointT__::clock::now() > deadline_) {
 						return false;
@@ -708,8 +717,8 @@ namespace dcool::concurrency {
 		}
 
 		private: void recursiveSpinningLock_()& noexcept requires (spinnable && recursive) {
-			RecursiveSpinnableSharedAtomicUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			RecursiveSpinnableSharedAtomicUnderlying_ new_ = {
+			RecursiveSpinnableSharedAtomUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+			RecursiveSpinnableSharedAtomUnderlying_ new_ = {
 				.exclusiveOwner_ = ::std::this_thread::get_id()
 			};
 			if (old_.exclusiveOwner_ == new_.exclusiveOwner_) {

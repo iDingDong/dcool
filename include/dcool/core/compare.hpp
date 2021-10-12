@@ -2,8 +2,9 @@
 #	define DCOOL_CORE_COMPARE_HPP_INCLUDED_ 1
 
 #	include <dcool/core/basic.hpp>
-#	include <dcool/core/basic.hpp>
+#	include <dcool/core/concept.hpp>
 
+#	include <atomic> // Value representation compare hack
 #	include <concepts>
 #	include <compare>
 #	include <functional>
@@ -114,6 +115,18 @@ namespace dcool::core {
 	template <typename OperandT_> using DefaultEqualityComparerFor = ::dcool::core::StandardEqualityComparerWrapperFor<
 		OperandT_, ::std::equal_to<OperandT_>
 	>;
+
+	template <::dcool::core::TriviallyCopyable OperandT_> constexpr auto hasEqualValueRepresentation(
+		OperandT_ const& left_, OperandT_ const& right_
+	) noexcept -> decltype(left_ <=> right_) {
+		if constexpr (::dcool::core::Scalar<OperandT_>) {
+			return left_ <=> right_;
+		}
+		// C++20 atomic supports value representation comparison with CAS. This is evil but portable.
+		::std::atomic<OperandT_> leftToCompare_(left_);
+		OperandT_ rightValue_ = right_;
+		return leftToCompare_.compare_exchange_strong(rightValue_, left_, ::std::memory_order::relaxed);
+	}
 }
 
 #endif

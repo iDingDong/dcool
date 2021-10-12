@@ -6,7 +6,10 @@
 #	include <type_traits>
 
 namespace dcool::core {
+	template <typename T_> using UndeducedType = ::std::type_identity_t<T_>;
+
 	template <typename T_> using LvalueReferenceAddedType = ::std::add_lvalue_reference_t<T_>;
+	template <typename T_> using ConstAddedType = ::std::add_const_t<T_>;
 	template <typename T_> using ReferenceRemovedType = ::std::remove_reference_t<T_>;
 	template <typename T_> using ConstRemovedType = ::std::remove_const_t<T_>;
 	template <typename T_> using VolatileRemovedType = ::std::remove_volatile_t<T_>;
@@ -90,7 +93,7 @@ namespace dcool::core {
 
 	template <typename FirstT_, typename SecondT_> using SmallerType = ::dcool::core::ConditionalType<
 		sizeof(FirstT_) <= sizeof(SecondT_), FirstT_, SecondT_
-	>::type;
+	>;
 
 	template <auto keyC_, typename ValueT_> struct SelectionCase {
 		static constexpr decltype(keyC_) key = keyC_;

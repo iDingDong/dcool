@@ -48,10 +48,10 @@ Minial reprocase:
 
 ```cpp
 auto foo() {
-  struct A {
-    using Type = int;
-  };
-  return A();
+	struct A {
+		using Type = int;
+	};
+	return A();
 }
 
 auto bar() {
@@ -97,6 +97,44 @@ The second defaulted copy constructor will be rejected by compiler with message:
 This bug only gets triggered by copy constructor/assignment in a class template specialization with concepts while move constructor/assignment or other form of class definitions are not affected.
 
 The workaround is to omit the `<T>` in the argument declarator.
+
+### Bug_4: Deadlock when calling `std::call_once` on the same `std::once_flag` again after a call throwing an exception
+
+- Compiler: GCC
+- Info last updated: 2021-10-11
+- Status: Unresolved (latest version 11.2.0)
+- Report link: [GCC Bug #66146](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66146)
+
+Minial reprocase:
+
+```cpp
+#include <mutex>
+#include <stdexcept>
+
+int main() {
+std::once_flag flag;
+	try {
+		std::call_once(
+			flag,
+			[]() {
+				throw std::exception();
+			}
+		);
+	} catch (std::exception const&) {
+	}
+	std::call_once(
+		flag,
+		[]() {
+			throw std::exception();
+		}
+	);
+	return 0;
+}
+```
+
+The code above will deadlock with libstdc++ implementation using `pthread_once`.
+
+The workaround is to manually guarantee that the flag is used for only once, or ensures the callable never throws.
 
 ## Resolved bugs
 

@@ -12,13 +12,14 @@ set(
 	"./container/list.cpp"
 	"./container/string.cpp"
 	"./resource/shared.cpp"
+	"./service/once_invoker.cpp"
+	"./service/sealer.cpp"
 	"./service/timer.cpp"
 	"./utility/any_mutex.cpp"
 	"./utility/any.cpp"
 	"./utility/cow.cpp"
 	"./utility/function.cpp"
 	"./utility/overloaded_function.cpp"
-	"./vigor/sealer.cpp"
 	"./test.cpp"
 )
 
