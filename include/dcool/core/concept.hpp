@@ -132,6 +132,8 @@ namespace dcool::core {
 
 	template <typename T_> concept Class = ::std::is_class_v<T_>;
 
+	template <typename T_> concept Scalar = ::std::is_scalar_v<T_>;
+
 	template <typename T_> concept Integral = ::std::is_integral_v<T_>;
 
 	template <typename T_> concept SignedIntegral = ::std::is_signed_v<T_>;

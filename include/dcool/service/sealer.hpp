@@ -7,7 +7,7 @@
 #	include <mutex>
 #	include <shared_mutex>
 
-namespace dcool::vigor {
+namespace dcool::service {
 	namespace detail_ {
 		template <typename ValueT_, typename EngineT_> struct SealerStorage_ {
 			private: using Self_ = SealerStorage_<ValueT_, EngineT_>;
@@ -154,7 +154,7 @@ namespace dcool::vigor {
 			};
 
 			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
-			public: using Storage = ::dcool::vigor::detail_::SealerStorage_<Value, Engine>;
+			public: using Storage = ::dcool::service::detail_::SealerStorage_<Value, Engine>;
 
 			static_assert(::dcool::resource::PoolFor<Pool, Value>);
 			static_assert(
@@ -165,19 +165,19 @@ namespace dcool::vigor {
 	}
 
 	template <typename T_, typename ValueT_> concept SealerConfig = requires {
-		typename ::dcool::vigor::detail_::SealerConfigAdaptor_<T_, ValueT_>;
+		typename ::dcool::service::detail_::SealerConfigAdaptor_<T_, ValueT_>;
 	};
 
-	template <typename ConfigT_, typename ValueT_> requires ::dcool::vigor::SealerConfig<
+	template <typename ConfigT_, typename ValueT_> requires ::dcool::service::SealerConfig<
 		ConfigT_, ValueT_
-	> using SealerConfigAdaptor = ::dcool::vigor::detail_::SealerConfigAdaptor_<ConfigT_, ValueT_>;
+	> using SealerConfigAdaptor = ::dcool::service::detail_::SealerConfigAdaptor_<ConfigT_, ValueT_>;
 
-	template <typename ValueT_, ::dcool::vigor::SealerConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct SealerChassis {
+	template <typename ValueT_, ::dcool::service::SealerConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct SealerChassis {
 		private: using Self_ = SealerChassis<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::vigor::SealerConfigAdaptor<Config, Value>;
+		private: using ConfigAdaptor_ = ::dcool::service::SealerConfigAdaptor<Config, Value>;
 		private: using Storage_ = ConfigAdaptor_::Storage;
 		public: using Engine = ConfigAdaptor_::Engine;
 		public: using Mutex = ConfigAdaptor_::Mutex;
@@ -201,8 +201,8 @@ namespace dcool::vigor {
 
 		public: template <typename ValueT__, typename ConfigT__> constexpr void cloneTo(
 			Engine& engine_,
-			::dcool::vigor::SealerChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
-			::dcool::vigor::SealerChassis<ValueT__, ConfigT__>& other_
+			::dcool::service::SealerChassis<ValueT__, ConfigT__>::Engine& otherEngine_,
+			::dcool::service::SealerChassis<ValueT__, ConfigT__>& other_
 		) const {
 			other_.initialize(otherEngine_, this->copiedValue(engine_));
 		}
@@ -259,13 +259,13 @@ namespace dcool::vigor {
 		}
 	};
 
-	template <typename ValueT_, ::dcool::vigor::SealerConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct Sealer {
+	template <typename ValueT_, ::dcool::service::SealerConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct Sealer {
 		private: using Self_ = Sealer<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
-		private: using ConfigAdaptor_ = ::dcool::vigor::SealerConfigAdaptor<Config, Value>;
-		public: using Chassis = ::dcool::vigor::SealerChassis<Value, Config>;
+		private: using ConfigAdaptor_ = ::dcool::service::SealerConfigAdaptor<Config, Value>;
+		public: using Chassis = ::dcool::service::SealerChassis<Value, Config>;
 		public: using Engine = ConfigAdaptor_::Engine;
 
 		private: Chassis m_chassis_;
@@ -341,8 +341,8 @@ namespace dcool::vigor {
 		};
 	}
 
-	template <typename ValueT_> using ThreadSafeSealer = ::dcool::vigor::Sealer<
-		ValueT_, ::dcool::vigor::detail_::ThreadSafeSealerConfig_
+	template <typename ValueT_> using ThreadSafeSealer = ::dcool::service::Sealer<
+		ValueT_, ::dcool::service::detail_::ThreadSafeSealerConfig_
 	>;
 }
 

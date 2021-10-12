@@ -1,14 +1,14 @@
-# Class template `dcool::vigor::Sealer`
+# Class template `dcool::service::Sealer`
 
-Include `<dcool/vigor.hpp>` to use.
+Include `<dcool/service.hpp>` to use.
 
 A strong exception safety helper.
 
 ```cpp
-template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::vigor::Sealer;
+template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::service::Sealer;
 ```
 
-A `dcool::vigor::Sealer` object hold and owns another object of `ValueT`.
+A `dcool::service::Sealer` object hold and owns another object of `ValueT`.
 
 Unless otherwise specified, all operations have strong exception guarantee even if the holded value does not guarentee that by itself.
 
@@ -25,11 +25,9 @@ Unless otherwise specified, if type `Config::Mutex` is available, all operations
 ## Constructors
 
 ```cpp
-constexpr dcool::vigor::Sealer::Sealer() noexcept(/* unspecified expression */); // 1
-
-constexpr dcool::vigor::Sealer::Sealer(Sealer const& other) noexcept(/* unspecified expression */); // 2
-
-template <typename... Arguments> constexpr dcool::vigor::Sealer::Sealer(
+constexpr Sealer() noexcept(/* unspecified expression */); // 1
+constexpr Sealer(Sealer const& other) noexcept(/* unspecified expression */); // 2
+template <typename... Arguments> constexpr Sealer(
 	::dcool::core::InPlaceTag, Arguments&&... parameters
 ) noexcept(/* unspecified expression */); // 3
 ```
@@ -49,7 +47,7 @@ Destruct holded value.
 ## Assignments
 
 ```cpp
-constexpr auto dcool::vigor::Sealer::operator =(Sealer const& other) noexcept(/* unspecified expression */) -> Sealer&;
+constexpr auto operator =(Sealer const& other) noexcept(/* unspecified expression */) -> Sealer&;
 ```
 
 Copy the value holded by `other` to value holded by self.
@@ -59,7 +57,7 @@ Copy the value holded by `other` to value holded by self.
 ### `copiedValue`
 
 ```cpp
-constexpr auto dcool::vigor::Sealer::copiedValue() const noexcept -> Value
+constexpr auto copiedValue() const noexcept -> Value
 ```
 
 Returns a copy of the holded value.
@@ -67,9 +65,7 @@ Returns a copy of the holded value.
 ### `emplace`
 
 ```cpp
-template <typename... Arguments> constexpr void dcool::vigor::Sealer::emplace(
-	Arguments&&... parameters
-) noexcept(/* unspecified expression */);
+template <typename... Arguments> constexpr void emplace(Arguments&&... parameters) noexcept(/* unspecified expression */);
 ```
 
 Replace the holded value with a new value constructed by forwarded `parameters`.
@@ -77,7 +73,7 @@ Replace the holded value with a new value constructed by forwarded `parameters`.
 ### `runTransaction`
 
 ```cpp
-template <typename TransactionT> constexpr void dcool::vigor::Sealer::runTransaction(
+template <typename TransactionT> constexpr void runTransaction(
 	TransactionT&& transaction
 ) noexcept(/* unspecified expression */);
 ```
@@ -87,7 +83,7 @@ template <typename TransactionT> constexpr void dcool::vigor::Sealer::runTransac
 ### `runObserver`
 
 ```cpp
-template <typename ObserverT> constexpr void dcool::vigor::Sealer::runObserver(
+template <typename ObserverT> constexpr void dcool::service::Sealer::runObserver(
 	ObserverT&& observer
 ) noexcept(/* unspecified expression */);
 ```
@@ -96,4 +92,4 @@ template <typename ObserverT> constexpr void dcool::vigor::Sealer::runObserver(
 
 ## Note
 
-Implementation of `dcool::vigor::Sealer` **might** dynamically allocate storage for the stored object. When writing a new value to the object, the new value would be used to construct a new value on another allocated space and replace the old storage on success.
+Implementation of `dcool::service::Sealer` **might** dynamically allocate storage for the stored object. When writing a new value to the object, the new value would be used to construct a new value on another allocated space and replace the old storage on success.

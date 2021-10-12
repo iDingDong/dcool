@@ -2,4 +2,4 @@
 
 A library based on available C++20 implementation. Intended to provide more flexible alternatives to part of the standard library.
 
-All developed or planned features heavily depend on C++20 concept, which basically makes GCC the only choice we have for now (2020-12-27).
+All developed features heavily are only tested with GCC. Currently (2021-10-09) clang lacks certain features we need to compile this library.
