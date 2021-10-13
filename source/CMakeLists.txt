@@ -38,6 +38,7 @@ endif()
 if(dcool_might_need_tbb)
 	target_link_library_if_exist(dcool_base ${dcool_base_scope} tbb)
 endif()
+target_link_library_if_exist(dcool_base ${dcool_base_scope} atomic)
 
 add_subdirectory("./concurrency")
 add_subdirectory("./core")

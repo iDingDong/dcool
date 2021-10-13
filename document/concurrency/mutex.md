@@ -6,7 +6,7 @@ Include `<dcool/concurrency.hpp>` to use.
 template <typename ConfigT = /* unspecified type */> struct dcool::concurrency::Mutex;
 ```
 
-A cu
+A customizeable mutex type.
 
 ## Configuration `ConfigT`
 
