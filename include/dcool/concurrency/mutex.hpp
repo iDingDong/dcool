@@ -1337,6 +1337,7 @@ namespace dcool::concurrency {
 			}
 		}
 
+		// For standard compatibility
 		public: auto try_lock()& noexcept -> ::dcool::core::Boolean {
 			return this->tryLock();
 		}

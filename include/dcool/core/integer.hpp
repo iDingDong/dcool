@@ -731,26 +731,27 @@ namespace dcool::core {
 			if constexpr (ValueT__::width == 0) {
 				return Self_(0);
 			}
-			if constexpr (ValueT__::usingBuiltInUnderlying) {
-				return Self_(value_.underlying_());
-			}
 			Self_ result_(0);
-			::dcool::core::Length commonLimbCount_;
-			if constexpr (limbCount_ < ValueT__::limbCount_) {
-				commonLimbCount_ = limbCount_;
-				result_.mutableSignificantPart_() = SignificantPart_(value_.limbs_()[limbCount_]);
+			if constexpr (ValueT__::usingBuiltInUnderlying) {
+				result_ = value_.underlying_();
 			} else {
-				commonLimbCount_ = ValueT__::limbCount_;
-				if constexpr (limbCount_ > ValueT__::limbCount_) {
-					if (value_.significantPart_() < 0) {
-						result_.mutableSignificantPart_() = ~SignificantPart_(0);
-						::dcool::core::batchFill(~Limb_(0), result_.m_limbs_.begin() + commonLimbCount_, result_.m_limbs_.end());
-					}
+				::dcool::core::Length commonLimbCount_;
+				if constexpr (limbCount_ < ValueT__::limbCount_) {
+					commonLimbCount_ = limbCount_;
+					result_.mutableSignificantPart_() = SignificantPart_(value_.limbs_()[limbCount_]);
 				} else {
-					result_.mutableSignificantPart_() = SignificantPart_(value_.significantPart_());
+					commonLimbCount_ = ValueT__::limbCount_;
+					if constexpr (limbCount_ > ValueT__::limbCount_) {
+						if (value_.significantPart_() < 0) {
+							result_.mutableSignificantPart_() = ~SignificantPart_(0);
+							::dcool::core::batchFill(~Limb_(0), result_.m_limbs_.begin() + commonLimbCount_, result_.m_limbs_.end());
+						}
+					} else {
+						result_.mutableSignificantPart_() = SignificantPart_(value_.significantPart_());
+					}
 				}
+				::dcool::core::batchCopyN(value_.limbs_().begin(), commonLimbCount_, result_.m_limbs_.begin());
 			}
-			::dcool::core::batchCopyN(value_.limbs_().begin(), commonLimbCount_, result_.m_limbs_.begin());
 			return result_;
 		}
 
@@ -1383,8 +1384,7 @@ namespace dcool::core {
 			} else if constexpr (OtherT__::usingBuiltInUnderlying) {
 				underlying_ = static_cast<Underlying_>(other_.underlying_());
 			} else {
-				// Not yet implemented.
-				::dcool::core::terminate();
+				underlying_ = Underlying_(other_.limbs_()[0]);
 			}
 			return Self_(underlying_);
 		}
