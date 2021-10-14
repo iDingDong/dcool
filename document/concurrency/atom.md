@@ -6,7 +6,7 @@ Include `<dcool/concurrency.hpp>` to use.
 template <typename ValueT, typename ConfigT = /* unspecified type */> struct dcool::concurrency::Atom;
 ```
 
-A custumizeable atomic-like type.
+A custumizeable atomic-like type with `ValueT` holded.
 
 `ValueT` is required to be trivially copyable.
 
@@ -30,6 +30,7 @@ Its member shall customize the list as decribed:
 | `Value` | Defined by `using Value = ValueT;`. |
 | `Stamp` | Defined by `using Stamp = dcool::core::UnsignedInteger<stampWidth>`. |
 | `StampedValue` | See below. |
+| `lockFree` | Implementation-defined. |
 
 `StampedValue` is defined by:
 
@@ -77,7 +78,7 @@ All `sequenced*` members are non-atomic operations. If `atomic.isDeterminateTrue
 
 All other operations will call the corresponding atomic versions if `!(atomic.isDeterminateFalse())`, otherwise the non-atomic versions are called.
 
-The `atomically*` and `sequenced*` versions are omitted in this document. Unless otherwise specified, these operations are provided correspondingly for all optionally atomic member functions except for the versions marked for standard compatibility. For example, the documented member `load` has the following omitted members acompanied:
+The `atomically*` and `sequenced*` versions are omitted in this document. Unless otherwise specified, these operations are provided correspondingly for all optionally atomic member functions except for the overloaded operators and versions marked for standard compatibility. For example, the documented member `load` has the following omitted members acompanied:
 
 ```cpp
 constexpr auto atomicallyLoad(std::memory_order order = std::memory_order::seq_cst) const noexcept -> Value;
@@ -99,6 +100,16 @@ constexpr auto load(std::memory_order order = std::memory_order::seq_cst) const 
 
 Loads from the atom with memory order `order`.
 
+Atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution()`.
+
+### Conversion to `Value`
+
+```cpp
+constexpr operator Value() const noexcept;
+```
+
+Returns `this->load()`.
+
 ### Store operations
 
 ```cpp
@@ -107,6 +118,8 @@ constexpr void store(Value desired, std::memory_order order = std::memory_order:
 ```
 
 Stores `desired` into the atom with memory order `order`.
+
+Atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
 
 ### Exchange operations
 
@@ -121,6 +134,8 @@ constexpr void exchange(Value desired, std::memory_order order = std::memory_ord
 ```
 
 Stores `desired` into the atom with memory order `order`. Return the previously holded (stamped) value.
+
+Atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
 
 ### CAS operations
 
@@ -179,6 +194,8 @@ Stores `desired` into the atom with memory order `order`/`successOrder` and retu
 
 The weak versions may spuriously fail but can be more efficient.
 
+Atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
+
 ### Fetch transform operations
 
 ```cpp
@@ -202,7 +219,9 @@ template <typename TransformerT> constexpr auto fetchTransform(
 )& noexcept -> Value;
 ```
 
-Transforms the previously holded value `previousValue` loaded with memory order `order`/`loadOrder` to `dcool::core::invoke(transformer_, previousValue)` (`transformer` might be forwarded on the last invocation) with memory order `order`/`transformOrder` and returns `previousValue`. This operation will be reattempted if the previous value changes during this operation.
+Transforms the previously holded value `previousValue` loaded with memory order `order`/`loadOrder` to `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation) with memory order `order`/`transformOrder` and returns `previousValue`. This operation will be reattempted if the previous value changes during this operation.
+
+Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` is not part of the atomicity.
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
 
@@ -229,9 +248,82 @@ template <typename TransformerT> constexpr auto fetchTransformOrLoad(
 )& noexcept -> Value;
 ```
 
-With previously holded value `previousValue` loaded with memory order `order`/`loadOrder`, executes `auto newValue = dcool::core::invoke(transformer_, previousValue)` (`transformer` might be forwarded on the last invocation), transforms the previously holded value to `newValue.access()` with memory order `order`/`transformOrder` if `newValue.valid()`. Returns `previousValue`. This operation will be reattempted if the previous value changes during this operation unless `!(newValue.valid())`.
+With previously holded value `previousValue` loaded with memory order `order`/`loadOrder`, executes `auto newValue = dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation), transforms the previously holded value to `newValue.access()` with memory order `order`/`transformOrder` if `newValue.valid()`. Returns `previousValue`. This operation will be reattempted if the previous value changes during this operation unless `!(newValue.valid())`.
+
+Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))`, `newValue.valid()` and `newValue.access()` are not part of the atomicity.
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
+
+### Wait operations
+
+```cpp
+constexpr void stampedWaitStamped(
+	StampedValue const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped)
+constexpr void stampedWait(
+	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped)
+constexpr void wait(
+	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires (!(atomic.isDeterminateFalse()));
+```
+
+If the holded (stamped) value loaded with memory order `order` has the same representation as `old`, blocks until notified or spuriously waked up and repeat the operation.
+
+These operations is intended to be no less efficient than a spinning check. With ISO/IEC 14882:2020 atomic wait operations, these operations can be even more efficient.
+
+No non-atomic versions are provided.
+
+### Wait new operations
+
+```cpp
+constexpr auto stampedWaitNewStamped(
+	StampedValue const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept -> StampedValue requires ((!(atomic.isDeterminateFalse())) && stamped)
+constexpr auto stampedWaitNew(
+	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept -> Value requires ((!(atomic.isDeterminateFalse())) && stamped)
+constexpr auto waitNew(
+	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept -> Value requires (!(atomic.isDeterminateFalse()));
+```
+
+If the holded (stamped) value `previousValue` loaded with memory order `order` has the same representation as `old`, blocks until notified or spuriously waked up and repeat the operation.
+
+Returns the last loaded `previousValue`.
+
+These operations is intended to be no less efficient than a spinning check. With ISO/IEC 14882:2020 atomic wait operations, these operations can be even more efficient.
+
+No non-atomic versions are provided.
+
+### Wait predicate operations
+
+```cpp
+template <typename PredicateT> constexpr void stampedWaitPredicateStamped(
+	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped);
+template <typename PredicateT> constexpr void stampedWaitPredicate(
+	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped);
+template <typename PredicateT> constexpr void waitPredicate(
+	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
+) const noexcept requires (!(atomic.isDeterminateFalse()));
+```
+
+If the holded (stamped) value `previousValue` loaded with memory order `order` does not satisfy `dcool::core::invoke(predicate, dcool::core::constantize(previousValue))` (`predicate` might be forwarded on the last invocation), blocks until notified or spuriously waked up and repeat the operation.
+
+These operations is intended to be no less efficient than a spinning check. With ISO/IEC 14882:2020 atomic wait operations, these operations can be even more efficient.
+
+No non-atomic versions are provided.
+
+### Notify operations
+
+```cpp
+constexpr void notifyOne() noexcept requires(!(atomic.isDeterminateFalse()));
+constexpr void notifyAll() noexcept requires(!(atomic.isDeterminateFalse()));
+```
+
+Notify one/all waiter(s) on this atom.
 
 ### Fetch arithmetic operations
 
@@ -258,3 +350,44 @@ The binary operator is determined as follows:
 | `fetchBitwiseAndStamped`, `fetchBitwiseAnd`, `fetch_and` | `&` |
 | `fetchBitwiseOrStamped`, `fetchBitwiseOr`, `fetch_or` | `|` |
 | `fetchBitwiseExclusiveOrStamped`, `fetchBitwiseExclusiveOr`, `fetch_xor` | `^` |
+
+Note that if the standard supports the corresponding `std::atomic_fetch_*`/`std::atomic_ref::fetch_*` for `Value` and `OperandT`, the operation will be performed through these standard functions for protential better performance unless `stamped`; otherwise (for example, a user-defined overloaded operator) the operation would be implemented using fetch transform operations.
+
+Evaluation of the operators are not part of the atomicity unless the `std::atomic_fetch_*`/`std::atomic_ref::fetch_*` were used.
+
+If the `std::atomic_fetch_*`/`std::atomic_ref::fetch_*` were used, atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
+
+### Arithmetic operators
+
+```cpp
+template <typename OperandT> constexpr auto operator +=(OperandT const& operand)& noexcept -> Atom&;
+template <typename OperandT> constexpr auto operator -=(OperandT const& operand)& noexcept -> Atom&;
+template <typename OperandT> constexpr auto operator &=(OperandT const& operand)& noexcept -> Atom&;
+template <typename OperandT> constexpr auto operator |=(OperandT const& operand)& noexcept -> Atom&;
+template <typename OperandT> constexpr auto operator ^=(OperandT const& operand)& noexcept -> Atom&;
+```
+
+Calls the corresponding `this->fetch*(operand)` and returns `*this`.
+
+## Static member functions
+
+### `is_always_lock_free`
+
+```cpp
+static constexpr auto is_always_lock_free() noexcept -> ::dcool::core::Boolean; // For standard compatibility
+```
+
+Returns `lockFree.isDeterminateTrue()`.
+
+## Non-static member functions
+
+### `lockFreeOnExecution`, `is_lock_free`
+
+```cpp
+constexpr auto lockFreeOnExecution() const noexcept -> ::dcool::core::Boolean;
+constexpr auto is_lock_free() const noexcept -> ::dcool::core::Boolean; // For standard compatibility
+```
+
+Returns `true` if `lockFree.isDeterminateTrue()`; returns `false` if `lockFree.isDeterminateFalse()`; otherwise implementation-defined.
+
+Indicates whether all operations are lock-free.

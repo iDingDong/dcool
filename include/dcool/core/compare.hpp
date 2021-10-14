@@ -118,9 +118,9 @@ namespace dcool::core {
 
 	template <::dcool::core::TriviallyCopyable OperandT_> constexpr auto hasEqualValueRepresentation(
 		OperandT_ const& left_, OperandT_ const& right_
-	) noexcept -> decltype(left_ <=> right_) {
+	) noexcept -> ::dcool::core::Boolean {
 		if constexpr (::dcool::core::Scalar<OperandT_>) {
-			return left_ <=> right_;
+			return left_ == right_;
 		}
 		// C++20 atomic supports value representation comparison with CAS. This is evil but portable.
 		::std::atomic<OperandT_> leftToCompare_(left_);
