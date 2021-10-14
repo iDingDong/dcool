@@ -1,6 +1,7 @@
 #ifndef DCOOL_CONCURRENCY_HPP_INCLUDED_
 #	define DCOOL_CONCURRENCY_HPP_INCLUDED_ 1
 
+#	include <dcool/concurrency/atom_basic.hpp>
 #	include <dcool/concurrency/atom.hpp>
 #	include <dcool/concurrency/atomic_flag.hpp>
 #	include <dcool/concurrency/basic.hpp>
