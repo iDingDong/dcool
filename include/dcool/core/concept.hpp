@@ -8,7 +8,7 @@
 #	include <type_traits>
 
 namespace dcool::core {
-	template <auto valueC_> using RequiresConsteval = void;
+	template <auto valueC_> using RequiresConstant = void;
 
 	template <typename T_> concept Complete = requires {
 		sizeof(T_);

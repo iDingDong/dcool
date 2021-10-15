@@ -114,9 +114,15 @@ namespace dcool::concurrency {
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
-		ValueT_ const& object_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		ValueT_& object_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) -> ValueT_ {
 		return ::std::atomic_ref<ValueT_>(object_).load(order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
+		::std::atomic<ValueT_>& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) -> ValueT_ {
+		return atom_.load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
@@ -353,7 +359,7 @@ namespace dcool::concurrency {
 #	endif
 		}
 
-		template <typename StandardAtomT_, ::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitNew_(
+		template <typename StandardAtomT_, ::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch_(
 			StandardAtomT_ const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		) noexcept -> ValueT_ {
 			ValueT_ result_;
@@ -380,7 +386,7 @@ namespace dcool::concurrency {
 					break;
 				}
 				::std::this_thread::yield();
-				value_ = ::dcool::concurrency::detail_::atomicallyWaitNew_(atom_, value_, order_);
+				value_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, value_, order_);
 			}
 		}
 
@@ -410,17 +416,17 @@ namespace dcool::concurrency {
 		::dcool::concurrency::detail_::atomicallyWait_(atom_, old_, order_);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitNew(
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch(
 		ValueT_ const& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		::std::atomic_ref<ValueT_> atom_(object_);
-		return ::dcool::concurrency::detail_::atomicallyWaitNew_(atom_, old_, order_);
+		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitNew(
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch(
 		::std::atomic<ValueT_> const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::detail_::atomicallyWaitNew_(atom_, old_, order_);
+		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> void atomicallyWaitPredicate(

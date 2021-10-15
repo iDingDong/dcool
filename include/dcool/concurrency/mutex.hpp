@@ -750,7 +750,7 @@ namespace dcool::concurrency {
 					do {
 						while (old_ >= exclusive_) {
 							::std::this_thread::yield();
-							old_ = this->m_underlying_.waitNew(old_, ::std::memory_order::relaxed);
+							old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
 						}
 						newValue_ = old_ + exclusive_;
 					} while (
@@ -763,7 +763,7 @@ namespace dcool::concurrency {
 					while (newValue_ != exclusive_) {
 						DCOOL_CORE_ASSERT(newValue_ > exclusive_);
 						::std::this_thread::yield();
-						newValue_ = this->m_underlying_.waitNew(newValue_, ::std::memory_order::acquire);
+						newValue_ = this->m_underlying_.waitFetch(newValue_, ::std::memory_order::acquire);
 					}
 				} else {
 					StatusCount_ expected_ = 0;
@@ -777,7 +777,7 @@ namespace dcool::concurrency {
 						}
 						do {
 							::std::this_thread::yield();
-							expected_ = this->m_underlying_.waitNew(expected_, ::std::memory_order::relaxed);
+							expected_ = this->m_underlying_.waitFetch(expected_, ::std::memory_order::relaxed);
 						} while (expected_ != 0);
 					}
 				}
@@ -1083,7 +1083,7 @@ namespace dcool::concurrency {
 					DCOOL_CORE_ASSERT(old_ <= exclusive_); // Another thread is locking. This would be a deadlock.
 					while (old_ >= exclusive_) {
 						::std::this_thread::yield();
-						old_ = this->m_underlying_.waitNew(old_, ::std::memory_order::relaxed);
+						old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
 					}
 					DCOOL_CORE_ASSERT(old_ >= 1);
 					newValue_ = old_ + (exclusive_ - 1);
@@ -1097,7 +1097,7 @@ namespace dcool::concurrency {
 				while (newValue_ != exclusive_) {
 					DCOOL_CORE_ASSERT(newValue_ > exclusive_);
 					::std::this_thread::yield();
-					newValue_ = this->m_underlying_.waitNew(newValue_, ::std::memory_order::acquire);
+					newValue_ = this->m_underlying_.waitFetch(newValue_, ::std::memory_order::acquire);
 				}
 			} else {
 				for (; ; ) {
@@ -1112,7 +1112,7 @@ namespace dcool::concurrency {
 					do {
 						DCOOL_CORE_ASSERT(expected_ > 1);
 						::std::this_thread::yield();
-						expected_ = this->m_underlying_.waitNew(expected_, ::std::memory_order::relaxed);
+						expected_ = this->m_underlying_.waitFetch(expected_, ::std::memory_order::relaxed);
 					} while (expected_ != 1);
 				}
 			}
@@ -1208,7 +1208,7 @@ namespace dcool::concurrency {
 			do {
 				while (old_ >= exclusive_) {
 					::std::this_thread::yield();
-					old_ = this->m_underlying_.waitNew(old_, ::std::memory_order::relaxed);
+					old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
 				};
 			} while (
 				!(
@@ -1291,7 +1291,7 @@ namespace dcool::concurrency {
 			do {
 				while (old_ >= exclusive_) {
 					::std::this_thread::yield();
-					old_ = this->m_underlying_.waitNew(old_, ::std::memory_order::relaxed);
+					old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
 				};
 				DCOOL_CORE_ASSERT(old_ >= 1);
 			} while (
