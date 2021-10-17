@@ -274,16 +274,16 @@ These operations is intended to be no less efficient than a spinning check. With
 
 No non-atomic versions are provided.
 
-### Wait new operations
+### Wait fetch operations
 
 ```cpp
-constexpr auto stampedWaitNewStamped(
+constexpr auto stampedWaitFetchStamped(
 	StampedValue const& old, std::memory_order order = ::std::memory_order::seq_cst
 ) const noexcept -> StampedValue requires ((!(atomic.isDeterminateFalse())) && stamped)
-constexpr auto stampedWaitNew(
+constexpr auto stampedWaitFetch(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
 ) const noexcept -> Value requires ((!(atomic.isDeterminateFalse())) && stamped)
-constexpr auto waitNew(
+constexpr auto waitFetch(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
 ) const noexcept -> Value requires (!(atomic.isDeterminateFalse()));
 ```

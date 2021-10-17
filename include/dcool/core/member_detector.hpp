@@ -25,7 +25,7 @@
 #	define DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(namespaceName_, ConceptName_, extractorName_, memberName_) \
 		namespace namespaceName_ { \
 			template <typename T_> concept ConceptName_ = requires { \
-				typename ::dcool::core::RequiresConsteval<T_::memberName_>; \
+				typename ::dcool::core::RequiresConstant<T_::memberName_>; \
 			}; \
 			\
 			template <typename T_, typename ValueT_> consteval auto extractorName_(ValueT_ defaultValue_) -> ValueT_ { \
