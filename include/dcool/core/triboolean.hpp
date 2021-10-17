@@ -20,26 +20,26 @@ namespace dcool::core {
 
 		private: using Underlying_ = ::dcool::core::detail_::TribooleanUnderlying_;
 
-		private: Underlying_ m_underlying_;
+		public: Underlying_ underlying_;
 
 		public: constexpr Triboolean(
 			::dcool::core::Boolean value_
-		) noexcept: m_underlying_(value_ ? Underlying_::determinateTrue_ : Underlying_::determinateFalse_) {
+		) noexcept: underlying_(value_ ? Underlying_::determinateTrue_ : Underlying_::determinateFalse_) {
 		}
 
-		private: constexpr Triboolean(Underlying_ underlying_) noexcept: m_underlying_(underlying_) {
+		private: constexpr Triboolean(Underlying_ underlying_) noexcept: underlying_(underlying_) {
 		}
 
 		public: constexpr auto isDeterminate() const noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_ != Underlying_::indeterminate_;
+			return this->underlying_ != Underlying_::indeterminate_;
 		}
 
 		public: constexpr auto isDeterminateTrue() const noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_ == Underlying_::determinateTrue_;
+			return this->underlying_ == Underlying_::determinateTrue_;
 		}
 
 		public: constexpr auto isDeterminateFalse() const noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_ == Underlying_::determinateFalse_;
+			return this->underlying_ == Underlying_::determinateFalse_;
 		}
 
 		public: constexpr auto operator !() const noexcept -> ::dcool::core::Triboolean {
