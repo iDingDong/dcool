@@ -30,7 +30,11 @@ Its member shall customize the list as decribed:
 | `Value` | Defined by `using Value = ValueT;`. |
 | `Stamp` | Defined by `using Stamp = dcool::core::UnsignedInteger<stampWidth>`. |
 | `StampedValue` | See below. |
-| `lockFree` | Implementation-defined. |
+
+## Member constants
+
+| `static constexpr dcool::core::Triboolean lockFree` | Implementation-defined. |
+| `static constexpr dcool::core::Boolean is_always_lock_free` | Defined by `static constexpr dcool::core::Boolean is_always_lock_free = lockFree.isDeterminateTrue()` |
 
 `StampedValue` is defined by:
 
@@ -225,6 +229,8 @@ Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previou
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
 
+For each `fetchTransform`/`FetchTransform` operation there is a corresponding `transformFetch`/`TransformFetch` operation which operates identically except that the `transformFetch`/`TransformFetch` operation returns the value after the modification.
+
 ### Fetch transform or load operations
 
 ```cpp
@@ -253,6 +259,8 @@ With previously holded value `previousValue` loaded with memory order `order`/`l
 Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))`, `newValue.valid()` and `newValue.access()` are not part of the atomicity.
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
+
+For each `fetchTransformOrLoad`/`FetchTransformOrLoad` operation there is a corresponding `transformFetchOrLoad`/`TransformFetchOrLoad` operation which operates identically except that the `transformFetchOrLoad`/`TransformFetchOrLoad` operation returns the value after the modification.
 
 ### Wait operations
 
@@ -357,27 +365,33 @@ Evaluation of the operators are not part of the atomicity unless the `std::atomi
 
 If the `std::atomic_fetch_*`/`std::atomic_ref::fetch_*` were used, atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
 
-### Arithmetic operators
+For each `fetch*`/`Fetch*` operation there is a corresponding `*Fetch` operation which operates identically except that the `*Fetch` operation returns the value after the modification.
+
+### Arithmetic compound assignment operators
 
 ```cpp
-template <typename OperandT> constexpr auto operator +=(OperandT const& operand)& noexcept -> Atom&;
-template <typename OperandT> constexpr auto operator -=(OperandT const& operand)& noexcept -> Atom&;
-template <typename OperandT> constexpr auto operator &=(OperandT const& operand)& noexcept -> Atom&;
-template <typename OperandT> constexpr auto operator |=(OperandT const& operand)& noexcept -> Atom&;
-template <typename OperandT> constexpr auto operator ^=(OperandT const& operand)& noexcept -> Atom&;
+template <typename OperandT> constexpr auto operator +=(OperandT const& operand)& noexcept -> Value;
+template <typename OperandT> constexpr auto operator -=(OperandT const& operand)& noexcept -> Value;
+template <typename OperandT> constexpr auto operator &=(OperandT const& operand)& noexcept -> Value;
+template <typename OperandT> constexpr auto operator |=(OperandT const& operand)& noexcept -> Value;
+template <typename OperandT> constexpr auto operator ^=(OperandT const& operand)& noexcept -> Value;
 ```
 
-Calls the corresponding `this->fetch*(operand)` and returns `*this`.
+Equivalent to corresponding `this->*Fetch(operand)`.
+
+```cpp
+constexpr auto operator ++()& noexcept -> Value; // 1
+constexpr auto operator ++(::dcool::core::PostDisambiguator)& noexcept -> Value; // 2
+constexpr auto operator --()& noexcept -> Value; // 3
+constexpr auto operator --(::dcool::core::PostDisambiguator)& noexcept -> Value; //4
+```
+
+- Version 1: equivalent to `this->fetchAdd(1)`.
+- Version 2: equivalent to `this->addFetch(1)`.
+- Version 3: equivalent to `this->fetchSubtract(1)`.
+- Version 4: equivalent to `this->subtractFetch(1)`.
 
 ## Static member functions
-
-### `is_always_lock_free`
-
-```cpp
-static constexpr auto is_always_lock_free() noexcept -> ::dcool::core::Boolean; // For standard compatibility
-```
-
-Returns `lockFree.isDeterminateTrue()`.
 
 ## Non-static member functions
 

@@ -24,11 +24,21 @@ namespace dcool::core {
 
 	template <typename T_, typename... Ts_> concept SameAs = ::dcool::core::isSame<T_, Ts_...>;
 
+	template <typename T_, typename OtherT_> concept DifferentFrom = !::dcool::core::SameAs<T_, OtherT_>;
+
 	template <typename T_, typename TargetT_> concept ConvertibleTo = ::std::convertible_to<T_, TargetT_>;
 
 	template <typename T_, typename OtherT_> concept ConvertibleBetween =
 		::dcool::core::ConvertibleTo<T_, OtherT_> && ::dcool::core::ConvertibleTo<OtherT_, T_>
 	;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isCopyConstructible = ::std::is_copy_constructible_v<T_>;
+
+	template <typename T_> concept CopyConstructible = ::dcool::core::isCopyConstructible<T_>;
+
+	template <typename T_> constexpr ::dcool::core::Boolean isMoveConstructible = ::std::is_move_constructible_v<T_>;
+
+	template <typename T_> concept MoveConstructible = ::dcool::core::isMoveConstructible<T_>;
 
 	template <typename T_> constexpr ::dcool::core::Boolean isNoThrowCopyConstructible =
 		::std::is_nothrow_copy_constructible_v<T_>
@@ -150,25 +160,31 @@ namespace dcool::core {
 
 	template <typename T_> concept Polymorphic = ::dcool::core::isPolymorphic<T_>;
 
-	template <typename T_, typename... Ts_> constexpr ::dcool::core::Boolean isOneOf = false;
-
-	template <
-		typename T_, typename FirstT_, typename... Ts_
-	> constexpr ::dcool::core::Boolean isOneOf<T_, FirstT_, Ts_...> =
-		::dcool::core::isSame<T_, FirstT_> || ::dcool::core::isOneOf<T_, Ts_...>
-	;
-
-	template <typename T_, typename... Ts_> concept OneOf = ::dcool::core::isOneOf<T_, Ts_...>;
-
 	template <typename T_, typename... Ts_> concept QualifiedOfSame = ::dcool::core::SameAs<
 		::dcool::core::QualifierRemovedType<T_>, ::dcool::core::QualifierRemovedType<Ts_>...
 	>;
+
+	template <typename T_, typename OtherT_> concept QualifiedOfDifferent = ::dcool::core::DifferentFrom<
+		::dcool::core::QualifierRemovedType<T_>, ::dcool::core::QualifierRemovedType<OtherT_>
+	>;
+
+	template <typename T_, typename... Ts_> concept OneOf = (::dcool::core::SameAs<T_, Ts_> || ...);
+
+	template <typename T_, typename... Ts_> concept NoneOf = !::dcool::core::OneOf<T_, Ts_...>;
 
 	template <typename T_, typename... Ts_> concept FormOfSame = ::dcool::core::QualifiedOfSame<
 		::dcool::core::ReferenceRemovedType<T_>, ::dcool::core::ReferenceRemovedType<Ts_>...
 	>;
 
+	template <typename T_, typename OtherT_> concept FormOfDifferent = ::dcool::core::QualifiedOfDifferent<
+		::dcool::core::ReferenceRemovedType<T_>, ::dcool::core::ReferenceRemovedType<OtherT_>
+	>;
+
 	template <typename T_, typename... Ts_> concept FormOfOneOf = ::dcool::core::OneOf<
+		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
+	>;
+
+	template <typename T_, typename... Ts_> concept FormOfNoneOf = ::dcool::core::NoneOf<
 		::dcool::core::QualifiedReferenceRemovedType<T_>, ::dcool::core::QualifiedReferenceRemovedType<Ts_>...
 	>;
 

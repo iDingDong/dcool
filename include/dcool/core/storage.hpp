@@ -135,7 +135,9 @@ namespace dcool::core {
 
 	template <
 		::dcool::core::ConvertibleTo<::dcool::core::StorageRequirement>... Ts_
-	> constexpr auto commonStorageRequirement(::dcool::core::StorageRequirement first_, Ts_... rests_) {
+	> constexpr auto commonStorageRequirement(
+		::dcool::core::StorageRequirement first_, Ts_... rests_
+	) noexcept -> ::dcool::core::StorageRequirement {
 		if constexpr (sizeof...(rests_) > 0) {
 			::dcool::core::StorageRequirement subResult_ = ::dcool::core::commonStorageRequirement(rests_...);
 			::dcool::core::Alignment alignment_ = ::std::max(
@@ -148,6 +150,14 @@ namespace dcool::core {
 		}
 		return first_;
 	}
+
+	template <
+		::dcool::core::StorageRequirement... requirementCs_
+	> using CommonStorage = ::dcool::core::AlignedStorage<::dcool::core::commonStorageRequirement(requirementCs_...)>;
+
+	template <typename... ValueTs_> using CommonStorageFor = ::dcool::core::CommonStorage<
+		::dcool::core::storageRequirementFor<ValueTs_>...
+	>;
 }
 
 #endif
