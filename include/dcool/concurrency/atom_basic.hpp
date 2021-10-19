@@ -457,7 +457,7 @@ namespace dcool::concurrency {
 #	if DCOOL_CPP_P1135R6_ENABLED
 			atom_.wait(old_, order_);
 #	else
-			while (::dcool::core::hasEqualValueRepresentation(atom_.load(order_), old_)) {
+			while (::dcool::core::intelliHasEqualValueRepresentation(atom_.load(order_), old_)) {
 				::std::this_thread::yield();
 			}
 #	endif
@@ -472,7 +472,7 @@ namespace dcool::concurrency {
 				atom_.wait(old_, order_);
 #	endif
 				result_ = atom_.load(order_);
-				if (!(::dcool::core::hasEqualValueRepresentation(atom_.load(order_), old_))) {
+				if (!(::dcool::core::intelliHasEqualValueRepresentation(atom_.load(order_), old_))) {
 					break;
 				}
 				::std::this_thread::yield();
@@ -480,11 +480,10 @@ namespace dcool::concurrency {
 			return result_;
 		}
 
-		template <typename StandardAtomT_, typename PredicateT_> void atomicallyWaitPredicate_(
+		template <typename StandardAtomT_, typename PredicateT_> auto atomicallyWaitPredicateFetch_(
 			StandardAtomT_ const& atom_, PredicateT_&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) noexcept {
-			using Value_ = StandardAtomT_::value_type;
-			Value_ value_ = atom_.load(order_);
+		) noexcept -> StandardAtomT_::value_type {
+			typename StandardAtomT_::value_type value_ = atom_.load(order_);
 			for (; ; ) {
 				if (::dcool::core::invoke(predicate_, ::dcool::core::constantize(value_))) {
 					break;
@@ -492,6 +491,21 @@ namespace dcool::concurrency {
 				::std::this_thread::yield();
 				value_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, value_, order_);
 			}
+			return value_;
+		}
+
+		template <typename StandardAtomT_> void atomicallyWaitEquality_(
+			StandardAtomT_ const& atom_,
+			typename StandardAtomT_::value_type const& expected_,
+			::std::memory_order order_ = ::std::memory_order::seq_cst
+		) noexcept {
+			::dcool::concurrency::detail_::atomicallyWaitPredicateFetch_(
+				atom_,
+				[&expected_](typename StandardAtomT_::value_type const& value_) noexcept -> ::dcool::core::Boolean {
+					return ::dcool::core::intelliHasEqualValueRepresentation(value_, expected_);
+				},
+				order_
+			);
 		}
 
 		template <typename StandardAtomT_> void atomicallyNotifyOne_(StandardAtomT_& object_) noexcept {
@@ -508,7 +522,7 @@ namespace dcool::concurrency {
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyWait(
-		ValueT_ const& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		ValueT_& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept {
 		::std::atomic_ref<ValueT_> atom_(object_);
 		::dcool::concurrency::detail_::atomicallyWait_(atom_, old_, order_);
@@ -521,7 +535,7 @@ namespace dcool::concurrency {
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch(
-		ValueT_ const& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		ValueT_& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		::std::atomic_ref<ValueT_> atom_(object_);
 		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
@@ -533,17 +547,38 @@ namespace dcool::concurrency {
 		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> void atomicallyWaitPredicate(
-		ValueT_ const& object_, PredicateT_&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) noexcept {
+	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> auto atomicallyWaitPredicateFetch(
+		ValueT_& object_, PredicateT_&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
 		::std::atomic_ref<ValueT_> atom_(object_);
-		::dcool::concurrency::detail_::atomicallyWaitPredicate_(atom_, ::dcool::core::forward<PredicateT_>(predicate_), order_);
+		return ::dcool::concurrency::detail_::atomicallyWaitPredicateFetch_(
+			atom_, ::dcool::core::forward<PredicateT_>(predicate_), order_
+		);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> void atomicallyWaitPredicate(
+	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> auto atomicallyWaitPredicateFetch(
 		::std::atomic<ValueT_> const& atom_, PredicateT_&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::detail_::atomicallyWaitPredicateFetch_(
+			atom_, ::dcool::core::forward<PredicateT_>(predicate_), order_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyWaitEquality(
+		ValueT_& object_,
+		::dcool::core::UndeducedType<ValueT_> const& expected_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept {
-		::dcool::concurrency::detail_::atomicallyWaitPredicate_(atom_, ::dcool::core::forward<PredicateT_>(predicate_), order_);
+		::std::atomic_ref<ValueT_> atom_(object_);
+		::dcool::concurrency::detail_::atomicallyWaitEquality_(atom_, expected_, order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyWaitEquality(
+		::std::atomic<ValueT_> const& atom_,
+		::dcool::core::UndeducedType<ValueT_> const& expected_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept {
+		::dcool::concurrency::detail_::atomicallyWaitEquality_(atom_, expected_, order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyNotifyOne(ValueT_& object_) noexcept {
@@ -565,11 +600,15 @@ namespace dcool::concurrency {
 	}
 
 	namespace detail_ {
-		template <typename StandardAtomT_, typename TaskT_> auto atomicallyFetchExecute_(
-			StandardAtomT_& atom_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		template <typename StandardAtomT_, typename TaskT_> auto atomicallyHintedFetchExecute_(
+			StandardAtomT_& atom_,
+			typename StandardAtomT_::value_type const& hint_,
+			TaskT_&& task_,
+			::std::memory_order transformOrder_,
+			::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
 			using Value_ = StandardAtomT_::value_type;
-			Value_ old_ = atom_.load(loadOrder_);
+			Value_ old_ = hint_;
 			for (; ; ) {
 				auto taskResult_ = ::dcool::core::invoke(task_, ::dcool::core::constantize(old_));
 				if (taskResult_.aborted()) {
@@ -582,16 +621,24 @@ namespace dcool::concurrency {
 				} else {
 					::std::this_thread::yield();
 				}
-				old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
+				if (taskResult_.delayedRetryRequested()) {
+					old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
+				} else {
+					old_ = atom_.load(loadOrder_);
+				}
 			}
 			return old_;
 		}
 
-		template <typename StandardAtomT_, typename TaskT_> auto atomicallyExecuteFetch_(
-			StandardAtomT_& atom_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		template <typename StandardAtomT_, typename TaskT_> auto atomicallyHintedExecuteFetch_(
+			StandardAtomT_& atom_,
+			typename StandardAtomT_::value_type const& hint_,
+			TaskT_&& task_,
+			::std::memory_order transformOrder_,
+			::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
 			using Value_ = StandardAtomT_::value_type;
-			Value_ old_ = atom_.load(loadOrder_);
+			Value_ old_ = hint_;
 			for (; ; ) {
 				auto taskResult_ = ::dcool::core::invoke(task_, ::dcool::core::constantize(old_));
 				if (taskResult_.aborted()) {
@@ -604,19 +651,72 @@ namespace dcool::concurrency {
 				} else {
 					::std::this_thread::yield();
 				}
-				::std::this_thread::yield();
-				old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
+				if (taskResult_.delayedRetryRequested()) {
+					old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
+				} else {
+					old_ = atom_.load(loadOrder_);
+				}
 			}
 			return old_;
 		}
 	}
 
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedFetchExecute(
+		ValueT_& object_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order transformOrder_,
+		::std::memory_order loadOrder_
+	) noexcept -> ValueT_ {
+		::std::atomic_ref<ValueT_> atom_(object_);
+		return ::dcool::concurrency::detail_::atomicallyHintedFetchExecute_(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedFetchExecute(
+		ValueT_& object_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::atomicallyHintedFetchExecute(
+			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedFetchExecute(
+		::std::atomic<ValueT_>& atom_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order transformOrder_,
+		::std::memory_order loadOrder_
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::detail_::atomicallyHintedFetchExecute_(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedFetchExecute(
+		::std::atomic<ValueT_>& atom_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::atomicallyHintedFetchExecute(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+		);
+	}
+
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyFetchExecute(
 		ValueT_& object_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 	) noexcept -> ValueT_ {
-		::std::atomic_ref<ValueT_> atom_(object_);
-		return ::dcool::concurrency::detail_::atomicallyFetchExecute_(
-			atom_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		return ::dcool::concurrency::atomicallyFetchExecute(
+			object_,
+			::dcool::concurrency::atomicallyLoad(object_, loadOrder_),
+			::dcool::core::forward<TaskT_>(task_),
+			transformOrder_,
+			loadOrder_
 		);
 	}
 
@@ -627,13 +727,14 @@ namespace dcool::concurrency {
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyFetchExecute(
-		::std::atomic<ValueT_>& atom_,
-		TaskT_&& task_,
-		::std::memory_order transformOrder_,
-		::std::memory_order loadOrder_
+		::std::atomic<ValueT_>& atom_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::detail_::atomicallyFetchExecute_(
-			atom_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		return ::dcool::concurrency::atomicallyHintedFetchExecute(
+			atom_,
+			::dcool::concurrency::atomicallyLoad(atom_, loadOrder_),
+			::dcool::core::forward<TaskT_>(task_),
+			transformOrder_,
+			loadOrder_
 		);
 	}
 
@@ -643,31 +744,80 @@ namespace dcool::concurrency {
 		return ::dcool::concurrency::atomicallyFetchExecute(atom_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
 	}
 
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedExecuteFetch(
+		ValueT_& object_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order transformOrder_,
+		::std::memory_order loadOrder_
+	) noexcept -> ValueT_ {
+		::std::atomic_ref<ValueT_> atom_(object_);
+		return ::dcool::concurrency::detail_::atomicallyHintedExecuteFetch_(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedExecuteFetch(
+		ValueT_& object_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::atomicallyHintedExecuteFetch(
+			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedExecuteFetch(
+		::std::atomic<ValueT_>& atom_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order transformOrder_,
+		::std::memory_order loadOrder_
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::detail_::atomicallyHintedExecuteFetch_(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedExecuteFetch(
+		::std::atomic<ValueT_>& atom_,
+		::dcool::core::UndeducedType<ValueT_> const& hint_,
+		TaskT_&& task_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::atomicallyHintedExecuteFetch(
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+		);
+	}
+
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
 		ValueT_& object_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 	) noexcept -> ValueT_ {
-		::std::atomic_ref<ValueT_> atom_(object_);
-		return ::dcool::concurrency::detail_::atomicallyExecuteFetch_(
-			atom_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		return ::dcool::concurrency::atomicallyExecuteFetch(
+			object_,
+			::dcool::concurrency::atomicallyLoad(object_, loadOrder_),
+			::dcool::core::forward<TaskT_>(task_),
+			transformOrder_,
+			loadOrder_
 		);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
 		ValueT_& object_, TaskT_&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::atomicallyExecuteFetch(
-			object_, ::dcool::core::forward<TaskT_>(task_), order_, order_
-		);
+		return ::dcool::concurrency::atomicallyExecuteFetch(object_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
-		::std::atomic<ValueT_>& atom_,
-		TaskT_&& task_,
-		::std::memory_order transformOrder_,
-		::std::memory_order loadOrder_
+		::std::atomic<ValueT_>& atom_, TaskT_&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::detail_::atomicallyExecuteFetch_(
-			atom_, ::dcool::core::forward<TaskT_>(task_), transformOrder_, loadOrder_
+		return ::dcool::concurrency::atomicallyHintedExecuteFetch(
+			atom_,
+			::dcool::concurrency::atomicallyLoad(atom_, loadOrder_),
+			::dcool::core::forward<TaskT_>(task_),
+			transformOrder_,
+			loadOrder_
 		);
 	}
 
