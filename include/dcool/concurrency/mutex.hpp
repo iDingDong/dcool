@@ -344,73 +344,83 @@ namespace dcool::concurrency {
 			TimePointT__ const& deadline_
 		)& noexcept -> ::dcool::core::Boolean requires (spinnable && timed && recursive) {
 			RecursiveSpinnableSharedAtomUnderlying_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			RecursiveSpinnableSharedAtomUnderlying_ new_ = {
-				.exclusiveOwner_ = ::std::this_thread::get_id()
-			};
-			for (; ; ) {
-				if (old_.exclusiveOwner_ == new_.exclusiveOwner_) {
-					DCOOL_CORE_ASSERT(old_.statusCount_ <= maxRecursion);
-					if (old_.statusCount_ == maxRecursion) {
-						return false;
-					}
-					new_.statusCount_ = old_.statusCount_ + 1;
-					this->m_underlying_.store(new_, ::std::memory_order::relaxed);
-					break;
-				}
-				if (old_.exclusiveOwner_ == ::dcool::concurrency::nullThreadId) {
-					DCOOL_CORE_ASSERT(old_.statusCount_ < maxShare);
-					if constexpr (preferExclusive.isDeterminateTrue()) {
-						new_.statusCount_ = old_.statusCount_;
-						if (
-							this->m_underlying_.compareExchangeWeak(
-								old_, new_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						) {
-							while (new_.statusCount_ != 0) {
-								if (TimePointT__::clock::now() > deadline_) {
-									RecursiveSpinnableSharedAtomUnderlying_ reverted_ = {
-										.exclusiveOwner_ = ::dcool::concurrency::nullThreadId,
-										.statusCount_ = new_.statusCount_
-									};
-									while ((!this->m_underlying_.compareExchangeWeak(new_, reverted_, ::std::memory_order::relaxed))) {
-										DCOOL_CORE_ASSERT(new_.statusCount_ < maxShare);
-										reverted_.statusCount_ = new_.statusCount_;
-									}
-									return false;
-								}
-								::std::this_thread::yield();
-								new_ = this->m_underlying_.load(::std::memory_order::acquire);
-								DCOOL_CORE_ASSERT(new_.statusCount_ < maxShare);
-							}
-							break;
-						}
-					} else {
-						if constexpr (shareable) {
-							if (old_.statusCount_ > 0) {
-								if (TimePointT__::clock::now() > deadline_) {
-									return false;
-								}
-								::std::this_thread::yield();
-								continue;
-							}
-							new_.statusCount_ = 0;
-						}
-						DCOOL_CORE_ASSERT(old_.statusCount_ == 0);
-						if (
-							this->m_underlying_.compare_exchange_weak(
-								old_, new_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						) {
-							break;
-						}
-					}
-					continue;
-				}
-				if (TimePointT__::clock::now() > deadline_) {
+			std::thread::id myId_ = ::std::this_thread::get_id();
+			if (old_.exclusiveOwner_ == myId_) {
+				DCOOL_CORE_ASSERT(old_.statusCount_ <= maxRecursion);
+				if (old_.statusCount_ == maxRecursion) {
 					return false;
 				}
-				::std::this_thread::yield();
-				old_ = this->m_underlying_.load(::std::memory_order::relaxed);
+				this->m_underlying_.store(
+					RecursiveSpinnableSharedAtomUnderlying_ {
+						.exclusiveOwner_ = myId_,
+						.statusCount_ = old_.statusCount_ + 1
+					},
+					::std::memory_order::relaxed
+				);
+				return true;
+			}
+			using TaskResult_ = ::dcool::core::TaskResult<RecursiveSpinnableSharedAtomUnderlying_>;
+			if constexpr (preferExclusive.isDeterminateTrue()) {
+				RecursiveSpinnableSharedAtomUnderlying_ new_ = this->m_underlying_.hintedFetchExecute(
+					old_,
+					[&deadline_, &myId_](RecursiveSpinnableSharedAtomUnderlying_ const& old_) noexcept -> TaskResult_ {
+						if (old_.exclusiveOwner_ != ::dcool::concurrency::nullThreadId) {
+							DCOOL_CORE_ASSERT(old_.exclusiveOwner_ != myId_);
+							if (TimePointT__::clock::now() > deadline_) {
+								return TaskResult_::makeAbort();
+							}
+							return TaskResult_::makeInstantRetry();
+						}
+						return TaskResult_ {
+							.exclusiveOwner_ = myId_,
+							.statusCount_ = old_.statusCount_
+						};
+					},
+					::std::memory_order::acquire,
+					::std::memory_order::relaxed
+				);
+				if (new_.exclusiveOwner_ != myId_) {
+					return false;
+				}
+				while (new_.statusCount_ > 0) {
+					if (TimePointT__::clock::now() > deadline_) {
+						RecursiveSpinnableSharedAtomUnderlying_ reverted_ = {
+							.exclusiveOwner_ = ::dcool::concurrency::nullThreadId,
+							.statusCount_ = new_.statusCount_
+						};
+						while ((!this->m_underlying_.compareExchangeWeak(new_, reverted_, ::std::memory_order::relaxed))) {
+							DCOOL_CORE_ASSERT(new_.statusCount_ < maxShare);
+							reverted_.statusCount_ = new_.statusCount_;
+						}
+						return false;
+					}
+					::std::this_thread::yield();
+					new_ = this->m_underlying_.load(::std::memory_order::acquire);
+					DCOOL_CORE_ASSERT(new_.statusCount_ < maxShare);
+				}
+			} else {
+				RecursiveSpinnableSharedAtomUnderlying_ new_ = this->m_underlying_.hintedExecuteFetch(
+					old_,
+					[&deadline_, &myId_](RecursiveSpinnableSharedAtomUnderlying_ const& old_) noexcept -> TaskResult_ {
+						DCOOL_CORE_ASSERT(old_.exclusiveOwner_ != myId_);
+						if (old_.exclusiveOwner_ == ::dcool::concurrency::nullThreadId && ((!shareable) || old_.statusCount_ == 0)) {
+							DCOOL_CORE_ASSERT(old_.statusCount_ == 0);
+							return TaskResult_ {
+								.exclusiveOwner_ = myId_,
+								.statusCount_ = 0
+							};
+						}
+						if (TimePointT__::clock::now() > deadline_) {
+							return TaskResult_::makeAbort();
+						}
+						return TaskResult_::makeInstantRetry();
+					},
+					::std::memory_order::acquire,
+					::std::memory_order::relaxed
+				);
+				if (new_.exclusiveOwner_ != myId_) {
+					return false;
+				}
 			}
 			return true;
 		}
@@ -421,25 +431,25 @@ namespace dcool::concurrency {
 			if constexpr (recursive) {
 				return this->tryRecursiveSpinningLockUntil_(deadline_);
 			} else if constexpr (shareable) {
+				using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
 				if constexpr (preferExclusive.isDeterminateTrue()) {
-					StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-					StatusCount_ nextValue_;
-					do {
-						while (old_ >= exclusive_) {
-							if (TimePointT__::clock::now() > deadline_) {
-								return false;
+					StatusCount_ old_ = this->m_underlying_.fetchExecute(
+						[&deadline_](StatusCount_ const& old_) noexcept -> TaskResult_ {
+							if (old_ >= exclusive_) {
+								if (TimePointT__::clock::now() > deadline_) {
+									return TaskResult_::makeAbort();
+								}
+								return TaskResult_::makeInstantRetry();
 							}
-							::std::this_thread::yield();
-							old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-						}
-						nextValue_ = old_ + exclusive_;
-					} while (
-						!(
-							this->m_underlying_.compareExchangeWeak(
-								old_, nextValue_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						)
+							return TaskResult_(old_ + exclusive_);
+						},
+						::std::memory_order::acquire,
+						::std::memory_order::relaxed
 					);
+					if (old_ >= exclusive_) {
+						return false;
+					}
+					StatusCount_ nextValue_ = old_ + exclusive_;
 					while (nextValue_ != exclusive_) {
 						if (TimePointT__::clock::now() > deadline_) {
 							StatusCount_ previousCount_ = this->m_underlying_.fetchSubtract(exclusive_, ::std::memory_order::relaxed);
@@ -452,24 +462,21 @@ namespace dcool::concurrency {
 						nextValue_ = this->m_underlying_.load(::std::memory_order::acquire);
 					}
 				} else {
-					StatusCount_ expected_ = 0;
-					while (
-						!(
-							this->m_underlying_.compareExchangeStrong(
-								expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						)
-					) {
-						if (TimePointT__::clock::now() > deadline_) {
-							return false;
-						}
-						::std::this_thread::yield();
-						while (this->m_underlying_.load(::std::memory_order::relaxed) > 0) {
-							if (TimePointT__::clock::now() > deadline_) {
-								return false;
+					StatusCount_ old_ = this->m_underlying_.fetchExecute(
+						[&deadline_](StatusCount_ const& old_) noexcept -> TaskResult_ {
+							if (old_ > 0) {
+								if (TimePointT__::clock::now() > deadline_) {
+									return TaskResult_::makeAbort();
+								}
+								return TaskResult_::makeInstantRetry();
 							}
-							::std::this_thread::yield();
-						}
+							return TaskResult_(exclusive_);
+						},
+						::std::memory_order::acquire,
+						::std::memory_order::relaxed
+					);
+					if (old_ > 0) {
+						return false;
 					}
 				}
 			} else {
@@ -652,13 +659,22 @@ namespace dcool::concurrency {
 			if constexpr (recursive) {
 				return this->tryRecursiveSpinningLockSharedUntil_(deadline_);
 			} else {
-				while (!(this->tryLockShared())) {
-					do {
-						if (TimePointT__::clock::now() > deadline_) {
-							return false;
+				using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
+				StatusCount_ old_ = this->m_underlying_.fetchExecute(
+					[&deadline_](StatusCount_ const& old_) noexcept -> TaskResult_ {
+						if (old_ >= exclusive_) {
+							if (TimePointT__::clock::now() > deadline_) {
+								return TaskResult_::makeAbort();
+							}
+							return TaskResult_::makeInstantRetry();
 						}
-						::std::this_thread::yield();
-					} while (this->m_underlying_.load(::std::memory_order::relaxed) >= exclusive_);
+						return TaskResult_(old_ + 1);
+					},
+					::std::memory_order::acquire,
+					::std::memory_order::relaxed
+				);
+				if (old_ >= exclusive_) {
+					return false;
 				}
 			}
 			return true;
@@ -744,42 +760,34 @@ namespace dcool::concurrency {
 			if constexpr (recursive) {
 				this->recursiveSpinningLock_();
 			} if constexpr (shareable) {
+				using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
 				if constexpr (preferExclusive.isDeterminateTrue()) {
-					StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-					StatusCount_ newValue_;
-					do {
-						while (old_ >= exclusive_) {
-							::std::this_thread::yield();
-							old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
-						}
-						newValue_ = old_ + exclusive_;
-					} while (
-						!(
-							this->m_underlying_.compareExchangeWeak(
-								old_, newValue_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						)
+					StatusCount_ newValue_ = this->m_underlying_.executeFetch(
+						[](StatusCount_ old_) noexcept -> TaskResult_ {
+							if (old_ >= exclusive_) {
+								return TaskResult_::makeDelayedRetry();
+							}
+							return TaskResult_(old_ + exclusive_);
+						},
+						::std::memory_order::acquire,
+						::std::memory_order::relaxed
 					);
-					while (newValue_ != exclusive_) {
+					if (newValue_ != exclusive_) {
 						DCOOL_CORE_ASSERT(newValue_ > exclusive_);
 						::std::this_thread::yield();
-						newValue_ = this->m_underlying_.waitFetch(newValue_, ::std::memory_order::acquire);
+						this->m_underlying_.waitEquality(exclusive_, ::std::memory_order::acquire);
 					}
 				} else {
-					StatusCount_ expected_ = 0;
-					for (; ; ) {
-						if (
-							this->m_underlying_.compareExchangeStrong(
-								expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-							)
-						) {
-							break;
-						}
-						do {
-							::std::this_thread::yield();
-							expected_ = this->m_underlying_.waitFetch(expected_, ::std::memory_order::relaxed);
-						} while (expected_ != 0);
-					}
+					this->m_underlying_.executeFetch(
+						[](StatusCount_ old_) noexcept -> TaskResult_ {
+							if (old_ > 0) {
+								return TaskResult_::makeDelayedRetry();
+							}
+							return TaskResult_(exclusive_);
+						},
+						::std::memory_order::acquire,
+						::std::memory_order::relaxed
+					);
 				}
 			} else {
 				while (!(this->tryLock())) {
@@ -831,23 +839,17 @@ namespace dcool::concurrency {
 		}
 
 		private: void spinningLockShared_()& noexcept requires (spinnable) {
-			for (; ; ) {
-				StatusCount_ previous_ = this->m_underlying_.fetchTransformOrLoad(
-					[](StatusCount_ old_) noexcept -> ::dcool::core::Optional<StatusCount_> {
-						if (old_ >= exclusive_) {
-							return ::dcool::core::nullOptional;
-						}
-						return old_ + 1;
-					},
-					::std::memory_order::acquire,
-					::std::memory_order::relaxed
-				);
-				if (previous_ < exclusive_) {
-					break;
-				}
-				::std::this_thread::yield();
-				this->m_underlying_.wait(previous_, ::std::memory_order::relaxed);
-			}
+			using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
+			this->m_underlying_.fetchExecute(
+				[](StatusCount_ old_) noexcept -> TaskResult_ {
+					if (old_ >= exclusive_) {
+						return TaskResult_::makeDelayedRetry();
+					}
+					return TaskResult_(old_ + 1);
+				},
+				::std::memory_order::acquire,
+				::std::memory_order::relaxed
+			);
 		}
 
 		public: void lockShared()& noexcept(spinnable) requires (shareable) {
@@ -963,8 +965,7 @@ namespace dcool::concurrency {
 					StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
 					StatusCount_ newValue_;
 					do {
-						// Another thread is locking. This would be a deadlock.
-						DCOOL_CORE_ASSERT(old_ <= exclusive_);
+						DCOOL_CORE_ASSERT(old_ <= exclusive_); // Another thread is locking. This would be a deadlock.
 						while (old_ >= exclusive_) {
 							if (TimePointT__::clock::now() > deadline_) {
 								return false;
@@ -1076,23 +1077,18 @@ namespace dcool::concurrency {
 		}
 
 		private: void spinningUpgrade_()& noexcept requires (spinnable && upgradeable) {
+			using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
 			if constexpr (preferExclusive.isDeterminateTrue()) {
-				StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-				StatusCount_ newValue_;
-				do {
-					DCOOL_CORE_ASSERT(old_ <= exclusive_); // Another thread is locking. This would be a deadlock.
-					while (old_ >= exclusive_) {
-						::std::this_thread::yield();
-						old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
-					}
-					DCOOL_CORE_ASSERT(old_ >= 1);
-					newValue_ = old_ + (exclusive_ - 1);
-				} while (
-					!(
-						this->m_underlying_.compare_exchange_weak(
-							old_, newValue_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-						)
-					)
+				StatusCount_ newValue_ = this->m_underlying_.executeFetch(
+					[](StatusCount_ const& old_) noexcept -> TaskResult_ {
+						DCOOL_CORE_ASSERT(old_ <= exclusive_); // Another thread is locking. This would be a deadlock.
+						if (old_ == exclusive_) {
+							return TaskResult_::makeDelayedRetry();
+						}
+						return TaskResult_(old_ + (exclusive_ - 1));
+					},
+					::std::memory_order::acquire,
+					::std::memory_order::relaxed
 				);
 				while (newValue_ != exclusive_) {
 					DCOOL_CORE_ASSERT(newValue_ > exclusive_);
@@ -1100,21 +1096,17 @@ namespace dcool::concurrency {
 					newValue_ = this->m_underlying_.waitFetch(newValue_, ::std::memory_order::acquire);
 				}
 			} else {
-				for (; ; ) {
-					StatusCount_ expected_ = 1;
-					if (
-						this->m_underlying_.compare_exchange_strong(
-							expected_, exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-						)
-					) {
-						break;
-					}
-					do {
-						DCOOL_CORE_ASSERT(expected_ > 1);
-						::std::this_thread::yield();
-						expected_ = this->m_underlying_.waitFetch(expected_, ::std::memory_order::relaxed);
-					} while (expected_ != 1);
-				}
+				this->m_underlying_.executeFetch(
+					[](StatusCount_ old_) noexcept -> TaskResult_ {
+						if (old_ != 1) {
+							DCOOL_CORE_ASSERT(old_ > 1);
+							return TaskResult_::makeDelayedRetry();
+						}
+						return TaskResult_(exclusive_);
+					},
+					::std::memory_order::acquire,
+					::std::memory_order::relaxed
+				);
 			}
 		}
 
@@ -1204,18 +1196,16 @@ namespace dcool::concurrency {
 		}
 
 		private: void spinningOrderLock_()& noexcept requires (spinnable && preferExclusive.isDeterminateTrue()) {
-			StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			do {
-				while (old_ >= exclusive_) {
-					::std::this_thread::yield();
-					old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
-				};
-			} while (
-				!(
-					this->m_underlying_.compareExchangeWeak(
-						old_, old_ + exclusive_, ::std::memory_order::acquire, ::std::memory_order::relaxed
-					)
-				)
+			using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
+			this->m_underlying_.fetchExecute(
+				[](StatusCount_ const& old_) noexcept -> TaskResult_ {
+					if (old_ >= exclusive_) {
+						return TaskResult_::makeDelayedRetry();
+					}
+					return TaskResult_(old_ + exclusive_);
+				},
+				::std::memory_order::acquire,
+				::std::memory_order::relaxed
 			);
 		}
 
@@ -1287,19 +1277,17 @@ namespace dcool::concurrency {
 		}
 
 		private: void spinningOrderUpgrade_()& noexcept requires (spinnable && upgradeable && preferExclusive.isDeterminateTrue()) {
-			StatusCount_ old_ = this->m_underlying_.load(::std::memory_order::relaxed);
-			do {
-				while (old_ >= exclusive_) {
-					::std::this_thread::yield();
-					old_ = this->m_underlying_.waitFetch(old_, ::std::memory_order::relaxed);
-				};
-				DCOOL_CORE_ASSERT(old_ >= 1);
-			} while (
-				!(
-					this->m_underlying_.compare_exchange_weak(
-						old_, old_ + (exclusive_ - 1), ::std::memory_order::acquire, ::std::memory_order::relaxed
-					)
-				)
+			using TaskResult_ = ::dcool::core::TaskResult<StatusCount_>;
+			this->m_underlying_.fetchExecute(
+				[](StatusCount_ const& old_) noexcept -> TaskResult_ {
+					DCOOL_CORE_ASSERT(old_ <= exclusive_); // Another thread is locking. This would be a deadlock.
+					if (old_ == exclusive_) {
+						return TaskResult_::makeDelayedRetry();
+					}
+					return TaskResult_(old_ + (exclusive_ - 1));
+				},
+				::std::memory_order::acquire,
+				::std::memory_order::relaxed
 			);
 		}
 
@@ -1354,13 +1342,7 @@ namespace dcool::concurrency {
 
 		private: void completeExclusiveOrder_()& noexcept requires (preferExclusive.isDeterminateTrue()) {
 			if constexpr (spinnable) {
-				this->m_underlying_.waitPredicate(
-					[](StatusCount_ value_) noexcept -> ::dcool::core::Boolean {
-						DCOOL_CORE_ASSERT(value_ >= exclusive_);
-						return value_ == exclusive_;
-					},
-					::std::memory_order::acquire
-				);
+				this->m_underlying_.waitEquality(exclusive_, ::std::memory_order::acquire);
 			} else {
 				::std::unique_lock locker_(this->m_underlying_.mutex_);
 				this->m_underlying_.blocker_.wait(

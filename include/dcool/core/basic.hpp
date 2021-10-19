@@ -93,6 +93,16 @@ namespace dcool::core {
 	}
 
 	using ::std::launder;
+	using ::std::forward;
+	using ::std::move;
+
+	template <::dcool::core::Boolean moveC_, typename ValueT_> constexpr decltype(auto) moveIf(ValueT_& value_) noexcept {
+		if constexpr (moveC_) {
+			return ::dcool::core::move(value_);
+		} else {
+			return value_;
+		}
+	}
 }
 
 #endif

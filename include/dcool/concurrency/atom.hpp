@@ -74,6 +74,22 @@ namespace dcool::concurrency {
 
 			alignas(::dcool::concurrency::requiredAtomAlignment<UnderlyingValueT_>) mutable UnderlyingValueT_ underlying_;
 		};
+
+		template <typename ValueT_, ::dcool::core::Length stampWidthC_> struct StampedValue_ {
+			private: using Self_ = StampedValue_<ValueT_, stampWidthC_>;
+			public: using Value = ValueT_;
+			public: static constexpr ::dcool::core::Length stampWidth = stampWidthC_;
+
+			public: using Stamp = ::dcool::core::UnsignedInteger<stampWidth>;
+
+			public: Value value;
+			public: [[no_unique_address]] Stamp stamp;
+
+			friend constexpr auto hasEqualValueRepresentation(Self_ const& left_, Self_ const& right_) {
+				//::dcool::core::terminate();
+				return left_.stamp == right_.stamp && ::dcool::core::hasEqualValueRepresentation(left_.value, right_.value);
+			}
+		};
 	}
 
 	template <typename ValueT_, ::dcool::concurrency::AtomConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct Atom {
@@ -90,22 +106,19 @@ namespace dcool::concurrency {
 			atomic.isDeterminateTrue() ?
 				::dcool::concurrency::detail_::AtomUnderlyingCategory_::atomic_ :
 				atomic.isDeterminateFalse() ?
-					::dcool::concurrency::detail_::AtomUnderlyingCategory_::atomicReadyPlain_ :
-					::dcool::concurrency::detail_::AtomUnderlyingCategory_::plain_
+					::dcool::concurrency::detail_::AtomUnderlyingCategory_::plain_ :
+					::dcool::concurrency::detail_::AtomUnderlyingCategory_::atomicReadyPlain_
 		;
 
-		public: using Stamp = ::dcool::core::UnsignedInteger<stampWidth>;
-
-		public: struct StampedValue {
-			[[no_unique_address]] ValueT_ value;
-			[[no_unique_address]] Stamp stamp;
-		};
-
-		private: using UnderlyingValue_ = ::dcool::core::ConditionalType<stamped, StampedValue, Value>;
-
-		private: using UnderlyingHolder_ = ::dcool::concurrency::detail_::AtomUnderlying_<underlyingCategory_, UnderlyingValue_>;
+		public: using StampedValue = ::dcool::concurrency::detail_::StampedValue_<Value, stampWidth>;
+		public: using Stamp = StampedValue::Stamp;
+		public: using UnderlyingValue = ::dcool::core::ConditionalType<stamped, StampedValue, Value>;
+		private: using UnderlyingHolder_ = ::dcool::concurrency::detail_::AtomUnderlying_<underlyingCategory_, UnderlyingValue>;
 
 		public: static constexpr ::dcool::core::Triboolean lockFree = UnderlyingHolder_::lockFree;
+
+		// For standard compatibility
+		public: static constexpr ::dcool::core::Boolean is_always_lock_free = lockFree.isDeterminateTrue();
 
 		private: UnderlyingHolder_ m_holder_;
 
@@ -115,7 +128,7 @@ namespace dcool::concurrency {
 		public: Atom(Self_ const&) = delete;
 		public: Atom(Self_&&) = delete;
 
-		public: constexpr Atom(Value desired_) noexcept: m_holder_ {
+		public: constexpr Atom(Value const& desired_) noexcept: m_holder_ {
 			.underlying_ = toUnderlying_(desired_)
 		} {
 		}
@@ -127,8 +140,8 @@ namespace dcool::concurrency {
 			return *this;
 		}
 
-		private: static constexpr auto toUnderlying_(Value const& value_) noexcept -> UnderlyingValue_ {
-			UnderlyingValue_ result_;
+		private: static constexpr auto toUnderlying_(Value const& value_) noexcept -> UnderlyingValue {
+			UnderlyingValue result_;
 			if constexpr (stamped) {
 				result_.value = value_;
 				result_.stamp = Stamp(0);
@@ -136,15 +149,6 @@ namespace dcool::concurrency {
 				result_ = value_;
 			}
 			return result_;
-		}
-
-		private: static constexpr auto sameValueRepresentation_(
-			UnderlyingValue_ const& left_, UnderlyingValue_ const& right_
-		) noexcept -> ::dcool::core::Boolean {
-			if constexpr (stamped) {
-				return left_.stamp == right_.stamp && ::dcool::core::hasEqualValueRepresentation(left_.value, right_.value);
-			}
-			return ::dcool::core::hasEqualValueRepresentation(left_, right_);
 		}
 
 		public: constexpr auto lockFreeOnExecution() const noexcept -> ::dcool::core::Boolean {
@@ -159,12 +163,12 @@ namespace dcool::concurrency {
 
 		// Underlying operations
 		private: constexpr auto atomicallyLoadUnderlying_(
-			::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
+			::std::memory_order order_
+		) const noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
 			return ::dcool::concurrency::atomicallyLoad(this->m_holder_.underlying_, order_);
 		}
 
-		private: constexpr auto sequencedLoadUnderlying_() const noexcept -> UnderlyingValue_ {
+		private: constexpr auto sequencedLoadUnderlying_() const noexcept -> UnderlyingValue {
 			if constexpr (atomic.isDeterminateTrue()) {
 				return this->atomicallyLoadUnderlying_(::std::memory_order::relaxed);
 			}
@@ -172,12 +176,12 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr void atomicallyStoreUnderlying_(
-			UnderlyingValue_ const& desired_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+			UnderlyingValue const& desired_, ::std::memory_order order_
 		)& noexcept requires (supportAtomicOperation_) {
 			::dcool::concurrency::atomicallyStore(this->m_holder_.underlying_, desired_, order_);
 		}
 
-		private: constexpr void sequencedStoreUnderlying_(UnderlyingValue_ const& desired_)& noexcept {
+		private: constexpr void sequencedStoreUnderlying_(UnderlyingValue const& desired_)& noexcept {
 			if constexpr (atomic.isDeterminateTrue()) {
 				this->atomicallyStoreUnderlying_(desired_, ::std::memory_order::relaxed);
 			} else {
@@ -186,31 +190,23 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr auto atomicallyExchangeUnderlying_(
-			UnderlyingValue_ const& desired_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
+			UnderlyingValue const& desired_, ::std::memory_order order_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
 			return ::dcool::concurrency::atomicallyExchange(this->m_holder_.underlying_, desired_, order_);
 		}
 
-		private: constexpr auto sequencedExchangeUnderlying_(UnderlyingValue_ const& desired_) const noexcept -> UnderlyingValue_ {
+		private: constexpr auto sequencedExchangeUnderlying_(UnderlyingValue const& desired_) noexcept -> UnderlyingValue {
 			if constexpr (atomic.isDeterminateTrue()) {
 				return this->atomicallyExchangeUnderlying_(desired_, ::std::memory_order::relaxed);
 			}
-			UnderlyingValue_ result_ = this->m_holder_.underlying_;
+			UnderlyingValue result_ = this->m_holder_.underlying_;
 			this->m_holder_.underlying_ = desired_;
 			return result_;
 		}
 
 		private: constexpr auto atomicallyCompareExchangeUnderlyingWeak_(
-			UnderlyingValue_& expected_,
-			UnderlyingValue_ const& desired_,
-			::std::memory_order order_ = ::std::memory_order::seq_cst
-		)& noexcept -> ::dcool::core::Boolean requires (supportAtomicOperation_) {
-			return ::dcool::concurrency::atomicallyCompareExchangeWeak(this->m_holder_.underlying_, expected_, desired_, order_);
-		}
-
-		private: constexpr auto atomicallyCompareExchangeUnderlyingWeak_(
-			UnderlyingValue_& expected_,
-			UnderlyingValue_ const& desired_,
+			UnderlyingValue& expected_,
+			UnderlyingValue const& desired_,
 			::std::memory_order successOrder_,
 			::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (supportAtomicOperation_) {
@@ -220,12 +216,12 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr auto sequencedCompareExchangeUnderlyingWeak_(
-			UnderlyingValue_& expected_, UnderlyingValue_ const& desired_
+			UnderlyingValue& expected_, UnderlyingValue const& desired_
 		)& noexcept -> ::dcool::core::Boolean {
 			::dcool::core::Boolean result_;
 			if constexpr (atomic.isDeterminateTrue()) {
 				result_ = ::dcool::concurrency::atomicallyCompareExchangeWeak(
-					this->m_holder_.underlying_, expected_, ::std::memory_order::relaxed
+					this->m_holder_.underlying_, expected_, desired_, ::std::memory_order::relaxed
 				);
 			} else {
 				// Non-atomic operations will not fail spuriously.
@@ -235,19 +231,8 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr auto atomicallyCompareExchangeUnderlyingStrong_(
-			UnderlyingValue_& expected_,
-			UnderlyingValue_ const& desired_,
-			::std::memory_order order_ = ::std::memory_order::seq_cst
-		)& noexcept -> ::dcool::core::Boolean requires (supportAtomicOperation_) {
-			if constexpr (atomic.isDeterminateTrue()) {
-				return this->atomicallyExchangeUnderlying_(desired_, ::std::memory_order::relaxed);
-			}
-			return ::dcool::concurrency::atomicallyCompareExchangeStrong(this->m_holder_.underlying_, expected_, desired_, order_);
-		}
-
-		private: constexpr auto atomicallyCompareExchangeUnderlyingStrong_(
-			UnderlyingValue_& expected_,
-			UnderlyingValue_ const& desired_,
+			UnderlyingValue& expected_,
+			UnderlyingValue const& desired_,
 			::std::memory_order successOrder_,
 			::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (supportAtomicOperation_) {
@@ -257,15 +242,15 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr auto sequencedCompareExchangeUnderlyingStrong_(
-			UnderlyingValue_& expected_, UnderlyingValue_ const& desired_
+			UnderlyingValue& expected_, UnderlyingValue const& desired_
 		)& noexcept -> ::dcool::core::Boolean {
 			::dcool::core::Boolean result_;
 			if constexpr (atomic.isDeterminateTrue()) {
 				result_ = ::dcool::concurrency::atomicallyCompareExchangeStrong(
-					this->m_holder_.underlying_, expected_, ::std::memory_order::relaxed
+					this->m_holder_.underlying_, expected_, desired_, ::std::memory_order::relaxed
 				);
 			} else {
-				if (!(sameValueRepresentation_(this->m_holder_.underlying_, expected_))) {
+				if (!(::dcool::core::intelliHasEqualValueRepresentation(this->m_holder_.underlying_, expected_))) {
 					expected_ = this->m_holder_.underlying_;
 					return false;
 				}
@@ -276,14 +261,8 @@ namespace dcool::concurrency {
 		}
 
 		private: template <typename TransformerT__> constexpr auto atomicallyFetchTransformUnderlying_(
-			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
-			return this->atomicallyFetchTransformUnderlying_(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
-		}
-
-		private: template <typename TransformerT__> constexpr auto atomicallyFetchTransformUnderlying_(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
 			return ::dcool::concurrency::atomicallyFetchTransform(
 				this->m_holder_.underlying_, ::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 			);
@@ -291,13 +270,13 @@ namespace dcool::concurrency {
 
 		private: template <typename TransformerT__> constexpr auto sequencedFetchTransformUnderlying_(
 			TransformerT__&& transformer_
-		)& noexcept -> UnderlyingValue_ {
+		)& noexcept -> UnderlyingValue {
 			if constexpr (atomic.isDeterminateTrue()) {
 				return this->atomicallyFetchTransformUnderlying_(
-					::dcool::core::forward<TransformerT__>(transformer_), ::std::memory_order::relaxed
+					::dcool::core::forward<TransformerT__>(transformer_), ::std::memory_order::relaxed, ::std::memory_order::relaxed
 				);
 			}
-			UnderlyingValue_ result_ = this->m_holder_.underlying_;
+			UnderlyingValue result_ = this->m_holder_.underlying_;
 			this->m_holder_.underlying_ = ::dcool::core::invoke(
 				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
 			);
@@ -305,17 +284,9 @@ namespace dcool::concurrency {
 		}
 
 		private: template <typename TransformerT__> constexpr auto atomicallyFetchTransformOrLoadUnderlying_(
-			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
-			return this->atomicallyFetchTransformOrLoadUnderlying_(
-				::dcool::core::forward<TransformerT__>(transformer_), order_, order_
-			);
-		}
-
-		private: template <typename TransformerT__> constexpr auto atomicallyFetchTransformOrLoadUnderlying_(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
-			UnderlyingValue_ old_ = this->atomicallyLoadUnderlying_(loadOrder_);
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			UnderlyingValue old_ = this->atomicallyLoadUnderlying_(loadOrder_);
 			for (; ; ) {
 				auto newValue_ = ::dcool::core::invoke(transformer_, ::dcool::core::constantize(old_));
 				if (!(newValue_.valid())) {
@@ -330,8 +301,8 @@ namespace dcool::concurrency {
 
 		private: template <typename TransformerT__> constexpr auto sequencedFetchTransformOrLoadUnderlying_(
 			TransformerT__&& transformer_
-		)& noexcept -> UnderlyingValue_ {
-			UnderlyingValue_ result_ = this->sequencedLoadUnderlying_();
+		)& noexcept -> UnderlyingValue {
+			UnderlyingValue result_ = this->sequencedLoadUnderlying_();
 			auto new_ = ::dcool::core::invoke(
 				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
 			);
@@ -342,23 +313,57 @@ namespace dcool::concurrency {
 		}
 
 		private: constexpr void atomicallyWaitUnderlying_(
-			UnderlyingValue_ old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+			UnderlyingValue old_, ::std::memory_order order_
 		) const noexcept requires (supportAtomicOperation_) {
 			::dcool::concurrency::atomicallyWait(this->m_holder_.underlying_, old_, order_);
 		}
 
 		private: constexpr auto atomicallyWaitFetchUnderlying_(
-			UnderlyingValue_ old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) {
+			UnderlyingValue old_, ::std::memory_order order_
+		) const noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
 			return ::dcool::concurrency::atomicallyWaitFetch(this->m_holder_.underlying_, old_, order_);
 		}
 
-		private: template <typename PredicateT_> constexpr void atomicallyWaitUnderlyingPredicate_(
-			PredicateT_&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept requires (supportAtomicOperation_) {
-			::dcool::concurrency::atomicallyWaitPredicate(
+		private: template <typename PredicateT_> constexpr auto atomicallyWaitPredicateFetchUnderlying_(
+			PredicateT_&& predicate_, ::std::memory_order order_
+		) const noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			return ::dcool::concurrency::atomicallyWaitPredicateFetch(
 				this->m_holder_.underlying_, ::dcool::core::forward<PredicateT_>(predicate_), order_
 			);
+		}
+
+		private: constexpr void atomicallyWaitEqualityUnderlying_(
+			UnderlyingValue const& expected_, ::std::memory_order order_
+		) const noexcept requires (supportAtomicOperation_) {
+			return ::dcool::concurrency::atomicallyWaitEquality(this->m_holder_.underlying_, expected_, order_);
+		}
+
+		private: template <typename TaskT__> constexpr auto atomicallyHintedFetchExecuteUnderlying_(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			return ::dcool::concurrency::atomicallyHintedFetchExecute(
+				this->m_holder_.underlying_, hint_, task_, transformOrder_, loadOrder_
+			);
+		}
+
+		private: template <typename TaskT__> constexpr auto atomicallyFetchExecuteUnderlying_(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			return ::dcool::concurrency::atomicallyFetchExecute(this->m_holder_.underlying_, task_, transformOrder_, loadOrder_);
+		}
+
+		private: template <typename TaskT__> constexpr auto atomicallyHintedExecuteFetchUnderlying_(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			return ::dcool::concurrency::atomicallyHintedExecuteFetch(
+				this->m_holder_.underlying_, hint_, task_, transformOrder_, loadOrder_
+			);
+		}
+
+		private: template <typename TaskT__> constexpr auto atomicallyExecuteFetchUnderlying_(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			 return ::dcool::concurrency::atomicallyExecuteFetch(this->m_holder_.underlying_, task_, transformOrder_, loadOrder_);
 		}
 
 		// Load operations
@@ -375,13 +380,10 @@ namespace dcool::concurrency {
 		public: constexpr auto loadStamped(
 			::std::memory_order order_ = ::std::memory_order::seq_cst
 		) const noexcept -> StampedValue requires (stamped) {
-			StampedValue result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyLoadStamped(order_);
-			} else {
-				result_ = this->sequencedLoadStamped();
+				return this->atomicallyLoadStamped(order_);
 			}
-			return result_;
+			return this->sequencedLoadStamped();
 		}
 
 		public: constexpr auto atomicallyLoad(
@@ -407,13 +409,10 @@ namespace dcool::concurrency {
 		}
 
 		public: constexpr auto load(::std::memory_order order_ = ::std::memory_order::seq_cst) const noexcept -> Value {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyLoad(order_);
-			} else {
-				result_ = this->sequencedLoad();
+				return this->atomicallyLoad(order_);
 			}
-			return result_;
+			return this->sequencedLoad();
 		}
 
 		public: constexpr operator Value() const noexcept {
@@ -503,13 +502,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedExchangeStamped(
 			Value const& desired_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		)& noexcept -> StampedValue requires (stamped) {
-			StampedValue result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedExchangeStamped(desired_, order_);
-			} else {
-				result_ = this->sequencedStampedExchangeStamped(desired_);
+				return this->atomicallyStampedExchangeStamped(desired_, order_);
 			}
-			return result_;
+			return this->sequencedStampedExchangeStamped(desired_);
 		}
 
 		public: constexpr auto atomicallyStampedExchange(
@@ -525,13 +521,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedExchange(
 			Value const& desired_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		)& noexcept -> Value requires (stamped) {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedExchange(desired_, order_);
-			} else {
-				result_ = this->sequencedStampedExchange(desired_);
+				return this->atomicallyStampedExchange(desired_, order_);
 			}
-			return result_;
+			return this->sequencedStampedExchange(desired_);
 		}
 
 		public: constexpr auto atomicallyExchange(
@@ -559,13 +552,10 @@ namespace dcool::concurrency {
 		public: constexpr auto exchange(
 			Value const& desired_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		)& noexcept -> Value {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyExchange(desired_, order_);
-			} else {
-				result_ = this->sequencedExchange(desired_);
+				return this->atomicallyExchange(desired_, order_);
 			}
-			return result_;
+			return this->sequencedExchange(desired_);
 		}
 
 		// Weak CAS operations
@@ -601,13 +591,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedCompareExchangeStampedWeak(
 			StampedValue& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (stamped) {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedCompareExchangeStampedWeak(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedStampedCompareExchangeStampedWeak(expected_, desired_);
+				return this->atomicallyStampedCompareExchangeStampedWeak(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedStampedCompareExchangeStampedWeak(expected_, desired_);
 		}
 
 		public: constexpr auto atomicallyStampedCompareExchangeWeak(
@@ -639,13 +626,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedCompareExchangeWeak(
 			Value& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (stamped) {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedCompareExchangeWeak(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedStampedCompareExchangeWeak(expected_, desired_);
+				return this->atomicallyStampedCompareExchangeWeak(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedStampedCompareExchangeWeak(expected_, desired_);
 		}
 
 		public: constexpr auto atomicallyCompareExchangeWeak(
@@ -687,13 +671,10 @@ namespace dcool::concurrency {
 		public: constexpr auto compareExchangeWeak(
 			Value& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyCompareExchangeWeak(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedCompareExchangeWeak(expected_, desired_);
+				return this->atomicallyCompareExchangeWeak(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedCompareExchangeWeak(expected_, desired_);
 		}
 
 		// Strong CAS operations
@@ -717,7 +698,7 @@ namespace dcool::concurrency {
 			StampedValue& expected_, Value const& desired_
 		)& noexcept -> ::dcool::core::Boolean requires (stamped) {
 			StampedValue old_ = this->sequencedLoadStamped();
-			if (!(sameValueRepresentation_(expected_, old_))) {
+			if (!(::dcool::core::intelliHasEqualValueRepresentation(expected_, old_))) {
 				expected_ = old_;
 				return false;
 			}
@@ -739,13 +720,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedCompareExchangeStampedStrong(
 			StampedValue& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (stamped) {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedCompareExchangeStampedStrong(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedStampedCompareExchangeStampedStrong(expected_, desired_);
+				return this->atomicallyStampedCompareExchangeStampedStrong(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedStampedCompareExchangeStampedStrong(expected_, desired_);
 		}
 
 		public: constexpr auto atomicallyStampedCompareExchangeStrong(
@@ -799,13 +777,10 @@ namespace dcool::concurrency {
 		public: constexpr auto stampedCompareExchangeStrong(
 			Value& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean requires (stamped) {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedCompareExchangeStrong(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedStampedCompareExchangeStrong(expected_, desired_);
+				return this->atomicallyStampedCompareExchangeStrong(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedStampedCompareExchangeStrong(expected_, desired_);
 		}
 
 		public: constexpr auto atomicallyCompareExchangeStrong(
@@ -847,22 +822,19 @@ namespace dcool::concurrency {
 		public: constexpr auto compareExchangeStrong(
 			Value& expected_, Value const& desired_, ::std::memory_order successOrder_, ::std::memory_order failureOrder_
 		)& noexcept -> ::dcool::core::Boolean {
-			::dcool::core::Boolean result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyCompareExchangeStrong(expected_, desired_, successOrder_, failureOrder_);
-			} else {
-				result_ = this->sequencedCompareExchangeStrong(expected_, desired_);
+				return this->atomicallyCompareExchangeStrong(expected_, desired_, successOrder_, failureOrder_);
 			}
-			return result_;
+			return this->sequencedCompareExchangeStrong(expected_, desired_);
 		}
 
 		// Fetch transform operations
-		private: template <typename TransformerT__> struct StampedTransformer_ {
+		private: template <typename TransformerT__> struct StampedStampedTransformer_ {
 			::dcool::core::ReferenceRemovedType<TransformerT__>* transformer_;
 
 			constexpr auto operator ()(StampedValue old_)& noexcept -> StampedValue {
 				return StampedValue {
-					.value = ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_.value)),
+					.value = ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_)),
 					.stamp = old_.stamp + 1
 				};
 			}
@@ -870,10 +842,24 @@ namespace dcool::concurrency {
 			constexpr auto operator ()(StampedValue old_)&& noexcept -> StampedValue {
 				return StampedValue {
 					.value = ::dcool::core::invoke(
-						::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_.value)
+						::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_)
 					),
 					.stamp = old_.stamp + 1
 				};
+			}
+		};
+
+		private: template <typename TransformerT__> struct StampedTransformer_ {
+			::dcool::core::ReferenceRemovedType<TransformerT__>* transformer_;
+
+			constexpr auto operator ()(StampedValue old_)& noexcept -> Value {
+				return ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_.value));
+			}
+
+			constexpr auto operator ()(StampedValue old_)&& noexcept -> Value {
+				return ::dcool::core::invoke(
+					::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_.value)
+				);
 			}
 		};
 
@@ -887,7 +873,7 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
 			return this->atomicallyFetchTransformUnderlying_(
-				StampedTransformer_<TransformerT__> {
+				StampedStampedTransformer_<TransformerT__> {
 					.transformer_ = ::dcool::core::addressOf(transformer_)
 				},
 				transformOrder_,
@@ -899,7 +885,7 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_
 		)& noexcept -> StampedValue requires (stamped) {
 			return this->sequencedFetchTransformUnderlying_(
-				StampedTransformer_<TransformerT__> {
+				StampedStampedTransformer_<TransformerT__> {
 					.transformer_ = ::dcool::core::addressOf(transformer_)
 				}
 			);
@@ -914,15 +900,57 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransformStamped(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> StampedValue requires (stamped) {
-			StampedValue result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedFetchTransformStamped(
+				return this->atomicallyStampedFetchTransformStamped(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
-			} else {
-				result_ = this->sequencedStampedFetchTransformStamped(::dcool::core::forward<TransformerT__>(transformer_));
 			}
-			return result_;
+			return this->sequencedStampedFetchTransformStamped(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchStamped(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetchStamped(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchStamped(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyTransformFetchUnderlying_(
+				StampedStampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
+			);
+		}
+
+		public: template <typename TransformerT__> constexpr auto sequencedStampedTransformFetchStamped(
+			TransformerT__&& transformer_
+		)& noexcept -> StampedValue requires (stamped) {
+			return this->sequencedTransformFetchUnderlying_(
+				StampedStampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchStamped(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (stamped) {
+			return this->stampedTransformFetchStamped(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchStamped(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (stamped) {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyStampedTransformFetchStamped(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedStampedTransformFetchStamped(::dcool::core::forward<TransformerT__>(transformer_));
 		}
 
 		public: template <typename TransformerT__> constexpr auto atomicallyStampedFetchTransform(
@@ -935,14 +963,22 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
 			return this->atomicallyStampedFetchTransformStamped(
-				::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				StampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
 			).value;
 		}
 
 		public: template <typename TransformerT__> constexpr auto sequencedStampedFetchTransform(
 			TransformerT__&& transformer_
 		)& noexcept -> Value requires (stamped) {
-			return this->sequencedStampedFetchTransformStamped(::dcool::core::forward<TransformerT__>(transformer_)).value;
+			return this->sequencedStampedFetchTransformStamped(
+				StampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			).value;
 		}
 
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransform(
@@ -954,15 +990,57 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransform(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value requires (stamped) {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedFetchTransform(
+				return this->atomicallyStampedFetchTransform(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
-			} else {
-				result_ = this->sequencedStampedFetchTransform(::dcool::core::forward<TransformerT__>(transformer_));
 			}
-			return result_;
+			return this->sequencedStampedFetchTransform(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetch(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetchStamped(
+				StampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
+			).value;
+		}
+
+		public: template <typename TransformerT__> constexpr auto sequencedStampedTransformFetch(
+			TransformerT__&& transformer_
+		)& noexcept -> Value requires (stamped) {
+			return this->sequencedStampedTransformFetchStamped(
+				StampedTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			).value;
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (stamped) {
+			return this->stampedTransformFetch(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (stamped) {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyStampedTransformFetch(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedStampedTransformFetch(::dcool::core::forward<TransformerT__>(transformer_));
 		}
 
 		public: template <typename TransformerT__> constexpr auto atomicallyFetchTransform(
@@ -1008,23 +1086,71 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto fetchTransform(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyFetchTransform(
+				return this->atomicallyFetchTransform(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedFetchTransform(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyTransformFetch(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyTransformFetch(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->atomicallyStampedTransformFetch(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
 			} else {
-				result_ = this->sequencedFetchTransform(::dcool::core::forward<TransformerT__>(transformer_));
+				result_ = this->atomicallyTransformFetchUnderlying_(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
 			}
 			return result_;
 		}
 
+		public: template <typename TransformerT__> constexpr auto sequencedTransformFetch(
+			TransformerT__&& transformer_
+		)& noexcept -> Value {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->sequencedStampedTransformFetch(::dcool::core::forward<TransformerT__>(transformer_));
+			} else {
+				result_ = this->sequencedTransformFetchUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+			}
+			return result_;
+		}
+
+		public: template <typename TransformerT__> constexpr auto transformFetch(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value {
+			return this->transformFetch(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto transformFetch(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyTransformFetch(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedTransformFetch(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
 		// Fetch transform or load operations
-		private: template <typename TransformerT__> struct StampedConditionalTransformer_ {
+		private: template <typename TransformerT__> struct StampedStampedConditionalTransformer_ {
 			::dcool::core::ReferenceRemovedType<TransformerT__>* transformer_;
 
 			constexpr auto operator ()(StampedValue old_)& noexcept -> StampedValue {
-				auto newValue_ = ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_.value));
+				auto newValue_ = ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_));
 				if (!(newValue_.valid())) {
 					return ::dcool::core::nullOptional;
 				}
@@ -1036,7 +1162,7 @@ namespace dcool::concurrency {
 
 			constexpr auto operator ()(StampedValue old_)&& noexcept -> StampedValue {
 				auto newValue_ = ::dcool::core::invoke(
-					::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_.value)
+					::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_)
 				);
 				if (!(newValue_.valid())) {
 					return ::dcool::core::nullOptional;
@@ -1045,6 +1171,28 @@ namespace dcool::concurrency {
 					.value = newValue_.access(),
 					.stamp = old_.stamp + 1
 				};
+			}
+		};
+
+		private: template <typename TransformerT__> struct StampedConditionalTransformer_ {
+			::dcool::core::ReferenceRemovedType<TransformerT__>* transformer_;
+
+			constexpr auto operator ()(StampedValue old_)& noexcept -> Value {
+				auto newValue_ = ::dcool::core::invoke(*(this->transformer_), ::dcool::core::constantize(old_.value));
+				if (!(newValue_.valid())) {
+					return ::dcool::core::nullOptional;
+				}
+				return newValue_.access();
+			}
+
+			constexpr auto operator ()(StampedValue old_)&& noexcept -> Value {
+				auto newValue_ = ::dcool::core::invoke(
+					::dcool::core::forward<TransformerT__>(*(this->transformer_)), ::dcool::core::constantize(old_.value)
+				);
+				if (!(newValue_.valid())) {
+					return ::dcool::core::nullOptional;
+				}
+				return newValue_.access();
 			}
 		};
 
@@ -1060,7 +1208,7 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
 			return this->atomicallyFetchTransformOrLoadUnderlying_(
-				StampedConditionalTransformer_<TransformerT__> {
+				StampedStampedConditionalTransformer_<TransformerT__> {
 					.transformer_ = ::dcool::core::addressOf(transformer_)
 				},
 				transformOrder_,
@@ -1072,7 +1220,7 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_
 		)& noexcept -> StampedValue requires (stamped) {
 			return this->sequencedFetchTransformOrLoadUnderlying_(
-				StampedConditionalTransformer_<TransformerT__> {
+				StampedStampedConditionalTransformer_<TransformerT__> {
 					.transformer_ = ::dcool::core::addressOf(transformer_)
 				}
 			);
@@ -1087,15 +1235,59 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransformOrLoadStamped(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> StampedValue requires (stamped) {
-			StampedValue result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedFetchTransformOrLoadStamped(
+				return this->atomicallyStampedFetchTransformOrLoadStamped(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
-			} else {
-				result_ = this->sequencedStampedFetchTransformOrLoadStamped(::dcool::core::forward<TransformerT__>(transformer_));
 			}
-			return result_;
+			return this->sequencedStampedFetchTransformOrLoadStamped(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchOrLoadStamped(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetchOrLoadStamped(
+				::dcool::core::forward<TransformerT__>(transformer_), order_, order_
+			);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchOrLoadStamped(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyTransformFetchOrLoadUnderlying_(
+				StampedStampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
+			);
+		}
+
+		public: template <typename TransformerT__> constexpr auto sequencedStampedTransformFetchOrLoadStamped(
+			TransformerT__&& transformer_
+		)& noexcept -> StampedValue requires (stamped) {
+			return this->sequencedTransformFetchOrLoadUnderlying_(
+				StampedStampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchOrLoadStamped(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (stamped) {
+			return this->stampedTransformFetchOrLoadStamped(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchOrLoadStamped(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (stamped) {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyStampedTransformFetchOrLoadStamped(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedStampedTransformFetchOrLoadStamped(::dcool::core::forward<TransformerT__>(transformer_));
 		}
 
 		public: template <typename TransformerT__> constexpr auto atomicallyStampedFetchTransformOrLoad(
@@ -1108,14 +1300,22 @@ namespace dcool::concurrency {
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
 			return this->atomicallyStampedFetchTransformOrLoadStamped(
-				::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				StampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
 			).value;
 		}
 
 		public: template <typename TransformerT__> constexpr auto sequencedStampedFetchTransformOrLoad(
 			TransformerT__&& transformer_
 		)& noexcept -> Value requires (stamped) {
-			return this->sequencedStampedFetchTransformOrLoadStamped(::dcool::core::forward<TransformerT__>(transformer_)).value;
+			return this->sequencedStampedFetchTransformOrLoadStamped(
+				StampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			).value;
 		}
 
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransformOrLoad(
@@ -1127,15 +1327,57 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto stampedFetchTransformOrLoad(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value requires (stamped) {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyStampedFetchTransformOrLoad(
+				return this->atomicallyStampedFetchTransformOrLoad(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
-			} else {
-				result_ = this->sequencedStampedFetchTransformOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
 			}
-			return result_;
+			return this->sequencedStampedFetchTransformOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyStampedTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedTransformFetchOrLoadStamped(
+				StampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				},
+				transformOrder_,
+				loadOrder_
+			).value;
+		}
+
+		public: template <typename TransformerT__> constexpr auto sequencedStampedTransformFetchOrLoad(
+			TransformerT__&& transformer_
+		)& noexcept -> Value requires (stamped) {
+			return this->sequencedStampedTransformFetchOrLoadStamped(
+				StampedConditionalTransformer_<TransformerT__> {
+					.transformer_ = ::dcool::core::addressOf(transformer_)
+				}
+			).value;
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (stamped) {
+			return this->stampedTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto stampedTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (stamped) {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyStampedTransformFetchOrLoad(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedStampedTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
 		}
 
 		public: template <typename TransformerT__> constexpr auto atomicallyFetchTransformOrLoad(
@@ -1181,15 +1423,63 @@ namespace dcool::concurrency {
 		public: template <typename TransformerT__> constexpr auto fetchTransformOrLoad(
 			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		)& noexcept -> Value {
-			Value result_;
 			if constexpr (supportAtomicOperation_) {
-				result_ = this->atomicallyFetchTransformOrLoad(
+				return this->atomicallyFetchTransformOrLoad(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedFetchTransformOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto atomicallyTransformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->atomicallyStampedTransformFetchOrLoad(
 					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
 				);
 			} else {
-				result_ = this->sequencedFetchTransformOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
+				result_ = this->atomicallyTransformFetchOrLoadUnderlying_(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
 			}
 			return result_;
+		}
+
+		public: template <typename TransformerT__> constexpr auto sequencedTransformFetchOrLoad(
+			TransformerT__&& transformer_
+		)& noexcept -> Value {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->sequencedStampedTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
+			} else {
+				result_ = this->sequencedTransformFetchOrLoadUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+			}
+			return result_;
+		}
+
+		public: template <typename TransformerT__> constexpr auto transformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value {
+			return this->transformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_), order_, order_);
+		}
+
+		public: template <typename TransformerT__> constexpr auto transformFetchOrLoad(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value {
+			if constexpr (supportAtomicOperation_) {
+				return this->atomicallyTransformFetchOrLoad(
+					::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			return this->sequencedTransformFetchOrLoad(::dcool::core::forward<TransformerT__>(transformer_));
 		}
 
 		// Wait operations
@@ -1293,16 +1583,16 @@ namespace dcool::concurrency {
 		}
 
 		// Wait predicate operations
-		public: template <typename PredicateT__> constexpr void atomicallyStampedWaitPredicateStamped(
+		public: template <typename PredicateT__> constexpr auto atomicallyStampedWaitPredicateFetchStamped(
 			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept requires (supportAtomicOperation_ && stamped) {
-			this->atomicallyWaitUnderlyingPredicate_(::dcool::core::forward<PredicateT__>(predicate_), order_);
+		) const noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyWaitPredicateFetchUnderlying_(::dcool::core::forward<PredicateT__>(predicate_), order_);
 		}
 
-		public: template <typename PredicateT__> constexpr void stampedWaitPredicateStamped(
+		public: template <typename PredicateT__> constexpr auto stampedWaitPredicateFetchStamped(
 			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept requires (supportAtomicOperation_ && stamped) {
-			this->atomicallyStampedWaitPredicateStamped(::dcool::core::forward<PredicateT__>(predicate_), order_);
+		) const noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedWaitPredicateFetchStamped(::dcool::core::forward<PredicateT__>(predicate_), order_);
 		}
 
 		private: template <typename PredicateT__> struct StampedPredicate_ {
@@ -1319,37 +1609,85 @@ namespace dcool::concurrency {
 			}
 		};
 
-		public: template <typename PredicateT__> constexpr void atomicallyStampedWaitPredicate(
+		public: template <typename PredicateT__> constexpr auto atomicallyStampedWaitPredicateFetch(
 			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) const noexcept requires (supportAtomicOperation_ && stamped) {
-			this->atomicallyStampedWaitPredicateStamped(
-				StampedPredicate_ {
+		) const noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedWaitPredicateFetchStamped(
+				StampedPredicate_<PredicateT__> {
 					.predicate_ = ::dcool::core::addressOf(predicate_)
+				},
+				order_
+			).value;
+		}
+
+		public: template <typename PredicateT__> constexpr auto stampedWaitPredicateFetch(
+			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedWaitPredicateFetch(::dcool::core::forward<PredicateT__>(predicate_), order_);
+		}
+
+		public: template <typename PredicateT__> constexpr auto atomicallyWaitPredicateFetch(
+			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept -> Value requires (supportAtomicOperation_) {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->stampedWaitPredicateFetch(::dcool::core::forward<PredicateT__>(predicate_), order_);
+			} else {
+				result_ = this->atomicallyWaitPredicateFetchUnderlying_(::dcool::core::forward<PredicateT__>(predicate_), order_);
+			}
+			return result_;
+		}
+
+		public: template <typename PredicateT__> constexpr auto waitPredicateFetch(
+			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyWaitPredicateFetch(::dcool::core::forward<PredicateT__>(predicate_), order_);
+		}
+
+		// Wait equality operations
+		public: constexpr void atomicallyStampedWaitEqualityStamped(
+			StampedValue const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept requires (supportAtomicOperation_ && stamped) {
+			this->atomicallyWaitEqualityUnderlying_(expected_, order_);
+		}
+
+		public: constexpr void stampedWaitEqualityStamped(
+			StampedValue const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept requires (supportAtomicOperation_ && stamped) {
+			this->atomicallyStampedWaitEqualityStamped(expected_, order_);
+		}
+
+		public: constexpr void atomicallyStampedWaitEquality(
+			Value const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		) const noexcept requires (supportAtomicOperation_ && stamped) {
+			this->atomicallyStampedWaitPredicateFetch(
+				[&expected_](Value const& value_) noexcept -> ::dcool::core::Boolean {
+					return ::dcool::core::intelliHasEqualValueRepresentation(value_, expected_);
 				},
 				order_
 			);
 		}
 
-		public: template <typename PredicateT__> constexpr void stampedWaitPredicate(
-			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		public: constexpr void stampedWaitEquality(
+			Value const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		) const noexcept requires (supportAtomicOperation_ && stamped) {
-			this->atomicallyStampedWaitPredicate(::dcool::core::forward<PredicateT__>(predicate_), order_);
+			this->atomicallyStampedWaitEquality(expected_, order_);
 		}
 
-		public: template <typename PredicateT__> constexpr void atomicallyWaitPredicate(
-			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		public: constexpr void atomicallyWaitEquality(
+			Value const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		) const noexcept requires (supportAtomicOperation_) {
 			if constexpr (stamped) {
-				this->stampedWaitPredicate(::dcool::core::forward<PredicateT__>(predicate_), order_);
+				this->atomicallyStampedWaitEquality(expected_, order_);
 			} else {
-				this->atomicallyWaitUnderlyingPredicate_(::dcool::core::forward<PredicateT__>(predicate_), order_);
+				this->atomicallyWaitEqualityUnderlying_(expected_, order_);
 			}
 		}
 
-		public: template <typename PredicateT__> constexpr void waitPredicate(
-			PredicateT__&& predicate_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		public: constexpr void waitEquality(
+			Value const& expected_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 		) const noexcept requires (supportAtomicOperation_) {
-			this->atomicallyWaitPredicate(::dcool::core::forward<PredicateT__>(predicate_), order_);
+			this->atomicallyWaitEquality(expected_, order_);
 		}
 
 		// Notify operations
@@ -1369,21 +1707,448 @@ namespace dcool::concurrency {
 			return this->atomicallyNotifyAll();
 		}
 
+		// Task operations
+		private: template <typename TaskT__> struct StampedStampedTask_ {
+			using TaskResult_ = ::dcool::core::TaskResult<StampedValue>;
+
+			::dcool::core::ReferenceRemovedType<TaskT__>* task_;
+
+			constexpr auto operator ()(StampedValue const& old_)& noexcept -> TaskResult_ {
+				return TaskResult_::transformFrom(
+					::dcool::core::invoke(*(this->task_), ::dcool::core::constantize(old_)),
+					[&old_](Value const& value_) noexcept -> StampedValue {
+						return TaskResult_(
+							StampedValue {
+								.value = value_,
+								.stamp = old_.stamp + 1
+							}
+						);
+					}
+				);
+			}
+
+			constexpr auto operator ()(StampedValue const& old_)&& noexcept -> StampedValue {
+				return TaskResult_::transformFrom(
+					::dcool::core::invoke(::dcool::core::forward<TaskT__>(*(this->transformer_)), ::dcool::core::constantize(old_)),
+					[&old_](Value const& value_) noexcept -> StampedValue {
+						return TaskResult_(
+							StampedValue {
+								.value = value_,
+								.stamp = old_.stamp + 1
+							}
+						);
+					}
+				);
+			}
+		};
+
+		private: template <typename TaskT__> struct StampedTask_ {
+			using TaskResult_ = ::dcool::core::TaskResult<Value>;
+
+			::dcool::core::ReferenceRemovedType<TaskT__>* task_;
+
+			constexpr auto operator ()(StampedValue const& old_)& noexcept -> TaskResult_ {
+				return TaskResult_::transformFrom(::dcool::core::invoke(*(this->task_), ::dcool::core::constantize(old_.value)));
+			}
+
+			constexpr auto operator ()(StampedValue const& old_)&& noexcept -> TaskResult_ {
+				return TaskResult_::transformFrom(
+					::dcool::core::invoke(
+						::dcool::core::forward<TaskT__>(*(this->task_)), ::dcool::core::constantize(old_.value)
+					),
+					::dcool::core::constantize(old_.value)
+				);
+			}
+		};
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedFetchExecuteStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecuteStamped(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedFetchExecuteStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyFetchExecuteUnderlying_(
+				hint_,
+				StampedStampedTask_<TaskT__> {
+					.task_ = ::dcool::core::addressOf(task_)
+				},
+				transformOrder_,
+				loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedFetchExecuteStamped(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedFetchExecuteStamped(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedFetchExecuteStamped(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecuteStamped(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedFetchExecuteStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->stampedHintedFetchExecuteStamped(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedFetchExecuteStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecuteStamped(
+				hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedFetchExecuteStamped(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->stampedFetchExecuteStamped(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedFetchExecuteStamped(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedFetchExecuteStamped(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecute(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecuteStamped(
+				hint_,
+				StampedTask_<TaskT__> {
+					.task_ = ::dcool::core::addressOf(task_)
+				},
+				transformOrder_,
+				loadOrder_
+			).value;
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedFetchExecute(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedFetchExecute(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedFetchExecute(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecute(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			).value;
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->stampedHintedFetchExecute(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedFetchExecute(
+				hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedFetchExecute(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->stampedFetchExecute(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedFetchExecute(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedFetchExecute(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedFetchExecute(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyHintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->atomicallyStampedHintedFetchExecute(
+					hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+				);
+			} else {
+				result_ = this->atomicallyHintedFetchExecuteUnderlying_(
+					hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+				);
+			}
+			return result_;
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyFetchExecute(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyFetchExecute(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyFetchExecute(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedFetchExecute(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto hintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->hintedFetchExecute(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto hintedFetchExecute(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedFetchExecute(hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto fetchExecute(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->fetchExecute(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto fetchExecute(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyFetchExecute(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedExecuteFetchStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetchStamped(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedExecuteFetchStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyExecuteFetchUnderlying_(
+				hint_,
+				StampedStampedTask_<TaskT__> {
+					.task_ = ::dcool::core::addressOf(task_)
+				},
+				transformOrder_,
+				loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedExecuteFetchStamped(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedExecuteFetchStamped(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedExecuteFetchStamped(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetchStamped(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedExecuteFetchStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->stampedHintedExecuteFetchStamped(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedExecuteFetchStamped(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetchStamped(
+				hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedExecuteFetchStamped(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->stampedExecuteFetchStamped(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedExecuteFetchStamped(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedExecuteFetchStamped(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetch(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetchStamped(
+				hint_,
+				StampedTask_<TaskT__> {
+					.task_ = ::dcool::core::addressOf(task_)
+				},
+				transformOrder_,
+				loadOrder_
+			).value;
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedExecuteFetch(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedExecuteFetch(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyStampedExecuteFetch(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetch(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			).value;
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->stampedHintedExecuteFetch(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedHintedExecuteFetch(
+				hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedExecuteFetch(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->stampedExecuteFetch(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto stampedExecuteFetch(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) {
+			return this->atomicallyStampedExecuteFetch(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedExecuteFetch(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyHintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			Value result_;
+			if constexpr (stamped) {
+				result_ = this->atomicallyStampedHintedExecuteFetch(
+					hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+				);
+			} else {
+				result_ = this->atomicallyHintedExecuteFetchUnderlying_(
+					hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+				);
+			}
+			return result_;
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyExecuteFetch(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyExecuteFetch(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto atomicallyExecuteFetch(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedExecuteFetch(
+				this->atomicallyLoad(loadOrder_), ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_
+			);
+		}
+
+		public: template <typename TaskT__> constexpr auto hintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->hintedExecuteFetch(hint_, ::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto hintedExecuteFetch(
+			UnderlyingValue const& hint_, TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyHintedExecuteFetch(hint_, ::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
+		public: template <typename TaskT__> constexpr auto executeFetch(
+			TaskT__&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->executeFetch(::dcool::core::forward<TaskT__>(task_), order_, order_);
+		}
+
+		public: template <typename TaskT__> constexpr auto executeFetch(
+			TaskT__&& task_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> Value requires (supportAtomicOperation_) {
+			return this->atomicallyExecuteFetch(::dcool::core::forward<TaskT__>(task_), transformOrder_, loadOrder_);
+		}
+
 		// Arithmetic operations
-#	define DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Operation_, standardOperation_, operator_) \
+#	define DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Operation_, operation_, standardOperation_, operator_) \
 		private: template <typename OperandT__> constexpr auto atomicallyFetch##Operation_##Underlying_( \
 			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-		)& noexcept -> UnderlyingValue_ requires (supportAtomicOperation_) { \
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) { \
 			return ::dcool::concurrency::atomicallyFetch##Operation_(this->m_holder_.underlying_, operand_, order_); \
 		} \
 		\
 		private: template <typename OperandT__> constexpr auto sequencedFetch##Operation_##Underlying_( \
 			OperandT__ const& operand_ \
-		)& noexcept -> UnderlyingValue_ { \
+		)& noexcept -> UnderlyingValue { \
 			if constexpr (atomic.isDeterminateTrue()) { \
 				return this->atomicallyFetch##Operation_##Underlying_(operand_, ::std::memory_order::relaxed); \
 			} \
-			UnderlyingValue_ result_ = this->m_holder_.underlying_; \
+			UnderlyingValue result_ = this->m_holder_.underlying_; \
+			this->m_holder_.underlying_ = result_ + operand_; \
+			return result_; \
+		} \
+		\
+		private: template <typename OperandT__> constexpr auto atomically##Operation_##FetchUnderlying_( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) { \
+			return ::dcool::concurrency::atomically##Operation_##Fetch(this->m_holder_.underlying_, operand_, order_); \
+		} \
+		\
+		private: template <typename OperandT__> constexpr auto sequenced##Operation_##FetchUnderlying_( \
+			OperandT__ const& operand_ \
+		)& noexcept -> UnderlyingValue { \
+			if constexpr (atomic.isDeterminateTrue()) { \
+				return this->atomically##Operation_##FetchUnderlying_(operand_, ::std::memory_order::relaxed); \
+			} \
+			UnderlyingValue result_ = this->m_holder_.underlying_; \
 			this->m_holder_.underlying_ = result_ + operand_; \
 			return result_; \
 		} \
@@ -1391,9 +2156,12 @@ namespace dcool::concurrency {
 		public: template <typename OperandT__> constexpr auto atomicallyStampedFetch##Operation_##Stamped( \
 			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
 		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) { \
+			auto operationTransformer_ = ::dcool::core::Operation_##Transformer<OperandT__ const&> { \
+				.operand = operand_ \
+			}; \
 			return this->atomicallyStampedFetchTransformStamped( \
-				::dcool::core::Operation_##Transformer<OperandT__ const&> { \
-					.operand = operand_ \
+				StampedTransformer_<decltype(operationTransformer_)&&> { \
+					.transformer_ = ::dcool::core::addressOf(operationTransformer_) \
 				}, \
 				order_, \
 				::std::memory_order::relaxed \
@@ -1403,9 +2171,12 @@ namespace dcool::concurrency {
 		public: template <typename OperandT__> constexpr auto sequencedStampedFetch##Operation_##Stamped( \
 			OperandT__ const& operand_ \
 		)& noexcept -> StampedValue requires (stamped) { \
+			auto operationTransformer_ = ::dcool::core::Operation_##Transformer<OperandT__ const&> { \
+				.operand = operand_ \
+			}; \
 			return this->sequencedStampedFetchTransformStamped( \
-				::dcool::core::Operation_##Transformer<OperandT__ const&> { \
-					.operand = operand_ \
+				StampedTransformer_<decltype(operationTransformer_)&&> { \
+					.transformer_ = ::dcool::core::addressOf(operationTransformer_) \
 				} \
 			); \
 		} \
@@ -1413,13 +2184,47 @@ namespace dcool::concurrency {
 		public: template <typename OperandT__> constexpr auto stampedFetch##Operation_##Stamped( \
 			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
 		)& noexcept -> StampedValue requires (stamped) { \
-			StampedValue result_; \
 			if constexpr (supportAtomicOperation_) { \
-				result_ = this->atomicallyStampedFetch##Operation_##Stamped(operand_, order_); \
-			} else { \
-				result_ = this->sequencedStampedFetch##Operation_##Stamped(operand_); \
+				return this->atomicallyStampedFetch##Operation_##Stamped(operand_, order_); \
 			} \
-			return result_; \
+			return this->sequencedStampedFetch##Operation_##Stamped(operand_); \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto atomicallyStamped##Operation_##FetchStamped( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> StampedValue requires (supportAtomicOperation_ && stamped) { \
+			auto operationTransformer_ = ::dcool::core::Operation_##Transformer<OperandT__ const&> { \
+				.operand = operand_ \
+			}; \
+			return this->atomicallyStampedTransformFetchStamped( \
+				StampedTransformer_<decltype(operationTransformer_)&&> { \
+					.transformer_ = ::dcool::core::addressOf(operationTransformer_) \
+				}, \
+				order_, \
+				::std::memory_order::relaxed \
+			); \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto sequencedStamped##Operation_##FetchStamped( \
+			OperandT__ const& operand_ \
+		)& noexcept -> StampedValue requires (stamped) { \
+			auto operationTransformer_ = ::dcool::core::Operation_##Transformer<OperandT__ const&> { \
+				.operand = operand_ \
+			}; \
+			return this->sequencedStampedTransformFetchStamped( \
+				StampedTransformer_<decltype(operationTransformer_)&&> { \
+					.transformer_ = ::dcool::core::addressOf(operationTransformer_) \
+				} \
+			); \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto stamped##Operation_##FetchStamped( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> StampedValue requires (stamped) { \
+			if constexpr (supportAtomicOperation_) { \
+				return this->atomicallyStamped##Operation_##FetchStamped(operand_, order_); \
+			} \
+			return this->sequencedStamped##Operation_##FetchStamped(operand_); \
 		} \
 		\
 		public: template <typename OperandT__> constexpr auto atomicallyStampedFetch##Operation_( \
@@ -1437,13 +2242,31 @@ namespace dcool::concurrency {
 		public: template <typename OperandT__> constexpr auto stampedFetch##Operation_( \
 			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
 		)& noexcept -> Value requires (stamped) { \
-			Value result_; \
 			if constexpr (supportAtomicOperation_) { \
-				result_ = this->atomicallyStampedFetch##Operation_(operand_, order_); \
-			} else { \
-				result_ = this->sequencedStampedFetch##Operation_(operand_); \
+				return this->atomicallyStampedFetch##Operation_(operand_, order_); \
 			} \
-			return result_; \
+			return this->sequencedStampedFetch##Operation_(operand_); \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto atomicallyStamped##Operation_##Fetch( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> Value requires (supportAtomicOperation_ && stamped) { \
+			return this->atomicallyStamped##Operation_##FetchStamped(operand_, order_).value; \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto sequencedStamped##Operation_##Fetch( \
+			OperandT__ const& operand_ \
+		)& noexcept -> Value requires (stamped) { \
+			return this->sequencedStamped##Operation_##FetchStamped(operand_).value; \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto stamped##Operation_##Fetch( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> Value requires (stamped) { \
+			if constexpr (supportAtomicOperation_) { \
+				return this->atomicallyStamped##Operation_##Fetch(operand_, order_); \
+			} \
+			return this->sequencedStamped##Operation_##Fetch(operand_); \
 		} \
 		\
 		public: template <typename OperandT__> constexpr auto atomicallyFetch##Operation_( \
@@ -1473,20 +2296,49 @@ namespace dcool::concurrency {
 		public: template <typename OperandT__> constexpr auto fetch##Operation_( \
 			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
 		)& noexcept -> Value { \
-			Value result_; \
 			if constexpr (supportAtomicOperation_) { \
-				result_ = this->atomicallyFetch##Operation_(operand_, order_); \
+				return this->atomicallyFetch##Operation_(operand_, order_); \
+			} \
+			return this->sequencedFetch##Operation_(operand_); \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto atomically##Operation_##Fetch( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> Value requires (supportAtomicOperation_) { \
+			Value result_; \
+			if constexpr (stamped) { \
+				result_ = this->atomicallyStamped##Operation_##Fetch(operand_, order_); \
 			} else { \
-				result_ = this->sequencedFetch##Operation_(operand_); \
+				result_ = this->atomically##Operation_##FetchUnderlying_(operand_, order_); \
 			} \
 			return result_; \
 		} \
 		\
+		public: template <typename OperandT__> constexpr auto sequenced##Operation_##Fetch( \
+			OperandT__ const& operand_ \
+		)& noexcept -> Value { \
+			Value result_; \
+			if constexpr (stamped) { \
+				result_ = this->sequencedStamped##Operation_##Fetch(operand_); \
+			} else { \
+				result_ = this->sequenced##Operation_##FetchUnderlying_(operand_); \
+			} \
+			return result_; \
+		} \
+		\
+		public: template <typename OperandT__> constexpr auto operation_##Fetch( \
+			OperandT__ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
+		)& noexcept -> Value { \
+			if constexpr (supportAtomicOperation_) { \
+				return this->atomically##Operation_##Fetch(operand_, order_); \
+			} \
+			return this->sequenced##Operation_##Fetch(operand_); \
+		} \
+		\
 		public: template <typename OperandT__> constexpr auto operator operator_##=( \
 			OperandT__ const& operand_ \
-		)& noexcept -> Self_& { \
-			this->fetch##Operation_(operand_); \
-			return *this; \
+		)& noexcept -> Value { \
+			return this->operation_##Fetch(operand_); \
 		} \
 		\
 		public: template <typename OperandT__> constexpr auto fetch_##standardOperation_( \
@@ -1495,33 +2347,26 @@ namespace dcool::concurrency {
 			return this->fetch##Operation_(operand_, order_); \
 		}
 
-		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Add, add, +)
-		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Subtract, sub, -)
-		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseAnd, and, *)
-		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseOr, or, /)
-		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseExclusiveOr, xor, ^)
+		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Add, add, add, +)
+		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(Subtract, subtract, sub, -)
+		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseAnd, bitwiseAnd, and, *)
+		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseOr, bitwiseOr, or, /)
+		DCOOL_CONCURRENCY_DEFINE_ATOM_ARITHMETIC_OPERATION_(BitwiseExclusiveOr, bitwiseExclusiveOr, xor, ^)
 
-		public: constexpr auto operator ++()& noexcept -> Self_& {
-			this->fetchAdd(1);
-			return *this;
+		public: constexpr auto operator ++()& noexcept -> Value {
+			return this->fetchAdd(1);
 		}
 
 		public: constexpr auto operator ++(::dcool::core::PostDisambiguator)& noexcept -> Value {
-			return this->fetchAdd(1) + 1;
+			return this->addFetch(1);
 		}
 
-		public: constexpr auto operator --()& noexcept -> Self_& {
-			this->fetchSubtract(1);
-			return *this;
+		public: constexpr auto operator --()& noexcept -> Value {
+			return this->fetchSubtract(1);
 		}
 
 		public: constexpr auto operator --(::dcool::core::PostDisambiguator)& noexcept -> Value {
-			return this->fetchSubtract(1) + 1;
-		}
-
-		// For standard compatibility
-		public: static constexpr auto is_always_lock_free() noexcept -> ::dcool::core::Boolean {
-			return lockFree.isDeterminateTrue();
+			return this->subtractFetch(1);
 		}
 
 		public: constexpr auto is_lock_free() const noexcept -> ::dcool::core::Boolean {

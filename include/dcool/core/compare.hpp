@@ -127,6 +127,12 @@ namespace dcool::core {
 		OperandT_ rightValue_ = right_;
 		return leftToCompare_.compare_exchange_strong(rightValue_, left_, ::std::memory_order::relaxed);
 	}
+
+	template <::dcool::core::TriviallyCopyable OperandT_> constexpr auto intelliHasEqualValueRepresentation(
+		OperandT_ const& left_, OperandT_ const& right_
+	) noexcept -> ::dcool::core::Boolean {
+		return hasEqualValueRepresentation(left_, right_);
+	}
 }
 
 #endif
