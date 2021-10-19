@@ -6,9 +6,6 @@
 #	include <utility>
 
 namespace dcool::core {
-	using ::std::forward;
-	using ::std::move;
-
 	template <typename T_, typename... ArgumentTs_> constexpr auto create(ArgumentTs_&&... parameters_) noexcept(
 		noexcept(T_(::dcool::core::forward<ArgumentTs_>(parameters_)...))
 	) -> T_ {

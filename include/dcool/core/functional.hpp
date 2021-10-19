@@ -15,16 +15,6 @@ namespace dcool::core {
 
 	constexpr NoOp noOp;
 
-	template <auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)> struct ConstantReturn {
-		template <typename... ArgumentTs_> constexpr auto operator ()(ArgumentTs_&&...) noexcept -> ReturnT_ {
-			return returnValueC_;
-		}
-	};
-
-	template <
-		auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)
-	> constexpr ConstantReturn<returnValueC_, ReturnT_> constantReturn;
-
 	struct ComparableNoOp: public NoOp {
 		private: using Self_ = ComparableNoOp;
 
@@ -34,6 +24,24 @@ namespace dcool::core {
 	};
 
 	constexpr ComparableNoOp comparableNoOp;
+
+	struct ArgumentReturner {
+		template <typename ArgumentT_> constexpr auto operator ()(ArgumentT_&& parameter_) noexcept -> ArgumentT_&& {
+			return ::dcool::core::forward<ArgumentT_>(parameter_);
+		}
+	};
+
+	constexpr ArgumentReturner argumentReturner;
+
+	template <auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)> struct ConstantReturn {
+		template <typename... ArgumentTs_> constexpr auto operator ()(ArgumentTs_&&...) noexcept -> ReturnT_ {
+			return returnValueC_;
+		}
+	};
+
+	template <
+		auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)
+	> constexpr ConstantReturn<returnValueC_, ReturnT_> constantReturn;
 
 	template <typename T_> using Function = ::std::function<T_>;
 

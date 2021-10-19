@@ -32,6 +32,7 @@
 #	include <dcool/core/select.hpp>
 #	include <dcool/core/span.hpp>
 #	include <dcool/core/storage.hpp>
+#	include <dcool/core/task_result.hpp>
 #	include <dcool/core/time_conversion.hpp>
 #	include <dcool/core/triboolean.hpp>
 #	include <dcool/core/tuple.hpp>
@@ -44,5 +45,6 @@
 #	include <dcool/core/unused_representation.hpp>
 #	include <dcool/core/utility.hpp>
 #	include <dcool/core/value_list.hpp>
+#	include <dcool/core/variant.hpp>
 
 #endif
