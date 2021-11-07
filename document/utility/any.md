@@ -133,7 +133,7 @@ class MyAny {
 
 	// We then need to define a customized 'virtual table' as our extended information.
 	struct MyVirtualTable {
-		using ConverterToString = auto (*)(MyAny const&) -> std::string;
+		using ConverterToString = auto(*)(MyAny const&) -> std::string;
 		// Intended to mimic a virtual function.
 		ConverterToString converterToString;
 

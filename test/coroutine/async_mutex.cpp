@@ -5,7 +5,7 @@
 
 #include <atomic>
 #include <chrono>
-#include <thread>
+#include <future>
 
 DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	using namespace std::literals::chrono_literals;
@@ -35,7 +35,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	std::atomic_flag occupied;
 	// We cannot capture any variables because the coroutines can be resumed after the thread ends the lifetime of this callable.
 	auto coroutine = [](DCOOL_TEST_CONTEXT_PARAMETER, auto asyncMutex, auto results, auto occupied, int i) -> Returned {
-		DCOOL_TEST_EXPECT(!(asyncMutex->tryLock()));
+		DCOOL_TEST_ASSERT(!(asyncMutex->tryLock()));
 		std::this_thread::sleep_for(10ms);
 		auto locker_ = co_await asyncMutex->guardedLockAsync();
 		DCOOL_TEST_EXPECT(!(occupied->test_and_set()));
@@ -44,10 +44,11 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 		std::this_thread::sleep_for(10ms);
 		occupied->clear();
 	};
-	DCOOL_TEST_EXPECT(asyncMutex.tryLock());
+	DCOOL_TEST_ASSERT(asyncMutex.tryLock());
 	DCOOL_TEST_EXPECT(!(occupied.test_and_set()));
 	results.emplaceBack(1);
-	std::jthread task1(
+	std::future<Returned> task1 = std::async(
+		std::launch::async,
 		coroutine,
 		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
@@ -55,7 +56,8 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 		dcool::core::addressOf(occupied),
 		5
 	);
-	std::jthread task2(
+	std::future<Returned> task2 = std::async(
+		std::launch::async,
 		coroutine,
 		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
@@ -63,7 +65,8 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 		dcool::core::addressOf(occupied),
 		5
 	);
-	std::jthread task3(
+	std::future<Returned> task3 = std::async(
+		std::launch::async,
 		coroutine,
 		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
@@ -73,11 +76,12 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 	);
 	std::this_thread::sleep_for(10ms);
 	results.emplaceBack(2);
-	task1.join();
-	task2.join();
-	task3.join();
+	task1.get();
+	task2.get();
+	task3.get();
 	results.emplaceBack(3);
-	std::jthread finalTask(
+	std::future<Returned> finalTask = std::async(
+		std::launch::async,
 		coroutine,
 		DCOOL_TEST_CONTEXT_ARGUMENT,
 		dcool::core::addressOf(asyncMutex),
@@ -85,7 +89,7 @@ DCOOL_TEST_CASE(dcoolCoroutine, asyncMutexBasics) {
 		dcool::core::addressOf(occupied),
 		6
 	);
-	finalTask.join();
+	finalTask.get();
 	results.emplaceBack(4);
 	occupied.clear();
 	asyncMutex.unlock();

@@ -20,7 +20,7 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionBasics) {
 	};
 
 	dcool::utility::DefaultOverloadedFunction<
-		auto (int, int) const -> int, void (int), auto () -> int
+		auto(int, int) const -> int, void(int), auto() -> int
 	> function1 = OverloadedAdder();
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(function1(3, 17) == 3 + 17));
 	DCOOL_TEST_EXPECT(DCOOL_CORE_PARAMETER(dcool::core::constantize(function1)(3, 17) == 3 + 17));
@@ -47,7 +47,7 @@ DCOOL_TEST_CASE(dcoolUtility, overloadedFunctionOverloading) {
 	};
 
 	dcool::utility::DefaultOverloadedFunction<
-		auto (int) const noexcept -> int, auto (int) noexcept -> int, auto (double) noexcept -> int
+		auto(int) const noexcept -> int, auto(int) noexcept -> int, auto(double) noexcept -> int
 	> function1 = OverloadedFunctor();
 
 	DCOOL_TEST_EXPECT(dcool::core::constantize(function1)(1) == 0);

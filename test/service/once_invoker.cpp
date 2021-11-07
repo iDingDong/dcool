@@ -3,8 +3,8 @@
 #include <dcool/service.hpp>
 
 #include <chrono>
+#include <future>
 #include <stdexcept>
-#include <thread>
 
 template <typename InvokerT> static void testOnceInvokerBasics(DCOOL_TEST_CONTEXT_PARAMETER) {
 	InvokerT invoker;
@@ -23,13 +23,14 @@ template <typename InvokerT> static void testOnceInvokerBasics(DCOOL_TEST_CONTEX
 			using namespace std::literals::chrono_literals;
 			::std::this_thread::sleep_for(10ms);
 		};
-		std::jthread task(
+		std::future<void> task = std::async(
+			std::launch::async,
 			[DCOOL_TEST_CAPTURE_CONTEXT, &invoker, &toInvoke]() {
 				invoker.invoke(toInvoke);
 			}
 		);
 		invoker.invoke(toInvoke);
-		task.join();
+		task.get();
 	}
 	DCOOL_TEST_EXPECT(flag);
 }
@@ -74,7 +75,8 @@ template <typename InvokerT> static void testOnceInvokerException(DCOOL_TEST_CON
 				throw Ixception();
 			}
 		};
-		std::jthread task1(
+		std::future<void> task1 = std::async(
+			std::launch::async,
 			[DCOOL_TEST_CAPTURE_CONTEXT, &invoker, &toInvoke, &thrown]() {
 				try {
 					invoker.invoke(toInvoke);
@@ -84,7 +86,8 @@ template <typename InvokerT> static void testOnceInvokerException(DCOOL_TEST_CON
 				}
 			}
 		);
-		std::jthread task2(
+		std::future<void> task2 = std::async(
+			std::launch::async,
 			[DCOOL_TEST_CAPTURE_CONTEXT, &invoker, &toInvoke, &thrown]() {
 				try {
 					invoker.invoke(toInvoke);
@@ -100,8 +103,8 @@ template <typename InvokerT> static void testOnceInvokerException(DCOOL_TEST_CON
 			DCOOL_TEST_EXPECT(!thrown);
 			thrown = true;
 		}
-		task1.join();
-		task2.join();
+		task1.get();
+		task2.get();
 	}
 	DCOOL_TEST_EXPECT(step == 2);
 }
