@@ -6,12 +6,25 @@
 #	include <dcool/core/variant.hpp>
 
 namespace dcool::core {
+	namespace detail_ {
+		template <
+			::dcool::core::NonVoid T1_,
+			::dcool::core::NonVoid T2_,
+			typename MayBeVoidT_
+		> struct TaskResultUnderlying_ {
+			using Result_ = ::dcool::core::DefaultVariant<T1_, T2_, MayBeVoidT_>;
+		};
+
+		template <::dcool::core::NonVoid T1_, ::dcool::core::NonVoid T2_> struct TaskResultUnderlying_<T1_, T2_, void> {
+			using Result_ = ::dcool::core::DefaultVariant<T1_, T2_>;
+		};
+	}
+
 	template <typename ValueT_> struct TaskResult {
 		private: using Self_ = TaskResult<ValueT_>;
 		public: using Value = ValueT_;
 
-		private: struct AbortTag_ {
-		};
+		private: static constexpr ::dcool::core::Boolean nonVoid_ = ::dcool::core::NonVoid<Value>;
 
 		private: struct InstantRetryTag_ {
 		};
@@ -19,25 +32,25 @@ namespace dcool::core {
 		private: struct DelayedRetryTag_ {
 		};
 
-		private: ::dcool::core::DefaultVariant<AbortTag_, InstantRetryTag_, DelayedRetryTag_, Value> m_value_ = AbortTag_();
+		private: using Underlying_ = ::dcool::core::detail_::TaskResultUnderlying_<
+			InstantRetryTag_, DelayedRetryTag_, Value
+		>::Result_;
+		private: Underlying_ m_underlying_;
 
 		public: constexpr TaskResult() noexcept = default;
 
-		public: constexpr TaskResult(Value const& result_) noexcept(noexcept(Value(result_))): m_value_(result_) {
+		public: constexpr TaskResult(Value const& result_) noexcept(noexcept(Value(result_))): m_underlying_(result_) {
 		}
 
 		public: constexpr TaskResult(
 			Value&& result_
-		) noexcept(noexcept(Value(::dcool::core::move(result_)))): m_value_(::dcool::core::move(result_)) {
+		) noexcept(noexcept(Value(::dcool::core::move(result_)))): m_underlying_(::dcool::core::move(result_)) {
 		}
 
-		private: constexpr TaskResult(InstantRetryTag_ tag_) noexcept: m_value_(tag_) {
+		private: constexpr TaskResult(InstantRetryTag_ tag_) noexcept: m_underlying_(tag_) {
 		}
 
-		private: constexpr TaskResult(DelayedRetryTag_ tag_) noexcept: m_value_(tag_) {
-		}
-
-		private: constexpr TaskResult(AbortTag_ tag_) noexcept: m_value_(tag_) {
+		private: constexpr TaskResult(DelayedRetryTag_ tag_) noexcept: m_underlying_(tag_) {
 		}
 
 		public: static constexpr auto makeInstantRetry() noexcept -> Self_ {
@@ -49,19 +62,19 @@ namespace dcool::core {
 		}
 
 		public: static constexpr auto makeAbort() noexcept -> Self_ {
-			return Self_(AbortTag_());
+			return Self_();
 		}
 
 		public: constexpr auto aborted() const noexcept -> ::dcool::core::Boolean {
-			return this->m_value_.template holding<AbortTag_>();
+			return !(this->m_underlying_.valid());
 		}
 
 		public: constexpr auto instantRetryRequested() const noexcept -> ::dcool::core::Boolean {
-			return this->m_value_.template holding<InstantRetryTag_>();
+			return this->m_underlying_.template holding<InstantRetryTag_>();
 		}
 
 		public: constexpr auto delayedRetryRequested() const noexcept -> ::dcool::core::Boolean {
-			return this->m_value_.template holding<DelayedRetryTag_>();
+			return this->m_underlying_.template holding<DelayedRetryTag_>();
 		}
 
 		public: constexpr auto retryRequested() const noexcept -> ::dcool::core::Boolean {
@@ -69,27 +82,40 @@ namespace dcool::core {
 		}
 
 		public: constexpr auto done() const noexcept -> ::dcool::core::Boolean {
-			return this->m_value_.template holding<Value>();
+			return this->m_underlying_.template holding<Value>();
 		}
 
-		public: constexpr auto accessValue() const noexcept -> Value const& {
+		public: constexpr auto accessValue() const noexcept -> Value const& requires (nonVoid_) {
 			DCOOL_CORE_ASSERT(this->done());
-			return this->m_value_.template access<Value>();
+			return this->m_underlying_.template access<Value>();
 		}
 
-		public: constexpr auto accessValue() noexcept -> Value& {
+		public: constexpr auto accessValue() noexcept -> Value& requires (nonVoid_) {
 			DCOOL_CORE_ASSERT(this->done());
-			return this->m_value_.template access<Value>();
+			return this->m_underlying_.template access<Value>();
 		}
 
 		public: template <typename TaskResultT__> static constexpr auto transformFrom(
 			TaskResultT__&& other_
+		) noexcept(
+			noexcept(transformFrom(::dcool::core::forward<TaskResultT__>(other_), ::dcool::core::argumentReturner))
 		) -> Self_ {
 			return transformFrom(::dcool::core::forward<TaskResultT__>(other_), ::dcool::core::argumentReturner);
 		}
 
 		public: template <typename TaskResultT__, typename TransformerT__> static constexpr auto transformFrom(
 			TaskResultT__&& other_, TransformerT__&& transformer_
+		) noexcept(
+			noexcept(
+				Self_(
+					Value(
+						::dcool::core::invoke(
+							::dcool::core::forward<TransformerT__>(transformer_),
+							::dcool::core::moveIf<::dcool::core::RvalueReference<TaskResultT__&&>>(other_.accessValue())
+						)
+					)
+				)
+			)
 		) -> Self_ {
 			if (other_.aborted()) {
 				return Self_::makeAbort();

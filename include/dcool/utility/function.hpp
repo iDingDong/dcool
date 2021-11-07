@@ -15,7 +15,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...) noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...) noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = true;
@@ -40,7 +40,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -52,7 +52,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...)& noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...)& noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = true;
@@ -77,7 +77,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -89,7 +89,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...)&& noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...)&& noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = false;
@@ -115,7 +115,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -127,7 +127,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...) const noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...) const noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = true;
@@ -152,7 +152,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__ const& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -164,7 +164,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...) const& noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...) const& noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = true;
@@ -189,7 +189,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__ const& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -201,7 +201,7 @@ namespace dcool::utility {
 
 		template <
 			typename ResultT_, ::dcool::core::Boolean noThrowC_, typename... ParameterTs_
-		> struct FunctionPrototypeInfo_<auto (ParameterTs_...) const&& noexcept(noThrowC_) -> ResultT_> {
+		> struct FunctionPrototypeInfo_<auto(ParameterTs_...) const&& noexcept(noThrowC_) -> ResultT_> {
 			using Result_ = ResultT_;
 			static constexpr ::dcool::core::Boolean noThrow_ = noThrowC_;
 			static constexpr ::dcool::core::Boolean lvalueReferenceAllowed_ = false;
@@ -227,7 +227,7 @@ namespace dcool::utility {
 				::dcool::core::terminate();
 			}
 
-			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto (*)(
+			template <typename FunctionChassisT__, typename EngineT__> using Invoker_ = auto(*)(
 				EngineT__& engine_, FunctionChassisT__ const& functionChassis_, ParameterTs_... parameters_
 			) noexcept(noThrow_) -> Result_;
 			template <
@@ -601,6 +601,10 @@ namespace dcool::utility {
 		)&& noexcept(noexceptInvocable) -> Result {
 			return ::dcool::core::move(*this).invokeSelf(::dcool::core::forward<ArgumentTs__>(parameters_)...);
 		}
+	};
+
+	template <typename... CallableTs_> struct Overloaded: CallableTs_... {
+		using CallableTs_::operator()...;
 	};
 }
 

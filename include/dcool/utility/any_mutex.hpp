@@ -152,9 +152,9 @@ namespace dcool::utility {
 			}
 		};
 
-		private: using Locker_ = void (*)(Engine& engine_, Self_& self_);
-		private: using TryLocker_ = auto (*)(Engine& engine_, Self_& self_) -> ::dcool::core::Boolean;
-		private: using Unlocker_ = void (*)(Engine& engine_, Self_& self_);
+		private: using Locker_ = void(*)(Engine& engine_, Self_& self_);
+		private: using TryLocker_ = auto(*)(Engine& engine_, Self_& self_) -> ::dcool::core::Boolean;
+		private: using Unlocker_ = void(*)(Engine& engine_, Self_& self_);
 
 		private: struct OverloadedFunctionExtendedInformation_ {
 			::dcool::core::StorageRequirement actualStorageRequirement_;

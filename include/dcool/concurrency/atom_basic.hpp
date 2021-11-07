@@ -8,6 +8,161 @@
 
 namespace dcool::concurrency {
 	namespace detail_ {
+		constexpr auto compareRelaxedWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::relaxed:
+				return ::dcool::core::PartialOrdering::equivalent;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::less;
+		}
+
+		constexpr auto compareConsumeWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::release:
+				return ::dcool::core::PartialOrdering::unordered;
+				case ::std::memory_order::consume:
+				return ::dcool::core::PartialOrdering::equivalent;
+				case ::std::memory_order::relaxed:
+				return ::dcool::core::PartialOrdering::greater;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::less;
+		}
+
+		constexpr auto compareAcquireWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::release:
+				return ::dcool::core::PartialOrdering::unordered;
+				case ::std::memory_order::acquire:
+				return ::dcool::core::PartialOrdering::equivalent;
+				case ::std::memory_order::consume:
+				case ::std::memory_order::relaxed:
+				return ::dcool::core::PartialOrdering::greater;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::less;
+		}
+
+		constexpr auto compareReleaseWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::acquire:
+				case ::std::memory_order::consume:
+				return ::dcool::core::PartialOrdering::unordered;
+				case ::std::memory_order::release:
+				return ::dcool::core::PartialOrdering::equivalent;
+				case ::std::memory_order::relaxed:
+				return ::dcool::core::PartialOrdering::greater;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::less;
+		}
+
+		constexpr auto compareAcquireReleaseWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::acq_rel:
+				return ::dcool::core::PartialOrdering::equivalent;
+				case ::std::memory_order::seq_cst:
+				return ::dcool::core::PartialOrdering::less;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::greater;
+		}
+
+		constexpr auto compareSequentiallyConsistentWith_(::std::memory_order right_) noexcept -> ::dcool::core::PartialOrdering {
+			switch (right_) {
+				case ::std::memory_order::seq_cst:
+				return ::dcool::core::PartialOrdering::equivalent;
+				default:
+				break;
+			}
+			return ::dcool::core::PartialOrdering::greater;
+		}
+	}
+
+	constexpr auto compareStrength(
+		::std::memory_order left_, ::std::memory_order right_
+	) noexcept -> ::dcool::core::PartialOrdering {
+		switch (left_) {
+			case ::std::memory_order::relaxed:
+			return ::dcool::concurrency::detail_::compareRelaxedWith_(right_);
+			case ::std::memory_order::consume:
+			return ::dcool::concurrency::detail_::compareConsumeWith_(right_);
+			case ::std::memory_order::acquire:
+			return ::dcool::concurrency::detail_::compareAcquireWith_(right_);
+			case ::std::memory_order::release:
+			return ::dcool::concurrency::detail_::compareReleaseWith_(right_);
+			case ::std::memory_order::acq_rel:
+			return ::dcool::concurrency::detail_::compareAcquireReleaseWith_(right_);
+			default:
+			break;
+		}
+		return ::dcool::concurrency::detail_::compareSequentiallyConsistentWith_(right_);
+	}
+
+	constexpr auto validLoadOrder(::std::memory_order order_) noexcept -> ::dcool::core::Boolean {
+		return ::dcool::core::oneOf(
+			order_,
+			::std::memory_order::relaxed,
+			::std::memory_order::consume,
+			::std::memory_order::acquire,
+			::std::memory_order::seq_cst
+		);
+	}
+
+	constexpr auto validStoreOrder(::std::memory_order order_) noexcept -> ::dcool::core::Boolean {
+		return ::dcool::core::oneOf(
+			order_,
+			::std::memory_order::relaxed,
+			::std::memory_order::release,
+			::std::memory_order::seq_cst
+		);
+	}
+
+	constexpr auto validReadConditionalWriteOrder(
+		::std::memory_order readWriteOrder_, ::std::memory_order readOrder_
+	) noexcept -> ::dcool::core::Boolean {
+		switch (readOrder_) {
+			case ::std::memory_order::relaxed:
+			if (::dcool::core::oneOf(readWriteOrder_, ::std::memory_order::relaxed, ::std::memory_order::release)) {
+				return true;
+			}
+			[[fallthrough]];
+			case ::std::memory_order::consume:
+			case ::std::memory_order::acquire:
+			if (::dcool::core::oneOf(readWriteOrder_, ::std::memory_order::acquire, ::std::memory_order::acq_rel)) {
+				return true;
+			}
+			[[fallthrough]];
+			case ::std::memory_order::seq_cst:
+			if (readWriteOrder_ == ::std::memory_order::seq_cst) {
+				return true;
+			}
+			[[fallthrough]];
+			default:
+			break;
+		}
+		return false;
+	}
+
+	constexpr auto toReadOrder(::std::memory_order readWriteOrder_) noexcept -> ::std::memory_order {
+		switch (readWriteOrder_) {
+			case ::std::memory_order::acq_rel:
+			return ::std::memory_order::acquire;
+			case ::std::memory_order::release:
+			return ::std::memory_order::relaxed;
+			default:
+			break;
+		}
+		return readWriteOrder_;
+	}
+
+	namespace detail_ {
 		constexpr auto intepretStandardLockFree(int value_) noexcept -> ::dcool::core::Triboolean {
 			switch (value_) {
 				case 0:
@@ -116,19 +271,21 @@ namespace dcool::concurrency {
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		ValueT_& object_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) -> ValueT_ {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return ::std::atomic_ref<ValueT_>(object_).load(order_);
-	}
-
-	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
-		::std::atomic<ValueT_>& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
-		return atom_.load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		::std::atomic<ValueT_> const& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) -> ValueT_ {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return atom_.load(order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
+		::std::atomic<ValueT_>& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) -> ValueT_ {
+		return ::dcool::concurrency::atomicallyLoad(::dcool::core::constantize(atom_), order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyStore(
@@ -136,6 +293,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		::std::atomic_ref<ValueT_>(object_).store(newValue_, order_);
 	}
 
@@ -144,6 +302,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		atom_.store(newValue_, order_);
 	}
 
@@ -179,6 +338,7 @@ namespace dcool::concurrency {
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
 	) -> ::dcool::core::Boolean {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
 
@@ -198,6 +358,7 @@ namespace dcool::concurrency {
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
 	) -> ::dcool::core::Boolean {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return atom_.compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
 
@@ -217,6 +378,7 @@ namespace dcool::concurrency {
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
 	) -> ::dcool::core::Boolean {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_strong(expected_, newValue_, successOrder_, failureOrder_);
 	}
 
@@ -236,6 +398,7 @@ namespace dcool::concurrency {
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
 	) -> ::dcool::core::Boolean {
+		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return atom_.compare_exchange_strong(expected_, newValue_, successOrder_, failureOrder_);
 	}
 
@@ -259,6 +422,7 @@ namespace dcool::concurrency {
 		template <typename StandardAtomT_, typename TransformerT_> auto atomicallyTransformFetch_(
 			StandardAtomT_& atom_, TransformerT_&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
+			DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(transformOrder_, loadOrder_));
 			using Value_ = StandardAtomT_::value_type;
 			Value_ old_ = atom_.load(loadOrder_);
 			Value_ new_;
@@ -274,6 +438,7 @@ namespace dcool::concurrency {
 		template <typename StandardAtomT_, typename TransformerT_> auto atomicallyFetchTransformOrLoad_(
 			StandardAtomT_& atom_, TransformerT_&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
+			DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(transformOrder_, loadOrder_));
 			using Value_ = StandardAtomT_::value_type;
 			Value_ old_ = atom_.load(loadOrder_);
 			for (; ; ) {
@@ -291,6 +456,7 @@ namespace dcool::concurrency {
 		template <typename StandardAtomT_, typename TransformerT_> auto atomicallyTransformFetchOrLoad_(
 			StandardAtomT_& atom_, TransformerT_&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
+			DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(transformOrder_, loadOrder_));
 			using Value_ = StandardAtomT_::value_type;
 			Value_ old_ = atom_.load(loadOrder_);
 			for (; ; ) {
@@ -319,7 +485,7 @@ namespace dcool::concurrency {
 		ValueT_& object_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyFetchTransform(
-			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -338,7 +504,7 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& atom_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyFetchTransform(
-			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -355,7 +521,7 @@ namespace dcool::concurrency {
 		ValueT_& object_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyTransformFetch(
-			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -374,7 +540,7 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& atom_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyTransformFetch(
-			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -391,7 +557,7 @@ namespace dcool::concurrency {
 		ValueT_& object_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyFetchTransformOrLoad(
-			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -410,7 +576,7 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& atom_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyFetchTransformOrLoad(
-			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			atom_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -427,7 +593,7 @@ namespace dcool::concurrency {
 		ValueT_& object_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyTransformFetchOrLoad(
-			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -446,15 +612,17 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& object_, TransformerT_&& transformer_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyTransformFetchOrLoad(
-			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, order_
+			object_, ::dcool::core::forward<TransformerT_>(transformer_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
 	namespace detail_ {
-		template <typename StandardAtomT_, ::dcool::core::TriviallyCopyable ValueT_> void atomicallyWait_(
-			StandardAtomT_ const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+		template <typename StandardAtomT_> void atomicallyWait_(
+			StandardAtomT_ const& atom_,
+			typename StandardAtomT_::value_type const& old_,
+			::std::memory_order order_ = ::std::memory_order::seq_cst
 		) noexcept {
-#	if DCOOL_CPP_P1135R6_ENABLED
+#	if DCOOL_CPP_ATOMIC_WAIT_VERSION >= DCOOL_CPP_ATOMIC_WAIT_VERSION_FOR_P1135R6
 			atom_.wait(old_, order_);
 #	else
 			while (::dcool::core::intelliHasEqualValueRepresentation(atom_.load(order_), old_)) {
@@ -463,16 +631,39 @@ namespace dcool::concurrency {
 #	endif
 		}
 
-		template <typename StandardAtomT_, ::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch_(
-			StandardAtomT_ const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-		) noexcept -> ValueT_ {
-			ValueT_ result_;
-			for (; ; ) {
-#	if DCOOL_CPP_P1135R6_ENABLED
-				atom_.wait(old_, order_);
+		template <typename StandardAtomT_, typename TimePointT_> auto atomicallyWaitUntil_(
+			StandardAtomT_ const& atom_,
+			typename StandardAtomT_::value_type const& old_,
+			TimePointT_ const& deadline_,
+			::std::memory_order order_ = ::std::memory_order::seq_cst
+		) noexcept -> ::dcool::core::Boolean {
+			while (::dcool::core::intelliHasEqualValueRepresentation(atom_.load(order_), old_)) {
+				if (TimePointT_::clock::now() > deadline_) {
+					return false;
+				}
+				::std::this_thread::yield();
+			}
+			return true;
+		}
+
+		template <typename StandardAtomT_> auto atomicallyWaitFetchWeak_(
+			StandardAtomT_ const& atom_, typename StandardAtomT_::value_type const& old_, ::std::memory_order order_
+		) noexcept -> typename StandardAtomT_::value_type {
+#	if DCOOL_CPP_ATOMIC_WAIT_VERSION >= DCOOL_CPP_ATOMIC_WAIT_VERSION_FOR_P1135R6
+			atom_.wait(old_, order_);
+			return atom_.load(order_);
+#	else
+			return atom_.load(order_);
 #	endif
-				result_ = atom_.load(order_);
-				if (!(::dcool::core::intelliHasEqualValueRepresentation(atom_.load(order_), old_))) {
+		}
+
+		template <typename StandardAtomT_> auto atomicallyWaitFetchStrong_(
+			StandardAtomT_ const& atom_, typename StandardAtomT_::value_type const& old_, ::std::memory_order order_
+		) noexcept -> typename StandardAtomT_::value_type {
+			typename StandardAtomT_::value_type result_;
+			for (; ; ) {
+				result_ = ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, old_, order_);
+				if (!(::dcool::core::intelliHasEqualValueRepresentation(result_, old_))) {
 					break;
 				}
 				::std::this_thread::yield();
@@ -489,7 +680,7 @@ namespace dcool::concurrency {
 					break;
 				}
 				::std::this_thread::yield();
-				value_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, value_, order_);
+				value_ = ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, value_, order_);
 			}
 			return value_;
 		}
@@ -508,19 +699,38 @@ namespace dcool::concurrency {
 			);
 		}
 
-		template <typename StandardAtomT_> void atomicallyNotifyOne_(StandardAtomT_& object_) noexcept {
-#	if DCOOL_CPP_P1135R6_ENABLED
+		template <typename StandardAtomT_> void atomicallyNotifyOne_(StandardAtomT_& atom_) noexcept {
+#	if DCOOL_CPP_ATOMIC_WAIT_VERSION >= DCOOL_CPP_ATOMIC_WAIT_VERSION_FOR_P1135R6
 			atom_.notify_one();
 #	endif
 		}
 
-		template <typename StandardAtomT_> void atomicallyNotifyAll_(StandardAtomT_& object_) noexcept {
-#	if DCOOL_CPP_P1135R6_ENABLED
+		template <typename StandardAtomT_> void atomicallyNotifyAll_(StandardAtomT_& atom_) noexcept {
+#	if DCOOL_CPP_ATOMIC_WAIT_VERSION >= DCOOL_CPP_ATOMIC_WAIT_VERSION_FOR_P1135R6
 			atom_.notify_all();
 #	endif
 		}
 	}
 
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TimePointT_> void atomicallyWaitUntil(
+		ValueT_& object_,
+		ValueT_ const& old_,
+		TimePointT_ const& deadline_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept {
+		::std::atomic_ref<ValueT_> atom_(object_);
+		::dcool::concurrency::detail_::atomicallyWaitUntil_(atom_, old_, deadline_, order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_, typename TimePointT_> void atomicallyWaitUntil(
+		::std::atomic<ValueT_> const& atom_,
+		ValueT_ const& old_,
+		TimePointT_ const& deadline_,
+		::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept {
+		::dcool::concurrency::detail_::atomicallyWaitUntil_(atom_, old_, deadline_, order_);
+	}
+
 	template <::dcool::core::TriviallyCopyable ValueT_> void atomicallyWait(
 		ValueT_& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept {
@@ -534,17 +744,30 @@ namespace dcool::concurrency {
 		::dcool::concurrency::detail_::atomicallyWait_(atom_, old_, order_);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch(
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetchWeak(
 		ValueT_& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		::std::atomic_ref<ValueT_> atom_(object_);
-		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
+		return ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, old_, order_);
 	}
 
-	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetch(
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetchWeak(
 		::std::atomic<ValueT_> const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, order_);
+		return ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, old_, order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetchStrong(
+		ValueT_& object_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		::std::atomic_ref<ValueT_> atom_(object_);
+		return ::dcool::concurrency::detail_::atomicallyWaitFetchStrong_(atom_, old_, order_);
+	}
+
+	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyWaitFetchStrong(
+		::std::atomic<ValueT_> const& atom_, ValueT_ const& old_, ::std::memory_order order_ = ::std::memory_order::seq_cst
+	) noexcept -> ValueT_ {
+		return ::dcool::concurrency::detail_::atomicallyWaitFetchStrong_(atom_, old_, order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename PredicateT_> auto atomicallyWaitPredicateFetch(
@@ -607,6 +830,7 @@ namespace dcool::concurrency {
 			::std::memory_order transformOrder_,
 			::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
+			DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(transformOrder_, loadOrder_));
 			using Value_ = StandardAtomT_::value_type;
 			Value_ old_ = hint_;
 			for (; ; ) {
@@ -620,11 +844,11 @@ namespace dcool::concurrency {
 					}
 				} else {
 					::std::this_thread::yield();
-				}
-				if (taskResult_.delayedRetryRequested()) {
-					old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
-				} else {
-					old_ = atom_.load(loadOrder_);
+					if (taskResult_.delayedRetryRequested()) {
+						old_ = ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, old_, loadOrder_);
+					} else {
+						old_ = atom_.load(loadOrder_);
+					}
 				}
 			}
 			return old_;
@@ -637,6 +861,7 @@ namespace dcool::concurrency {
 			::std::memory_order transformOrder_,
 			::std::memory_order loadOrder_
 		) noexcept -> StandardAtomT_::value_type {
+			DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(transformOrder_, loadOrder_));
 			using Value_ = StandardAtomT_::value_type;
 			Value_ old_ = hint_;
 			for (; ; ) {
@@ -650,11 +875,11 @@ namespace dcool::concurrency {
 					}
 				} else {
 					::std::this_thread::yield();
-				}
-				if (taskResult_.delayedRetryRequested()) {
-					old_ = ::dcool::concurrency::detail_::atomicallyWaitFetch_(atom_, old_, loadOrder_);
-				} else {
-					old_ = atom_.load(loadOrder_);
+					if (taskResult_.delayedRetryRequested()) {
+						old_ = ::dcool::concurrency::detail_::atomicallyWaitFetchWeak_(atom_, old_, loadOrder_);
+					} else {
+						old_ = atom_.load(loadOrder_);
+					}
 				}
 			}
 			return old_;
@@ -681,7 +906,7 @@ namespace dcool::concurrency {
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyHintedFetchExecute(
-			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -704,7 +929,7 @@ namespace dcool::concurrency {
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyHintedFetchExecute(
-			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -723,7 +948,9 @@ namespace dcool::concurrency {
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyFetchExecute(
 		ValueT_& object_, TaskT_&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::atomicallyFetchExecute(object_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
+		return ::dcool::concurrency::atomicallyFetchExecute(
+			object_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
+		);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyFetchExecute(
@@ -741,7 +968,9 @@ namespace dcool::concurrency {
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyFetchExecute(
 		::std::atomic<ValueT_>& atom_, TaskT_&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::atomicallyFetchExecute(atom_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
+		return ::dcool::concurrency::atomicallyFetchExecute(
+			atom_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
+		);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyHintedExecuteFetch(
@@ -764,7 +993,7 @@ namespace dcool::concurrency {
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyHintedExecuteFetch(
-			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+			object_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -787,7 +1016,7 @@ namespace dcool::concurrency {
 		::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyHintedExecuteFetch(
-			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, order_
+			atom_, hint_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
 		);
 	}
 
@@ -806,7 +1035,9 @@ namespace dcool::concurrency {
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
 		ValueT_& object_, TaskT_&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::atomicallyExecuteFetch(object_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
+		return ::dcool::concurrency::atomicallyExecuteFetch(
+			object_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
+		);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
@@ -824,7 +1055,9 @@ namespace dcool::concurrency {
 	template <::dcool::core::TriviallyCopyable ValueT_, typename TaskT_> auto atomicallyExecuteFetch(
 		::std::atomic<ValueT_>& atom_, TaskT_&& task_, ::std::memory_order order_ = ::std::memory_order::seq_cst
 	) noexcept -> ValueT_ {
-		return ::dcool::concurrency::atomicallyExecuteFetch(atom_, ::dcool::core::forward<TaskT_>(task_), order_, order_);
+		return ::dcool::concurrency::atomicallyExecuteFetch(
+			atom_, ::dcool::core::forward<TaskT_>(task_), order_, ::dcool::concurrency::toReadOrder(order_)
+		);
 	}
 }
 

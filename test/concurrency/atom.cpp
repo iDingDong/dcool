@@ -4,6 +4,7 @@
 
 #include <bit>
 #include <chrono>
+#include <future>
 #include <thread>
 
 static constexpr dcool::core::UnsignedMaxInteger repeatCount = 10000;
@@ -63,9 +64,9 @@ template <typename ConfigT = dcool::core::Empty<>> static void testAtomBasics(DC
 			}
 			mainBlocker.release();
 		};
-		dcool::container::List<std::jthread> tasks;
+		dcool::container::List<std::future<void>> tasks;
 		for (unsigned i = 0; i < concurrencyLimit; ++i) {
-			tasks.pushBack(std::jthread(task));
+			tasks.pushBack(std::async(std::launch::async, task));
 		}
 		taskBlocker.countDown();
 		for (unsigned i = 0; i < concurrencyLimit; ++i) {
@@ -73,8 +74,8 @@ template <typename ConfigT = dcool::core::Empty<>> static void testAtomBasics(DC
 			DCOOL_TEST_EXPECT(atom.load() >= repeatCount * (i + 1));
 		}
 		DCOOL_TEST_EXPECT(atom.load() == repeatCount * (concurrencyLimit + 1));
-		for (std::jthread& task: tasks) {
-			task.join();
+		for (std::future<void>& task: tasks) {
+			task.get();
 		}
 		DCOOL_TEST_EXPECT(atom.load() == repeatCount * (concurrencyLimit + 1));
 	}
@@ -84,29 +85,49 @@ struct StampedAtomConfig {
 	static constexpr dcool::core::Length stampWidth = 64;
 };
 
+DCOOL_TEST_CASE(dcoolConcurrency, atomBasics) {
+	testAtomBasics(DCOOL_TEST_CONTEXT_ARGUMENT);
+	testAtomBasics<StampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+}
+
 struct FlexibleAtomConfig {
 	static constexpr dcool::core::Triboolean atomic = dcool::core::indeterminate;
 };
 
 struct FlexibleStampedAtomConfig {
-	static constexpr dcool::core::Length stampWidth = 64;
 	static constexpr dcool::core::Triboolean atomic = dcool::core::indeterminate;
+	static constexpr dcool::core::Length stampWidth = 64;
 };
+
+DCOOL_TEST_CASE(dcoolConcurrency, flexibleAtomBasics) {
+	testAtomBasics<FlexibleAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+	testAtomBasics<FlexibleStampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+}
+
+struct LockfullAtomConfig {
+	static constexpr dcool::core::Boolean lockFull = true;
+};
+
+struct LockfullStampedAtomConfig {
+	static constexpr dcool::core::Boolean lockFull = true;
+	static constexpr dcool::core::Length stampWidth = 64;
+};
+
+DCOOL_TEST_CASE(dcoolConcurrency, lockfullAtomBasics) {
+	testAtomBasics<LockfullAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+	testAtomBasics<LockfullStampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+}
 
 struct PhoneyAtomConfig {
 	static constexpr dcool::core::Triboolean atomic = dcool::core::determinateFalse;
 };
 
 struct PhoneyStampedAtomConfig {
-	static constexpr dcool::core::Length stampWidth = 64;
 	static constexpr dcool::core::Triboolean atomic = dcool::core::determinateFalse;
+	static constexpr dcool::core::Length stampWidth = 64;
 };
 
-DCOOL_TEST_CASE(dcoolConcurrency, atomBasics) {
-	testAtomBasics(DCOOL_TEST_CONTEXT_ARGUMENT);
-	testAtomBasics<StampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
-	testAtomBasics<FlexibleAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
-	testAtomBasics<FlexibleStampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
+DCOOL_TEST_CASE(dcoolConcurrency, phoneyAtomBasics) {
 	testAtomBasics<PhoneyAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
 	testAtomBasics<PhoneyStampedAtomConfig>(DCOOL_TEST_CONTEXT_ARGUMENT);
 }

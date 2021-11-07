@@ -633,6 +633,10 @@ namespace dcool::resource {
 			return this->agent_().strongReferenceCount();
 		}
 
+		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
+			return this->intrusive().valid();
+		}
+
 		public: constexpr auto dereferenceSelf() const noexcept -> Value& {
 			return this->agent_().value();
 		}
@@ -708,25 +712,15 @@ namespace dcool::resource {
 	}
 
 	namespace detail_ {
-		// Workaround for a compiler bug.
-		// See document/dependency_bugs#Bug_2 for more details.
-		template <typename BaseConfigT_, typename ValueT_> struct CompactSharedAgentConfig_ {
-			private: using ConfigAdaptor_ = ::dcool::resource::SharedAgentConfigAdaptor<BaseConfigT_, ValueT_>;
+		template <typename ValueT_, typename BaseConfigT_> struct CompactSharedAgentConfig_: BaseConfigT_ {
 			public: static constexpr ::dcool::core::Boolean compact = true;
-			public: static constexpr ::dcool::core::Boolean atomicallyCounted = ConfigAdaptor_::atomicallyCounted;
-			public: static constexpr ::dcool::core::UnsignedMaxInteger maxStrongReferenceCount =
-				ConfigAdaptor_::maxStrongReferenceCount
-			;
-			public: static constexpr ::dcool::core::UnsignedMaxInteger maxWeakReferenceCount =
-				ConfigAdaptor_::maxWeakReferenceCount
-			;
 		};
 	}
 
 	template <
 		typename ValueT_, typename BaseConfigT_ = ::dcool::core::Empty<>
 	> using CompactSharedStrongPointer = ::dcool::resource::SharedStrongPointer<
-		ValueT_, ::dcool::resource::detail_::CompactSharedAgentConfig_<BaseConfigT_, ValueT_>
+		ValueT_, ::dcool::resource::detail_::CompactSharedAgentConfig_<ValueT_, BaseConfigT_>
 	>;
 }
 

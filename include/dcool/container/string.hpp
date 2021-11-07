@@ -572,6 +572,14 @@ namespace dcool::container {
 			return this->chassis().position(this->engine_(), index_);
 		}
 
+		public: constexpr auto data() const noexcept -> Character const* {
+			return this->chassis().data(this->engine_());
+		}
+
+		public: constexpr auto data() noexcept -> Character* {
+			return this->chassis().data(this->engine_());
+		}
+
 		public: constexpr auto rawPointerAt(Index index_) const noexcept -> Character const* {
 			return this->chassis().rawPointerAt(this->engine_(), index_);
 		}

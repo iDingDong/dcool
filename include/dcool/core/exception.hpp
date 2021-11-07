@@ -103,6 +103,14 @@ namespace dcool::core {
 		}
 	}
 
+	inline void rethrowAndConsumeIfValid(::dcool::core::ExceptionPointer& pointer_) {
+		if (pointer_) {
+			::dcool::core::ExceptionPointer toThrow_ = pointer_;
+			pointer_ = ::dcool::core::nullPointer;
+			::dcool::core::rethrow(toThrow_);
+		}
+	}
+
 	template <typename... Ts_> class ExceptionSafetyDowngrade : ::std::runtime_error {
 		private: using Super_ = ::std::runtime_error;
 

@@ -2,7 +2,7 @@
 #include <dcool/test.hpp>
 
 #include <chrono>
-#include <thread>
+#include <future>
 
 template <typename MutexT> static void testMutexCommon(DCOOL_TEST_CONTEXT_PARAMETER) {
 	using Locker = dcool::concurrency::Locker<MutexT>;
@@ -14,7 +14,8 @@ template <typename MutexT> static void testMutexCommon(DCOOL_TEST_CONTEXT_PARAME
 	if (!attempResult) {
 		return;
 	}
-	::std::jthread task1(
+	std::future<void> task1 = std::async(
+		std::launch::async,
 		[DCOOL_TEST_CAPTURE_CONTEXT, &mutex, &mainBlocker]() {
 			Locker locker(mutex, Locker::Status::idle);
 			DCOOL_TEST_EXPECT(!(locker.tryLock()));
@@ -26,7 +27,7 @@ template <typename MutexT> static void testMutexCommon(DCOOL_TEST_CONTEXT_PARAME
 	);
 	mainBlocker.wait();
 	locker.unlock();
-	task1.join();
+	task1.get();
 	DCOOL_CORE_ASSERT(locker.status() == Locker::Status::idle);
 }
 
@@ -38,15 +39,12 @@ template <typename MutexT> static void testMutexShare(DCOOL_TEST_CONTEXT_PARAMET
 	dcool::concurrency::Latch<> mainBlocker(1);
 	dcool::concurrency::Latch<> task2Blocker(1);
 	Locker locker(mutex, Locker::Status::idle);
-	dcool::core::Boolean attempResult = locker.tryLockShared();
-	DCOOL_TEST_EXPECT(attempResult);
-	if (!attempResult) {
-		return;
-	}
-	::std::jthread task1(
+	DCOOL_TEST_ASSERT(locker.tryLockShared());
+	std::future<void> task1 = std::async(
+		std::launch::async,
 		[DCOOL_TEST_CAPTURE_CONTEXT, &mutex, &produced, &task2Blocker]() {
 			Locker locker(mutex, Locker::Status::idle);
-			DCOOL_TEST_EXPECT(!(locker.tryLock()));
+			DCOOL_TEST_ASSERT(!(locker.tryLock()));
 			task2Blocker.countDown();
 			locker.lock();
 			produced = true;
@@ -54,17 +52,18 @@ template <typename MutexT> static void testMutexShare(DCOOL_TEST_CONTEXT_PARAMET
 			DCOOL_CORE_ASSERT(locker.status() == Locker::Status::idle);
 		}
 	);
-	::std::jthread task2(
+	std::future<void> task2 = std::async(
+		std::launch::async,
 		[DCOOL_TEST_CAPTURE_CONTEXT, &mutex, &produced, &mainBlocker, &task2Blocker]() {
 			Locker locker(mutex, Locker::Status::idle);
 			task2Blocker.wait();
 			std::this_thread::sleep_for(10ms);
 			mainBlocker.countDown();
 			if (locker.tryLockShared()) {
-				DCOOL_TEST_EXPECT(!(MutexT::preferExclusive.isDeterminateTrue()));
+				DCOOL_TEST_ASSERT(!(MutexT::preferExclusive.isDeterminateTrue()));
 				DCOOL_TEST_EXPECT(!produced);
 			} else {
-				DCOOL_TEST_EXPECT(!(MutexT::preferExclusive.isDeterminateFalse()));
+				DCOOL_TEST_ASSERT(!(MutexT::preferExclusive.isDeterminateFalse()));
 				locker.lockShared();
 				DCOOL_TEST_EXPECT(produced);
 			}
@@ -76,8 +75,8 @@ template <typename MutexT> static void testMutexShare(DCOOL_TEST_CONTEXT_PARAMET
 	std::this_thread::sleep_for(10ms);
 	DCOOL_TEST_EXPECT(!produced);
 	locker.unlockShared();
-	task1.join();
-	task2.join();
+	task1.get();
+	task2.get();
 	DCOOL_TEST_EXPECT(produced);
 	DCOOL_CORE_ASSERT(locker.status() == Locker::Status::idle);
 }
@@ -87,16 +86,19 @@ template <typename MutexT> static void testMutexFlexibility(DCOOL_TEST_CONTEXT_P
 	using namespace std::literals::chrono_literals;
 	MutexT mutex;
 	dcool::core::Boolean readed = false;
-	dcool::concurrency::Latch<> mainBlocker(1);
+	dcool::concurrency::Latch<> mainBlocker1(1);
+	dcool::concurrency::Latch<> mainBlocker2(1);
 	dcool::concurrency::Latch<> task1Blocker(1);
 	Locker locker(mutex, Locker::Status::idle);
 	locker.lock();
-	::std::jthread task1(
-		[DCOOL_TEST_CAPTURE_CONTEXT, &mutex, &readed, &mainBlocker, &task1Blocker]() {
+	std::future<void> task1 = std::async(
+		std::launch::async,
+		[DCOOL_TEST_CAPTURE_CONTEXT, &mutex, &readed, &mainBlocker1, &mainBlocker2, &task1Blocker]() {
 			Locker locker(mutex, Locker::Status::idle);
-			DCOOL_TEST_EXPECT(!(locker.tryLockShared()));
-			mainBlocker.countDown();
+			DCOOL_TEST_ASSERT(!(locker.tryLockShared()));
+			mainBlocker1.countDown();
 			locker.lockShared();
+			mainBlocker2.countDown();
 			readed = true;
 			task1Blocker.wait();
 			locker.unlockShared();
@@ -104,15 +106,16 @@ template <typename MutexT> static void testMutexFlexibility(DCOOL_TEST_CONTEXT_P
 		}
 	);
 	DCOOL_TEST_EXPECT(!readed);
-	mainBlocker.wait();
+	mainBlocker1.wait();
 	DCOOL_TEST_EXPECT(!readed);
+	//std::this_thread::sleep_for(10ms);
 	locker.downgrade();
-	std::this_thread::sleep_for(10ms);
-	DCOOL_TEST_EXPECT(!(locker.tryUpgrade()));
+	mainBlocker2.wait();
+	DCOOL_TEST_ASSERT(!(locker.tryUpgrade()));
 	task1Blocker.countDown();
 	locker.upgrade();
 	locker.unlock();
-	task1.join();
+	task1.get();
 	DCOOL_TEST_EXPECT(readed);
 	DCOOL_CORE_ASSERT(locker.status() == Locker::Status::idle);
 }
