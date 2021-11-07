@@ -133,6 +133,21 @@ namespace dcool::core {
 	) noexcept -> ::dcool::core::Boolean {
 		return hasEqualValueRepresentation(left_, right_);
 	}
+
+	template <typename ValueT_> constexpr auto oneOf(ValueT_ const& value_) noexcept -> ::dcool::core::Boolean {
+		return false;
+	}
+
+	template <typename ValueT_, typename... ValueTs_> constexpr auto oneOf(
+		ValueT_ const& value_,
+		::dcool::core::UndeducedType<ValueT_> const& first_,
+		ValueTs_ const&... rests_
+	) noexcept(noexcept(value_ == first_)) -> ::dcool::core::Boolean {
+		if (value_ == first_) {
+			return true;
+		}
+		return ::dcool::core::oneOf(value_, rests_...);
+	}
 }
 
 #endif

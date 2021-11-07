@@ -4,7 +4,7 @@
 
 #include <atomic>
 #include <chrono>
-#include <thread>
+#include <future>
 
 DCOOL_TEST_CASE(dcoolConcurrency, semaphoreBasics) {
 	using namespace std::literals::chrono_literals;
@@ -21,36 +21,42 @@ DCOOL_TEST_CASE(dcoolConcurrency, semaphoreBasics) {
 		DCOOL_TEST_EXPECT(postCountValue <= preCountValue);
 	};
 
-	std::jthread consumer([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
-		for (dcool::core::Length i = 0; i < testCount; ++i) {
-			checker();
-			semaphore.acquire();
-			checker();
-			auto newPostCountValue = ++postCount;
-			DCOOL_TEST_EXPECT(newPostCountValue <= preCount);
+	std::future<void> consumer = std::async(
+		std::launch::async,
+		[DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
+			for (dcool::core::Length i = 0; i < testCount; ++i) {
+				checker();
+				semaphore.acquire();
+				checker();
+				auto newPostCountValue = ++postCount;
+				DCOOL_TEST_EXPECT(newPostCountValue <= preCount);
+			}
 		}
-	});
+	);
 
-	DCOOL_TEST_EXPECT(!(semaphore.tryAcquire()));
-	DCOOL_TEST_EXPECT(!(semaphore.tryAcquireFor(10ms)));
+	DCOOL_TEST_ASSERT(!(semaphore.tryAcquire()));
+	DCOOL_TEST_ASSERT(!(semaphore.tryAcquireFor(10ms)));
 	DCOOL_TEST_EXPECT(postCount == 0);
 
-	std::jthread producer([DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
-		for (dcool::core::Length i = 0; i < testCount; ++i) {
-			checker();
-			auto newPreCountValue = ++preCount;
-			DCOOL_TEST_EXPECT(postCount < newPreCountValue);
-			semaphore.release();
-			checker();
-			std::this_thread::sleep_for(20ms);
-			checker();
+	std::future<void> producer = std::async(
+		std::launch::async,
+		[DCOOL_TEST_CAPTURE_CONTEXT, &preCount, &postCount, &semaphore, checker]() {
+			for (dcool::core::Length i = 0; i < testCount; ++i) {
+				checker();
+				auto newPreCountValue = ++preCount;
+				DCOOL_TEST_EXPECT(postCount < newPreCountValue);
+				semaphore.release();
+				checker();
+				std::this_thread::sleep_for(20ms);
+				checker();
+			}
 		}
-	});
+	);
 	checker();
-	consumer.join();
+	consumer.get();
 	DCOOL_TEST_EXPECT(preCount == testCount);
 	DCOOL_TEST_EXPECT(postCount == testCount);
-	producer.join();
+	producer.get();
 	DCOOL_TEST_EXPECT(preCount == testCount);
 	DCOOL_TEST_EXPECT(postCount == testCount);
 }

@@ -10,7 +10,7 @@ DCOOL_TEST_CASE(dcoolService, quickTimerBasics) {
 	using QuickTimer = dcool::service::QuickTimer<>;
 	dcool::concurrency::AtomicFlag flag;
 	QuickTimer quickTimer(
-		100ms,
+		10ms,
 		[DCOOL_TEST_CAPTURE_CONTEXT, &flag]() -> QuickTimer::ActionResult {
 			DCOOL_TEST_EXPECT(!(flag.testAndSet()));
 			return QuickTimer::ActionResult::done;
@@ -24,7 +24,7 @@ DCOOL_TEST_CASE(dcoolService, quickTimerStop) {
 	using namespace std::literals::chrono_literals;
 	using QuickTimer = dcool::service::QuickTimer<>;
 	QuickTimer quickTimer(
-		100ms,
+		10ms,
 		[DCOOL_TEST_CAPTURE_CONTEXT]() -> QuickTimer::ActionResult {
 			DCOOL_TEST_EXPECT(false);
 			return QuickTimer::ActionResult::done;

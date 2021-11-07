@@ -92,20 +92,20 @@ namespace dcool::utility {
 			private: using Storage_ = ::dcool::resource::StorageSqueezer<squeezedTankage, DynamicHandle>;
 			private: using Cloner_ = ::dcool::core::ConditionalType<
 				copyable,
-				void (*)(Engine& engine_, Self_ const& self_, Engine& otherEngine_, Self_& other_),
+				void(*)(Engine& engine_, Self_ const& self_, Engine& otherEngine_, Self_& other_),
 				::dcool::core::Pit
 			>;
 			private: using Relocator_ = ::dcool::core::ConditionalType<
 				moveable,
-				void (*)(Engine& engine_, Self_& self_, Self_& other_) noexcept(noThrowMovable),
+				void(*)(Engine& engine_, Self_& self_, Self_& other_) noexcept(noThrowMovable),
 				::dcool::core::Pit
 			>;
 			private: using CrossRelocator_ = ::dcool::core::ConditionalType<
 				moveable,
-				void (*)(Engine& engine_, Self_& self_, Engine& otherEngine_, Self_& other_),
+				void(*)(Engine& engine_, Self_& self_, Engine& otherEngine_, Self_& other_),
 				::dcool::core::Pit
 			>;
-			private: using Destructor_ = void (*)(Engine& engine_, Self_& self_) noexcept;
+			private: using Destructor_ = void(*)(Engine& engine_, Self_& self_) noexcept;
 
 			private: struct InformationTable_ {
 				::dcool::core::StorageRequirement storageRequirement_;

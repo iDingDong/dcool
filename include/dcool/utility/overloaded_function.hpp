@@ -19,13 +19,13 @@ namespace dcool::utility {
 		template < \
 			::dcool::core::Boolean noThrowC_, typename ResultT_, typename... ParameterTs_ \
 		> struct OverloadedFunctionChassisBase_< \
-			auto (ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_ \
+			auto(ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_ \
 		> { \
 			private: using Self_ = OverloadedFunctionChassisBase_< \
-				auto (ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_ \
+				auto(ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_ \
 			>; \
 			 \
-			private: using Prototype_ = auto (ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_; \
+			private: using Prototype_ = auto(ParameterTs_...) qualifiler_ referenceCategory_ noexcept(noThrowC_) -> ResultT_; \
 			private: using PrototypeInfo_ = ::dcool::utility::detail_::FunctionPrototypeInfo_<Prototype_>; \
 			private: using Result_ = PrototypeInfo_::Result_; \
 			private: static constexpr ::dcool::core::Boolean noThrow_ = PrototypeInfo_::noThrow_; \

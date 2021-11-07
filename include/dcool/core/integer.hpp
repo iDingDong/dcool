@@ -436,11 +436,11 @@ namespace dcool::core {
 
 	template <
 		::dcool::core::Length widthC_, ::dcool::core::UnsignedIntegerConfig<widthC_> ConfigT_ = ::dcool::core::Empty<>
-	> using UnsignedInteger = ::dcool::core::Integer<false, widthC_>;
+	> using UnsignedInteger = ::dcool::core::Integer<false, widthC_, ConfigT_>;
 
 	template <
 		::dcool::core::Length widthC_, ::dcool::core::SignedIntegerConfig<widthC_> ConfigT_ = ::dcool::core::Empty<>
-	> using SignedInteger = ::dcool::core::Integer<true, widthC_>;
+	> using SignedInteger = ::dcool::core::Integer<true, widthC_, ConfigT_>;
 
 	template <auto maxC_, auto minC_ = 0> requires (maxC_ >= minC_) using ExtendedIntegerTypeToRepresent = ::dcool::core::Integer<
 		(minC_ < 0), ::dcool::core::max(::std::bit_width(maxC_), ::std::bit_width(minC_ < 0 ? minC_ + 1 : maxC_))

@@ -120,6 +120,22 @@ namespace dcool::core {
 		::dcool::core::storageRequirementFor<ValueT_>
 	>;
 
+	namespace detail_ {
+		template <typename ValueT_> struct StorableTypeHelper_ {
+			using Result_ = ValueT_;
+		};
+
+		template <::dcool::core::Reference ReferenceT_> struct StorableTypeHelper_<ReferenceT_> {
+			using Result_ = ::dcool::core::ReferenceRemovedType<ReferenceT_>*;
+		};
+
+		template <> struct StorableTypeHelper_<void> {
+			using Result_ = ::dcool::core::Empty<>;
+		};
+	}
+
+	template <typename ValueT_> using StorableType = ::dcool::core::detail_::StorableTypeHelper_<ValueT_>::Result_;
+
 	constexpr auto padSizeToMatchAligment(
 		::dcool::core::Size size_, ::dcool::core::Alignment alignmentToMatch_
 	) noexcept -> ::dcool::core::Size {

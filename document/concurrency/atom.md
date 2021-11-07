@@ -17,6 +17,8 @@ Its member shall customize the list as decribed:
 | Member | Default | Behavior |
 | - | - | - |
 | `static constexpr dcool::core::Triboolean atomic` | `dcool::core::determinateTrue` | Supports all atomic operations and simulate non-atomic operations if it takes value `dcool::core::determinateTrue`; otherwise supports all kinds of operations if it takes value `dcool::core::indeterminate`; otherwise supports non-atomic operations only. |
+| `static constexpr dcool::core::Boolean lockFull` | `false` | Use a mutex to simulate atomic operations if it takes value `true` and `!(atomic.isDeterminateFalse())`; otherwise extra mutex will not be introduced. |
+| `static constexpr dcool::core::Boolean waitable` | `true` | Supports wait/notify and task operations if it takes value `true`; otherwise not. |
 | `static constexpr dcool::core::Length stampWidth` | `0` | Indicates the width of stamp in the atomic which would increment every time when the value of atom changes. |
 
 ### Note
@@ -33,8 +35,14 @@ Its member shall customize the list as decribed:
 
 ## Member constants
 
+| Name | Definition |
+| - | - |
+| `static constexpr dcool::core::Triboolean atomic` | Determined by configuration. |
 | `static constexpr dcool::core::Triboolean lockFree` | Implementation-defined. |
-| `static constexpr dcool::core::Boolean is_always_lock_free` | Defined by `static constexpr dcool::core::Boolean is_always_lock_free = lockFree.isDeterminateTrue()` |
+| `static constexpr dcool::core::Boolean is_always_lock_free` | Defined by `static constexpr dcool::core::Boolean is_always_lock_free = lockFree.isDeterminateTrue();` |
+| `static constexpr dcool::core::Boolean lockFull` | Takes value `true` if configuration `lockFull` takes value `true` and `!(atomic.isDeterminateFalse())`; otherwise takes value `false`. |
+| `static constexpr dcool::core::Boolean waitable` | Takes value `true` if configuration `waitable` takes value `true` and `!(atomic.isDeterminateFalse())`; otherwise takes value `false`. |
+| `static constexpr dcool::core::Boolean is_always_lock_free` | Defined by `static constexpr dcool::core::Boolean is_always_lock_free = lockFree.isDeterminateTrue();` |
 
 `StampedValue` is defined by:
 
@@ -200,7 +208,7 @@ The weak versions may spuriously fail but can be more efficient.
 
 Atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
 
-### Fetch transform operations
+### Transform operations
 
 ```cpp
 template <typename TransformerT> constexpr auto stampedFetchTransformStamped(
@@ -223,57 +231,73 @@ template <typename TransformerT> constexpr auto fetchTransform(
 )& noexcept -> Value;
 ```
 
-Transforms the previously holded value `previousValue` loaded with memory order `order`/`loadOrder` to `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation) with memory order `order`/`transformOrder` and returns `previousValue`. This operation will be reattempted if the previous value changes during this operation.
+Replace the previously holded (stamped) value `previousValue` loaded with memory order `order`/`loadOrder` with `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation) with memory order `order`/`transformOrder` and returns `previousValue`. This operation will be reattempted if the previous value changes during the replacement.
 
-Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` is not part of the atomicity.
+The invocable `transformer` should accept argument of the following type:
+
+| Version | Argument type |
+| - | - |
+| 1, 2 | `StampedValue const&` |
+| 3~6 | `Value const&` |
+
+Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` is not part of the atomicity unless `lockFull`.
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
 
-For each `fetchTransform`/`FetchTransform` operation there is a corresponding `transformFetch`/`TransformFetch` operation which operates identically except that the `transformFetch`/`TransformFetch` operation returns the value after the modification.
+For each `fetchTransform`/`FetchTransform` operation there is a corresponding `transformFetch`/`TransformFetch` operation which operates identically except that the `transformFetch`/`TransformFetch` operation returns the value after the modification (if any).
 
-### Fetch transform or load operations
+### Transform or load operations
 
 ```cpp
 template <typename TransformerT> constexpr auto stampedFetchTransformOrLoadStamped(
 	TransformerT&& transformer, std::memory_order order = std::memory_order::seq_cst
-)& noexcept -> StampedValue requires (stamped);
+)& noexcept -> StampedValue requires (stamped); // 1
 template <typename TransformerT> constexpr auto stampedFetchTransformOrLoadStamped(
 	TransformerT&& transformer, std::memory_order transformOrder, std::memory_order loadOrder
-)& noexcept -> StampedValue requires (stamped);
+)& noexcept -> StampedValue requires (stamped); // 2
 template <typename TransformerT> constexpr auto stampedFetchTransformOrLoad(
 	TransformerT&& transformer, std::memory_order order = std::memory_order::seq_cst
-)& noexcept -> Value requires (stamped);
+)& noexcept -> Value requires (stamped); // 3
 template <typename TransformerT> constexpr auto stampedFetchTransformOrLoad(
 	TransformerT&& transformer, std::memory_order transformOrder, std::memory_order loadOrder
-)& noexcept -> Value requires (stamped);
+)& noexcept -> Value requires (stamped); // 4
 template <typename TransformerT> constexpr auto fetchTransformOrLoad(
 	TransformerT&& transformer, std::memory_order order = std::memory_order::seq_cst
-)& noexcept -> Value;
+)& noexcept -> Value; // 5
 template <typename TransformerT> constexpr auto fetchTransformOrLoad(
 	TransformerT&& transformer, std::memory_order transformOrder, std::memory_order loadOrder
-)& noexcept -> Value;
+)& noexcept -> Value; // 6
 ```
 
-With previously holded value `previousValue` loaded with memory order `order`/`loadOrder`, executes `auto newValue = dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation), transforms the previously holded value to `newValue.access()` with memory order `order`/`transformOrder` if `newValue.valid()`. Returns `previousValue`. This operation will be reattempted if the previous value changes during this operation unless `!(newValue.valid())`.
+With previously holded (stamped) value `previousValue` loaded with memory order `order`/`loadOrder`, executes `auto newValue = dcool::core::invoke(transformer, dcool::core::constantize(previousValue))` (`transformer` might be forwarded on the last invocation), replace the previously holded value with `newValue.access()` with memory order `order`/`transformOrder` if `newValue.valid()`. Returns `previousValue`. This operation will be reattempted if the previous value changes during the replacement.
 
-Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))`, `newValue.valid()` and `newValue.access()` are not part of the atomicity.
+The invocable `transformer` should accept argument of the following type:
+
+| Version | Argument type |
+| - | - |
+| 1, 2 | `StampedValue const&` |
+| 3~6 | `Value const&` |
+
+Evaluation of `dcool::core::invoke(transformer, dcool::core::constantize(previousValue))`, `newValue.valid()` and `newValue.access()` are not part of the atomicity unless `lockFull`.
 
 Note that if the same value was written into the atom by another operation, the value is not considered to be changed unless `stamped` and the stamp did not wrap to the same value.
 
-For each `fetchTransformOrLoad`/`FetchTransformOrLoad` operation there is a corresponding `transformFetchOrLoad`/`TransformFetchOrLoad` operation which operates identically except that the `transformFetchOrLoad`/`TransformFetchOrLoad` operation returns the value after the modification.
+For each `fetchTransformOrLoad`/`FetchTransformOrLoad` operation there is a corresponding `transformFetchOrLoad`/`TransformFetchOrLoad` operation which operates identically except that the `transformFetchOrLoad`/`TransformFetchOrLoad` operation returns the value after the modification (if any).
+
+Hint: `transformer` may return a `dcool::core::Optional<Value>`.
 
 ### Wait operations
 
 ```cpp
 constexpr void stampedWaitStamped(
 	StampedValue const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped)
+) const noexcept requires (waitable && stamped)
 constexpr void stampedWait(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped)
+) const noexcept requires (waitable && stamped)
 constexpr void wait(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires (!(atomic.isDeterminateFalse()));
+) const noexcept requires (waitable);
 ```
 
 If the holded (stamped) value loaded with memory order `order` has the same representation as `old`, blocks until notified or spuriously waked up and repeat the operation.
@@ -287,13 +311,13 @@ No non-atomic versions are provided.
 ```cpp
 constexpr auto stampedWaitFetchStamped(
 	StampedValue const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept -> StampedValue requires ((!(atomic.isDeterminateFalse())) && stamped)
+) const noexcept -> StampedValue requires (waitable && stamped)
 constexpr auto stampedWaitFetch(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept -> Value requires ((!(atomic.isDeterminateFalse())) && stamped)
+) const noexcept -> Value requires (waitable && stamped)
 constexpr auto waitFetch(
 	Value const& old, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept -> Value requires (!(atomic.isDeterminateFalse()));
+) const noexcept -> Value requires (waitable);
 ```
 
 If the holded (stamped) value `previousValue` loaded with memory order `order` has the same representation as `old`, blocks until notified or spuriously waked up and repeat the operation.
@@ -309,13 +333,13 @@ No non-atomic versions are provided.
 ```cpp
 template <typename PredicateT> constexpr void stampedWaitPredicateStamped(
 	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped);
+) const noexcept requires (waitable && stamped);
 template <typename PredicateT> constexpr void stampedWaitPredicate(
 	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires ((!(atomic.isDeterminateFalse())) && stamped);
+) const noexcept requires (waitable && stamped);
 template <typename PredicateT> constexpr void waitPredicate(
 	PredicateT&& predicate, std::memory_order order = ::std::memory_order::seq_cst
-) const noexcept requires (!(atomic.isDeterminateFalse()));
+) const noexcept requires (waitable);
 ```
 
 If the holded (stamped) value `previousValue` loaded with memory order `order` does not satisfy `dcool::core::invoke(predicate, dcool::core::constantize(previousValue))` (`predicate` might be forwarded on the last invocation), blocks until notified or spuriously waked up and repeat the operation.
@@ -332,6 +356,73 @@ constexpr void notifyAll() noexcept requires(!(atomic.isDeterminateFalse()));
 ```
 
 Notify one/all waiter(s) on this atom.
+
+### Task Operations
+
+```cpp
+template <typename TaskT> constexpr auto stampedHintedFetchExecuteStamped(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> StampedValue requires (waitable && stamped); // 1
+template <typename TaskT> constexpr auto stampedHintedFetchExecuteStamped(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> StampedValue requires (waitable && stamped); // 2
+template <typename TaskT> constexpr auto stampedFetchExecuteStamped(
+	TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> StampedValue requires (waitable && stamped); // 3
+template <typename TaskT> constexpr auto stampedFetchExecuteStamped(
+	TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> StampedValue requires (waitable && stamped); // 4
+template <typename TaskT> constexpr auto stampedHintedFetchExecute(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> Value requires (waitable && stamped); // 5
+template <typename TaskT> constexpr auto stampedHintedFetchExecute(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> Value requires (waitable && stamped); // 6
+template <typename TaskT> constexpr auto stampedFetchExecute(
+	TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> Value requires (waitable && stamped); // 7
+template <typename TaskT> constexpr auto stampedFetchExecute(
+	TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> Value requires (waitable && stamped); // 8
+template <typename TaskT> constexpr auto hintedFetchExecute(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> Value requires (waitable); // 9
+template <typename TaskT> constexpr auto hintedFetchExecute(
+	UnderlyingValue const& hint, TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> Value requires (waitable); // 10
+template <typename TaskT> constexpr auto fetchExecute(
+	TaskT&& task, ::std::memory_order order = ::std::memory_order::seq_cst
+)& noexcept -> Value requires (waitable); // 11
+template <typename TaskT> constexpr auto fetchExecute(
+	TaskT&& task, ::std::memory_order transformOrder, ::std::memory_order loadOrder
+)& noexcept -> Value requires (waitable); // 12
+```
+
+With previously holded (stamped) value `previousValue` loaded with memory order `order`/`loadOrder`, executes `auto taskResult = dcool::core::invoke(task, dcool::core::constantize(previousValue))` (`task` might be forwarded on the last invocation). Exactly only one of the following expression shall be evaluated to `true` and its corresponding action will be taken:
+
+| Expression | Action if `true` |
+| - | - |
+| `taskResult.aborted()` | Exit this operation. |
+| `taskResult.instantRetryRequested()` | Hint the current thread to reschedule, then this the operation. |
+| `taskResult.delayedRetryRequested()` | Wait until the holded (stamped) value changes, then repeat this operation. |
+| `taskResult.done()` | Replace the previously holded value with `taskResult.accessValue()`, then repeat this operation. |
+
+Returns `previousValue`.
+
+This operation will be reattempted if the previous value changes during the replacement.
+
+The invocable `task` should accept argument of the following type:
+
+| Version | Argument type |
+| - | - |
+| 1~4 | `StampedValue const&` |
+| 5~12 | `Value const&` |
+
+If `hint` is provided, the first load towards `previousValue` will be from `hint` instead of the actual holded value.
+
+For each `fetchExecute`/`FetchExecute` operation there is a corresponding `executeFetch`/`ExecuteFetch` operation which operates identically except that the `executeFetch`/`ExecuteFetch` operation returns the value after the modification (if any).
+
+Hint: `task` may return a `dcool::core::TaskResult<Value>`.
 
 ### Fetch arithmetic operations
 
@@ -365,7 +456,7 @@ Evaluation of the operators are not part of the atomicity unless the `std::atomi
 
 If the `std::atomic_fetch_*`/`std::atomic_ref::fetch_*` were used, atomic versions are signal safe if `atomic.isDeterminateTrue() && lockFreeOnExecution() && (!stamped)`.
 
-For each `fetch*`/`Fetch*` operation there is a corresponding `*Fetch` operation which operates identically except that the `*Fetch` operation returns the value after the modification.
+For each `fetch*`/`Fetch*` operation there is a corresponding `*Fetch` operation which operates identically except that the `*Fetch` operation returns the value after the modification (if any).
 
 ### Arithmetic compound assignment operators
 
@@ -405,3 +496,90 @@ constexpr auto is_lock_free() const noexcept -> ::dcool::core::Boolean; // For s
 Returns `true` if `lockFree.isDeterminateTrue()`; returns `false` if `lockFree.isDeterminateFalse()`; otherwise implementation-defined.
 
 Indicates whether all operations are lock-free.
+
+### Examples
+
+`dcool::concurrency::Atom` can simplfy the user-code with complicated tranditional CAS operations. For example, given a shared spin mutex underlying status defined like this:
+
+```cpp
+struct Status {
+	bool exclusivelyOwned;
+	std::size_t shareCount;
+};
+
+constexpr std::size_t maxShareCount = 1000;
+```
+
+Direct implementation of the mutex lock with `std::atomic` involves tricky CAS usage:
+
+```cpp
+std::atomic<Status> status;
+
+void lock() noexcept {
+	Status old = status.load(std::memory_order::relaxed);
+	for (; ; ) {
+		while (old.exclusivelyOwned || old.shareCount > 0) {
+			status.wait(old);
+			Status old = status.load(std::memory_order::relaxed);
+		}
+		Status desired = {
+			.exclusivelyOwned = true,
+			.shareCount = 0
+		};
+		if (status.compare_exchange_weak(old, desired, std::memory_order::acquire, std::memory_order::relaxed)) {
+			break;
+		}
+	}
+}
+
+void lockShared() noexcept {
+	Status old = status.load(std::memory_order::relaxed);
+	for (; ; ) {
+		while (old.exclusivelyOwned || old.shareCount >= maxShareCount) {
+			status.wait(old);
+			Status old = status.load(std::memory_order::relaxed);
+		}
+		Status desired = {
+			.exclusivelyOwned = false,
+			.shareCount = old.shareCount + 1
+		};
+		if (status.compare_exchange_weak(old, desired, std::memory_order::acquire, std::memory_order::relaxed)) {
+			break;
+		}
+	}
+}
+```
+
+By using `dcool::concurrency::Atom` the lock implementation can be more intuitive:
+
+```cpp
+dcool::concurrency::Atom<Status> status;
+
+void lock() noexcept {
+	status.fetchExecute(
+		[](Status const& old) noexcept -> dcool::core::TaskResult<Status> {
+			if (old.exclusivelyOwned || old.shareCount >= 0) {
+				return dcool::core::TaskResult<Status>::makeDelayedRetry();
+			}
+			return Status {
+				.exclusivelyOwned = true,
+				.shareCount = 0
+			};
+		}
+	);
+}
+
+void lockShared() noexcept {
+	status.fetchExecute(
+		[](Status const& old) noexcept -> dcool::core::TaskResult<Status> {
+			if (old.exclusivelyOwned || old.shareCount >= maxShareCount) {
+				return dcool::core::TaskResult<Status>::makeDelayedRetry();
+			}
+			return Status {
+				.exclusivelyOwned = false,
+				.shareCount = old.shareCount + 1
+			};
+		}
+	);
+}
+```
