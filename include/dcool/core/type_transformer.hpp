@@ -161,6 +161,22 @@ namespace dcool::core {
 	template <typename LeftT_, typename RightT_> using UseRightType = RightT_;
 
 	template <typename LeftT_, auto rightC_> constexpr decltype(rightC_) useRightValue = rightC_;
+
+	namespace detail_ {
+		struct VoidStub_;
+
+		template <typename T_> struct StubReferenceableHelper_ {
+			using Result_ = T_;
+		};
+
+		template <> struct StubReferenceableHelper_<void> {
+			using Result_ = ::dcool::core::detail_::VoidStub_;
+		};
+	}
+
+	template <typename T_> using StubReferenceableType = ::dcool::core::IdenticallyQualifiedType<
+		typename ::dcool::core::detail_::StubReferenceableHelper_<::dcool::core::ReferenceRemovedType<T_>>::Result_, T_
+	>;
 }
 
 #endif

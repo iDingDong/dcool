@@ -371,6 +371,58 @@ namespace dcool::concurrency {
 			return result_;
 		}
 
+		private: template <typename TransformerT__> constexpr auto atomicallyTransformFetchUnderlying_(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			if constexpr (usingAtomicBasicOperation_) {
+				return ::dcool::concurrency::atomicallyTransformFetch(
+					this->m_holder_.underlying_, ::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			::dcool::core::PhoneyLockGuard guard_(this->m_locker_.mutex_);
+			return this->sequencedTransformFetchUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		private: template <typename TransformerT__> constexpr auto sequencedTransformFetchUnderlying_(
+			TransformerT__&& transformer_
+		)& noexcept -> UnderlyingValue {
+			if constexpr (usingStandardAtomic_) {
+				return this->atomicallyTransformFetchUnderlying_(
+					::dcool::core::forward<TransformerT__>(transformer_), ::std::memory_order::relaxed, ::std::memory_order::relaxed
+				);
+			}
+			UnderlyingValue result_ = this->m_holder_.underlying_;
+			this->m_holder_.underlying_ = ::dcool::core::invoke(
+				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
+			);
+			return result_;
+		}
+
+		private: template <typename TransformerT__> constexpr auto atomicallyTransformFetchOrLoadUnderlying_(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			if constexpr (usingAtomicBasicOperation_) {
+				return ::dcool::concurrency::atomicallyTransformFetchOrLoad(
+					this->m_holder_.underlying_, ::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			::dcool::core::PhoneyLockGuard guard_(this->m_locker_.mutex_);
+			return this->sequencedTransformFetchOrLoadUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		private: template <typename TransformerT__> constexpr auto sequencedTransformFetchOrLoadUnderlying_(
+			TransformerT__&& transformer_
+		)& noexcept -> UnderlyingValue {
+			UnderlyingValue result_ = this->sequencedLoadUnderlying_();
+			auto new_ = ::dcool::core::invoke(
+				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
+			);
+			if (new_.valid()) {
+				this->sequencedStoreUnderlying_(new_.access());
+			}
+			return result_;
+		}
+
 		private: constexpr void atomicallyWaitUnderlying_(
 			UnderlyingValue const& old_, ::std::memory_order order_
 		) const noexcept requires (waitable) {

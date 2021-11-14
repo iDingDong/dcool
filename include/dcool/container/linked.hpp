@@ -817,6 +817,10 @@ namespace dcool::container {
 			middleMan_.relocateTo(engine_, other_);
 		}
 
+		public: constexpr auto vacant(Engine& engine_) const noexcept -> ::dcool::core::Boolean {
+			return this->begin(engine_) == this->end(engine_);
+		}
+
 		public: constexpr auto lightBeforeBegin(Engine& engine_) const noexcept -> ConstLightIterator {
 			return ConstLightIterator(this->m_sentryHolder_.handle(engine_.pool()));
 		}
@@ -881,6 +885,22 @@ namespace dcool::container {
 
 		public: constexpr auto end(Engine& engine_) noexcept -> Iterator {
 			return fromLight(engine_, this->lightEnd(engine_));
+		}
+
+		public: constexpr auto front(Engine& engine_) const& noexcept -> Value const& {
+			return *(this->begin(engine_));
+		}
+
+		public: constexpr auto front(Engine& engine_)& noexcept -> Value& {
+			return *(this->begin(engine_));
+		}
+
+		public: constexpr auto back(Engine& engine_) const& noexcept -> Value const& {
+			return *(this->end(engine_).previous());
+		}
+
+		public: constexpr auto back(Engine& engine_)& noexcept -> Value& {
+			return *(this->end(engine_).previous());
 		}
 
 		private: template <typename... ArgumentTs__> static constexpr auto createNode_(
@@ -1089,6 +1109,14 @@ namespace dcool::container {
 		public: constexpr auto eraseAfter(Engine& engine_, Iterator position_) noexcept -> Iterator {
 			LightIterator result_ = this->eraseAfter_(engine_.pool(), this->toLight(engine_, position_));
 			return this->fromLight(engine_, result_);
+		}
+
+		public: constexpr void popFront(Engine& engine_) noexcept {
+			this->eraseAfter(engine_, this->beforeBegin(engine_));
+		}
+
+		public: constexpr void popBack(Engine& engine_) noexcept requires (bidirectional) {
+			this->erase(engine_, this->end(engine_).previous());
 		}
 	};
 
