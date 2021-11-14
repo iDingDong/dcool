@@ -8,5 +8,6 @@
 #	include <dcool/concurrency/latch.hpp>
 #	include <dcool/concurrency/mutex.hpp>
 #	include <dcool/concurrency/semaphore.hpp>
+#	include <dcool/concurrency/thread_pool.hpp>
 
 #endif

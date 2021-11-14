@@ -3,28 +3,18 @@
 
 #	include <dcool/core/basic.hpp>
 #	include <dcool/core/concept.hpp>
+#	include <dcool/core/type_transformer.hpp>
+#	include <dcool/core/utility.hpp>
 #	include <dcool/core/variant.hpp>
 
 namespace dcool::core {
-	namespace detail_ {
-		template <
-			::dcool::core::NonVoid T1_,
-			::dcool::core::NonVoid T2_,
-			typename MayBeVoidT_
-		> struct TaskResultUnderlying_ {
-			using Result_ = ::dcool::core::DefaultVariant<T1_, T2_, MayBeVoidT_>;
-		};
-
-		template <::dcool::core::NonVoid T1_, ::dcool::core::NonVoid T2_> struct TaskResultUnderlying_<T1_, T2_, void> {
-			using Result_ = ::dcool::core::DefaultVariant<T1_, T2_>;
-		};
-	}
-
 	template <typename ValueT_> struct TaskResult {
 		private: using Self_ = TaskResult<ValueT_>;
 		public: using Value = ValueT_;
 
 		private: static constexpr ::dcool::core::Boolean nonVoid_ = ::dcool::core::NonVoid<Value>;
+
+		private: using UnderlyingValue_ = ::dcool::core::ConditionalType<nonVoid_, Value, ::dcool::core::InPlaceTag>;
 
 		private: struct InstantRetryTag_ {
 		};
@@ -32,19 +22,31 @@ namespace dcool::core {
 		private: struct DelayedRetryTag_ {
 		};
 
-		private: using Underlying_ = ::dcool::core::detail_::TaskResultUnderlying_<
-			InstantRetryTag_, DelayedRetryTag_, Value
-		>::Result_;
+		private: using Underlying_ = ::dcool::core::DefaultVariant<InstantRetryTag_, DelayedRetryTag_, UnderlyingValue_>;
 		private: Underlying_ m_underlying_;
 
 		public: constexpr TaskResult() noexcept = default;
 
-		public: constexpr TaskResult(Value const& result_) noexcept(noexcept(Value(result_))): m_underlying_(result_) {
+		public: constexpr TaskResult(
+			::dcool::core::StubReferenceableType<Value> const& result_
+		) noexcept(noexcept(Value(result_))) requires (nonVoid_): m_underlying_(result_) {
 		}
 
 		public: constexpr TaskResult(
-			Value&& result_
-		) noexcept(noexcept(Value(::dcool::core::move(result_)))): m_underlying_(::dcool::core::move(result_)) {
+			::dcool::core::StubReferenceableType<Value>&& result_
+		) noexcept(noexcept(Value(::dcool::core::move(result_)))) requires (nonVoid_): m_underlying_(::dcool::core::move(result_)) {
+		}
+
+		private: template <typename... ArgumentTs__> static consteval auto noexceptEmplaceable_() noexcept -> ::dcool::core::Boolean {
+			if constexpr (nonVoid_) {
+				return noexcept(Value(::dcool::core::declval<ArgumentTs__>()...));
+			}
+			return true;
+		}
+
+		public: template <typename... ArgumentTs__> constexpr TaskResult(
+			::dcool::core::InPlaceTag, ArgumentTs__&&... parameters_
+		) noexcept(noexceptEmplaceable_<ArgumentTs__&&...>()): m_underlying_(::dcool::core::forward<ArgumentTs__>(parameters_)...) {
 		}
 
 		private: constexpr TaskResult(InstantRetryTag_ tag_) noexcept: m_underlying_(tag_) {
@@ -82,15 +84,16 @@ namespace dcool::core {
 		}
 
 		public: constexpr auto done() const noexcept -> ::dcool::core::Boolean {
-			return this->m_underlying_.template holding<Value>();
+			return this->m_underlying_.template holding<UnderlyingValue_>();
 		}
 
-		public: constexpr auto accessValue() const noexcept -> Value const& requires (nonVoid_) {
+		public: constexpr auto accessValue(
+		) const noexcept -> ::dcool::core::StubReferenceableType<Value> const& requires (nonVoid_) {
 			DCOOL_CORE_ASSERT(this->done());
 			return this->m_underlying_.template access<Value>();
 		}
 
-		public: constexpr auto accessValue() noexcept -> Value& requires (nonVoid_) {
+		public: constexpr auto accessValue() noexcept -> ::dcool::core::StubReferenceableType<Value>& requires (nonVoid_) {
 			DCOOL_CORE_ASSERT(this->done());
 			return this->m_underlying_.template access<Value>();
 		}

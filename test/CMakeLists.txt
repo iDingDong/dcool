@@ -4,6 +4,7 @@ set(
 	"./concurrency/latch.cpp"
 	"./concurrency/mutex.cpp"
 	"./concurrency/semaphore.cpp"
+	"./concurrency/thread_pool.cpp"
 	"./core/integer.cpp"
 	"./core/layout.cpp"
 	"./coroutine/async_mutex.cpp"
