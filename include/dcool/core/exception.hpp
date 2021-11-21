@@ -71,7 +71,9 @@ namespace dcool::core {
 	};
 #	endif
 
-	constexpr ::dcool::core::ExceptionSafetyStrategy defaultExceptionSafetyStrategy = ::dcool::core::exceptionSafetyStrategy<>;
+	inline constexpr ::dcool::core::ExceptionSafetyStrategy defaultExceptionSafetyStrategy =
+		::dcool::core::exceptionSafetyStrategy<>
+	;
 
 	template <typename T_> constexpr ::dcool::core::ExceptionSafetyStrategy exceptionSafetyStrategyOf =
 		::dcool::core::extractedExceptionSafetyStrategyValue<T_>(::dcool::core::defaultExceptionSafetyStrategy)

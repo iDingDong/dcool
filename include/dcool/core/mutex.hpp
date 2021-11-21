@@ -14,7 +14,7 @@ DCOOL_CORE_DEFINE_TYPE_MEMBER_DETECTOR(dcool::core, HasTypeMutex, ExtractedMutex
 namespace dcool::core {
 	using AdoptLockTag = ::std::adopt_lock_t;
 
-	constexpr ::dcool::core::AdoptLockTag adoptLock = ::std::adopt_lock;
+	inline constexpr ::dcool::core::AdoptLockTag adoptLock = ::std::adopt_lock;
 
 	template <typename T_> concept StandardBasicLockable = requires (T_ mutex_) {
 		mutex_.lock();

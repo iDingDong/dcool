@@ -17,9 +17,9 @@ namespace dcool::binary {
 		network = ::dcool::binary::Endian::big
 	};
 
-	constexpr dcool::core::Boolean littleEndian = (::dcool::binary::Endian::native == ::dcool::binary::Endian::little);
-	constexpr dcool::core::Boolean bigEndian = (::dcool::binary::Endian::native == ::dcool::binary::Endian::big);
-	constexpr dcool::core::Boolean mixedEndian = !(::dcool::binary::littleEndian || ::dcool::binary::bigEndian);
+	inline constexpr ::dcool::core::Boolean littleEndian = (::dcool::binary::Endian::native == ::dcool::binary::Endian::little);
+	inline constexpr ::dcool::core::Boolean bigEndian = (::dcool::binary::Endian::native == ::dcool::binary::Endian::big);
+	inline constexpr ::dcool::core::Boolean mixedEndian = !(::dcool::binary::littleEndian || ::dcool::binary::bigEndian);
 
 	template <
 		::dcool::binary::Endian targetEndianC_, ::dcool::core::UnsignedIntegral T_

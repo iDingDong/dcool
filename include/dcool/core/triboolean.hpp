@@ -97,13 +97,13 @@ namespace dcool::core {
 		};
 	}
 
-	constexpr ::dcool::core::Triboolean determinateFalse = ::dcool::core::detail_::TribooleanMaker_::make_(
+	inline constexpr ::dcool::core::Triboolean determinateFalse = ::dcool::core::detail_::TribooleanMaker_::make_(
 		::dcool::core::detail_::TribooleanUnderlying_::determinateFalse_
 	);
-	constexpr ::dcool::core::Triboolean determinateTrue = ::dcool::core::detail_::TribooleanMaker_::make_(
+	inline constexpr ::dcool::core::Triboolean determinateTrue = ::dcool::core::detail_::TribooleanMaker_::make_(
 		::dcool::core::detail_::TribooleanUnderlying_::determinateTrue_
 	);
-	constexpr ::dcool::core::Triboolean indeterminate = ::dcool::core::detail_::TribooleanMaker_::make_(
+	inline constexpr ::dcool::core::Triboolean indeterminate = ::dcool::core::detail_::TribooleanMaker_::make_(
 		::dcool::core::detail_::TribooleanUnderlying_::indeterminate_
 	);
 }

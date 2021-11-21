@@ -26,7 +26,7 @@ namespace dcool::core {
 
 	template <typename ValueT_> using PointerFor = ValueT_*;
 
-	constexpr ::dcool::core::NullPointer nullPointer = nullptr;
+	inline constexpr ::dcool::core::NullPointer nullPointer = nullptr;
 
 	template <typename ValueT_> constexpr ::dcool::core::PointerFor<ValueT_> nullPointerFor = ::dcool::core::nullPointer;
 
@@ -66,7 +66,7 @@ namespace dcool::core {
 		}
 	};
 
-	constexpr ::dcool::core::Pit pit;
+	inline constexpr ::dcool::core::Pit pit;
 
 	template <typename ValueT_, ::dcool::core::Boolean validC_> struct StaticOptional {
 		static consteval auto valid() noexcept -> ::dcool::core::Boolean {

@@ -66,7 +66,7 @@ namespace dcool::coroutine {
 		struct GeneratorEnd_ {
 		};
 
-		constexpr ::dcool::coroutine::detail_::GeneratorEnd_ generatorEnd_;
+		inline constexpr ::dcool::coroutine::detail_::GeneratorEnd_ generatorEnd_;
 
 		template <typename YieldedT_, typename ConfigT_> struct GeneratorIterator_ {
 			public: using Self_ = GeneratorIterator_<YieldedT_, ConfigT_>;

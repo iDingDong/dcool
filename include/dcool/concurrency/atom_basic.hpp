@@ -176,83 +176,83 @@ namespace dcool::concurrency {
 		}
 	}
 
-	template <typename T_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic =
+	template <typename T_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic =
 		::std::atomic<T_>::is_always_lock_free() ? ::dcool::core::determinateTrue : ::dcool::core::indeterminate
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<::dcool::core::Boolean> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<::dcool::core::Boolean> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_BOOL_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char8_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char8_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR8_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char16_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char16_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR16_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char32_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char32_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR32_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<wchar_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<wchar_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_WCHAR_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned short> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned short> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_SHORT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed short> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed short> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_SHORT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned int> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned int> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_INT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed int> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed int> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_INT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LLONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LLONG_LOCK_FREE)
 	;
 
-	template <typename ValueT_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<ValueT_*> =
+	template <typename ValueT_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<ValueT_*> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_POINTER_LOCK_FREE)
 	;
 
-	template <typename T_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomicRef =
+	template <typename T_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomicRef =
 		::std::atomic_ref<T_>::is_always_lock_free() ? ::dcool::core::determinateTrue : ::dcool::core::indeterminate
 	;
 
-	template <::dcool::core::TriviallyCopyable ValueT_> constexpr ::dcool::core::Alignment requiredAtomAlignment =
+	template <::dcool::core::TriviallyCopyable ValueT_> inline constexpr ::dcool::core::Alignment requiredAtomAlignment =
 		::std::atomic_ref<ValueT_>::required_alignment
 	;
 

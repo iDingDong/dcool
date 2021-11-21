@@ -608,7 +608,16 @@ namespace dcool::resource {
 		public: template <typename... ArgumentTs__> constexpr SharedStrongPointer(
 			::dcool::core::InPlaceTag inPlaceTag_, ArgumentTs__&&... parameters_
 		) requires (compact): Self_(
-			*new ::dcool::resource::SharedAgent<Value, AgentConfig>(inPlaceTag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+			*new Agent(inPlaceTag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+		) {
+		}
+
+		public: template <::dcool::resource::PoolFor<Agent> PoolT_, typename... ArgumentTs__> constexpr SharedStrongPointer(
+			::dcool::resource::PooledTag, PoolT_& pool_, ArgumentTs__&&... parameters_
+		) requires (compact): Self_(
+			*::dcool::resource::createPointerByPoolFor<Agent>(
+				pool_, ::dcool::core::inPlace, ::dcool::core::forward<ArgumentTs__>(parameters_)...
+			)
 		) {
 		}
 
