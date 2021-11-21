@@ -21,7 +21,7 @@ namespace dcool::utility {
 			constexpr explicit AnyMutexTimedLockAttemptTag_() noexcept = default;
 		};
 
-		constexpr ::dcool::utility::detail_::AnyMutexTimedLockAttemptTag_ anyMutexTimedLockAttempt_;
+		inline constexpr ::dcool::utility::detail_::AnyMutexTimedLockAttemptTag_ anyMutexTimedLockAttempt_;
 
 		template <typename SupportedTimePoints> struct AnyMutexTimedTryLockers_;
 

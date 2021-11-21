@@ -13,7 +13,7 @@ namespace dcool::core {
 		}
 	};
 
-	constexpr NoOp noOp;
+	inline constexpr NoOp noOp;
 
 	struct ComparableNoOp: public NoOp {
 		private: using Self_ = ComparableNoOp;
@@ -23,7 +23,7 @@ namespace dcool::core {
 		}
 	};
 
-	constexpr ComparableNoOp comparableNoOp;
+	inline constexpr ComparableNoOp comparableNoOp;
 
 	struct ArgumentReturner {
 		template <typename ArgumentT_> constexpr auto operator ()(ArgumentT_&& parameter_) noexcept -> ArgumentT_&& {
@@ -31,7 +31,7 @@ namespace dcool::core {
 		}
 	};
 
-	constexpr ArgumentReturner argumentReturner;
+	inline constexpr ArgumentReturner argumentReturner;
 
 	template <auto returnValueC_, typename ReturnT_ = decltype(returnValueC_)> struct ConstantReturn {
 		template <typename... ArgumentTs_> constexpr auto operator ()(ArgumentTs_&&...) noexcept -> ReturnT_ {

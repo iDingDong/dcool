@@ -53,7 +53,7 @@ namespace dcool::concurrency {
 		public: using Super_::Super_;
 	};
 
-	constexpr ::dcool::core::UnsignedMaxInteger standardMutexMaxShare = 10000;
+	inline constexpr ::dcool::core::UnsignedMaxInteger standardMutexMaxShare = 10000;
 
 	namespace detail_ {
 		template <typename ConfigT_> class MutexConfigAdaptor_ {

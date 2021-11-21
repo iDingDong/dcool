@@ -39,6 +39,12 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 
 namespace dcool::resource {
+	struct PooledTag {
+		constexpr explicit PooledTag() noexcept = default;
+	};
+
+	inline constexpr ::dcool::resource::PooledTag pooled;
+
 	using BadAllocation = ::std::bad_alloc;
 
 	template <typename T_> concept ClassicPool = requires (

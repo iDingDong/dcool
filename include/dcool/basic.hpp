@@ -8,25 +8,31 @@
 #	include <cstdint>
 
 namespace dcool {
-	constexpr ::std::uintmax_t majorVersion = DCOOL_MAJOR_VERSION;
-	constexpr ::std::uintmax_t minorVersion = DCOOL_MINOR_VERSION;
-	constexpr ::std::uintmax_t patchVersion = DCOOL_PATCH_VERSION;
-	constexpr char8_t versionName[] = DCOOL_VERSION_NAME;
-	constexpr char versionNativeName[] = DCOOL_VERSION_NATIVE_NAME;
-	constexpr char8_t configDescription[] = DCOOL_CONFIG_DESCRIPTION;
-	constexpr char configNativeDescription[] = DCOOL_CONFIG_NATIVE_DESCRIPTION;
-	constexpr char8_t commonSelfDescription[] = DCOOL_SELF_DESCRIPTION;
-	constexpr char commonSelfNativeDescription[] = DCOOL_SELF_NATIVE_DESCRIPTION;
+	inline constexpr ::std::uintmax_t majorVersion = DCOOL_MAJOR_VERSION;
+	inline constexpr ::std::uintmax_t minorVersion = DCOOL_MINOR_VERSION;
+	inline constexpr ::std::uintmax_t patchVersion = DCOOL_PATCH_VERSION;
+	inline constexpr char8_t versionName[] = DCOOL_VERSION_NAME;
+	inline constexpr char versionNativeName[] = DCOOL_VERSION_NATIVE_NAME;
+	inline constexpr char8_t configDescription[] = DCOOL_CONFIG_DESCRIPTION;
+	inline constexpr char configNativeDescription[] = DCOOL_CONFIG_NATIVE_DESCRIPTION;
+	inline constexpr char8_t commonSelfDescription[] = DCOOL_SELF_DESCRIPTION;
+	inline constexpr char commonSelfNativeDescription[] = DCOOL_SELF_NATIVE_DESCRIPTION;
 
 	struct Version {
-		::std::uintmax_t major = ::dcool::majorVersion;
-		::std::uintmax_t minor = ::dcool::minorVersion;
-		::std::uintmax_t patch = ::dcool::patchVersion;
-		char8_t const* name = ::dcool::versionName;
-		char const* nativeName = ::dcool::versionNativeName;
+		::std::uintmax_t major;
+		::std::uintmax_t minor;
+		::std::uintmax_t patch;
+		char8_t const* name;
+		char const* nativeName;
 	};
 
-	constexpr ::dcool::Version version;
+	inline constexpr ::dcool::Version version = {
+		.major = ::dcool::majorVersion;
+		.minor = ::dcool::minorVersion;
+		.patch = ::dcool::patchVersion;
+		.name = ::dcool::versionName;
+		.nativeName = ::dcool::versionNativeName;
+	};
 }
 
 #endif

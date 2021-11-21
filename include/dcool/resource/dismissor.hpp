@@ -28,7 +28,7 @@ namespace dcool::resource {
 		}
 	};
 
-	constexpr ::dcool::resource::DefaultDestroyer defaultDestoryer;
+	inline constexpr ::dcool::resource::DefaultDestroyer defaultDestoryer;
 
 	template <typename ValueT_> class DefaultDestroyerExceptFor {
 		template <typename ValueT__> constexpr void operator ()(ValueT__& toDestroy_) const noexcept {

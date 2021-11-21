@@ -10,9 +10,9 @@
 #	include <memory>
 
 namespace dcool::core {
-	constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-	constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
-	constexpr ::dcool::core::Alignment maxRepresentableAlignment = std::bit_floor(
+	inline constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+	inline constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
+	inline constexpr ::dcool::core::Alignment maxRepresentableAlignment = std::bit_floor(
 		::std::numeric_limits<::dcool::core::Alignment>::max()
 	);
 	template <::dcool::core::Size sizeC_> constexpr ::dcool::core::Alignment defaultAlignmentFor = alignof(
