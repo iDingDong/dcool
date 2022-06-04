@@ -73,10 +73,10 @@ namespace dcool::service {
 		public: QuickTimer(Self_&&) = delete;
 
 		private: template <typename DurationT__, typename ActionT__> constexpr auto makePerformer_(
-			DurationT__ duration_, ActionT__ action_
+			DurationT__ duration_, ActionT__&& action_
 		) -> ::std::jthread {
 			return ::std::jthread(
-				[](::std::stop_token token_, Self_& timer_, auto initialTime_, DurationT__ duration_, ActionT__& action_) {
+				[](::std::stop_token token_, Self_& timer_, auto initialTime_, DurationT__ duration_, ActionT__&& action_) {
 					auto nextTime_ = initialTime_ + duration_;
 					for (; ; ) {
 						if constexpr (quickStop_) {
@@ -116,7 +116,7 @@ namespace dcool::service {
 				::std::ref(*this),
 				::std::chrono::steady_clock::now(),
 				duration_,
-				::std::ref(action_)
+				::dcool::core::forward<ActionT__>(action_)
 			);
 		}
 

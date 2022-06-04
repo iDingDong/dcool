@@ -206,7 +206,6 @@ namespace dcool::container {
 	template <typename ConfigT_> using StringConfigAdaptor = ::dcool::container::detail_::StringConfigAdaptor_<ConfigT_>;
 
 	template <::dcool::container::StringConfig ConfigT_ = ::dcool::core::Empty<>> struct StringChassis {
-		private: using Self_ = StringChassis<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::container::StringConfigAdaptor<Config>;
@@ -229,8 +228,8 @@ namespace dcool::container {
 		;
 
 		public: struct UnderlyingConfig_ {
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = StringChassis::Pool;
+			using Engine = StringChassis::Engine;
 			public: static constexpr ::dcool::core::Boolean squeezedOnly = squeezedOnly;
 			public: static constexpr Length squeezedCapacity = squeezedCapacity;
 			public: static constexpr ::dcool::core::Boolean stuffed = stuffed;
@@ -294,7 +293,7 @@ namespace dcool::container {
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy
-		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, StringChassis& other_) {
 			this->m_underlying_.relocateTo(engine_, otherEngine_, other_.m_underlying_);
 		}
 
@@ -302,7 +301,7 @@ namespace dcool::container {
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
 			::dcool::core::Boolean engineWillBeSwappedC__ = false
 		> constexpr void swapWith(
-			Engine& engine_, Engine& otherEngine_, Self_& other_
+			Engine& engine_, Engine& otherEngine_, StringChassis& other_
 		) {
 			this->m_underlying_.template swapWith<strategyC__, engineWillBeSwappedC__>(engine_, otherEngine_, other_.m_underlying_);
 		}
@@ -401,7 +400,7 @@ namespace dcool::container {
 		}
 
 		public: static constexpr auto compare(
-			Engine& leftEngine_, Self_ const& left_, Engine& rightEngine_, Self_ const& right_
+			Engine& leftEngine_, StringChassis const& left_, Engine& rightEngine_, StringChassis const& right_
 		) noexcept -> ComparisonCategory {
 			Length commonLength = ::dcool::core::min(left_.length(leftEngine_), right_.length(rightEngine_));
 			auto compareResult_ = ConfigAdaptor_::characterSequenceCompare(
@@ -418,7 +417,7 @@ namespace dcool::container {
 		}
 
 		public: static constexpr auto equivalent(
-			Engine& leftEngine_, Self_ const& left_, Engine& rightEngine_, Self_ const& right_
+			Engine& leftEngine_, StringChassis const& left_, Engine& rightEngine_, StringChassis const& right_
 		) noexcept -> ::dcool::core::Boolean {
 			if (left_.length(leftEngine_) != right_.length(rightEngine_)) {
 				return false;

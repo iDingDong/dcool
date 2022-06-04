@@ -7,5 +7,6 @@
 #	include <dcool/test/check.hpp>
 #	include <dcool/test/registeration.hpp>
 #	include <dcool/test/suite.hpp>
+#	include <dcool/test/traceable_tag.hpp>
 
 #endif

@@ -249,7 +249,6 @@ namespace dcool::utility {
 		};
 
 		template <::dcool::utility::FunctionPrototype PrototypeT_, typename ConfigT_> struct FunctionChassis_ {
-			private: using Self_ = FunctionChassis_<PrototypeT_, ConfigT_>;
 			public: using Prototype = PrototypeT_;
 			public: using Config = ConfigT_;
 
@@ -259,7 +258,7 @@ namespace dcool::utility {
 			public: using Pool = ConfigAdaptor_::Pool;
 			public: using Engine = ConfigAdaptor_::Engine;
 			public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
-			private: using Invoker_ = typename PrototypeInfo_::Invoker_<Self_, Engine>;
+			private: using Invoker_ = typename PrototypeInfo_::Invoker_<FunctionChassis_, Engine>;
 			public: static constexpr ::dcool::core::Boolean copyable = ConfigAdaptor_::copyable;
 			public: static constexpr ::dcool::core::Boolean moveable = ConfigAdaptor_::moveable;
 			public: static constexpr ::dcool::core::Boolean noexceptInvocable = PrototypeInfo_::noThrow_;
@@ -273,16 +272,16 @@ namespace dcool::utility {
 				ExtendedInformation extendedInformation_;
 
 				template <typename ValueT__> constexpr AnyExtendedInformation_(::dcool::core::TypedTag<ValueT__> typed_) noexcept:
-					invoker_(PrototypeInfo_::template invoker_<Self_, Engine, ValueT__>),
+					invoker_(PrototypeInfo_::template invoker_<FunctionChassis_, Engine, ValueT__>),
 					extendedInformation_(typed_)
 				{
 				}
 			};
 
 			private: struct AnyConfig_ {
-				using Pool = Pool;
+				using Pool = FunctionChassis_::Pool;
 				using ExtendedInformation = AnyExtendedInformation_;
-				using Engine = Engine;
+				using Engine = FunctionChassis_::Engine;
 				static constexpr ::dcool::core::Boolean copyable = copyable;
 				static constexpr ::dcool::core::Boolean moveable = moveable;
 				static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
@@ -319,20 +318,20 @@ namespace dcool::utility {
 				this->m_underlying_.uninitialize(engine_);
 			}
 
-			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+			public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, FunctionChassis_& other_) const {
 				this->m_underlying_.cloneTo(engine_, otherEngine_, other_.m_underlying_);
 			}
 
 			public: template <
 				::dcool::core::Boolean engineWillBeUniformedC__ = false
-			> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, FunctionChassis_& other_) {
 				this->m_underlying_.template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, other_.m_underlying_);
 			}
 
 			public: public: template <
 				::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
 				::dcool::core::Boolean engineWillBeSwappedC__ = false
-			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+			> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, FunctionChassis_& other_) {
 				this->m_underlying_.template swapWith<strategyC__, engineWillBeSwappedC__>(engine_, otherEngine_, other_.m_underlying_);
 			}
 
@@ -520,10 +519,6 @@ namespace dcool::utility {
 
 		public: constexpr auto storageRequirement() const noexcept {
 			return this->chassis().storageRequirement(this->mutableEngine());
-		}
-
-		public: constexpr auto immutablyInvocable() const noexcept -> ::dcool::core::Boolean {
-			return this->chassis().immutablyInvocable(this->mutableEngine());
 		}
 
 		public: constexpr auto typeInfo() const noexcept -> ::dcool::core::TypeInfo const& {

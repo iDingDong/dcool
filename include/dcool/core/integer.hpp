@@ -33,9 +33,9 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 	dcool::core::detail_,
-	HasValueOutOfRangeStrategryForInteger_,
-	extractedOutOfRangeStrategryForIntegerValue_,
-	outOfRangeStrategry
+	HasValueOutOfRangeStrategyForInteger_,
+	extractedOutOfRangeStrategyForIntegerValue_,
+	outOfRangeStrategy
 )
 
 namespace dcool::core {
@@ -277,7 +277,19 @@ namespace dcool::core {
 				::dcool::core::UnsignedMaxInteger
 			>::Result_
 		>;
+
+		template <::dcool::core::Length widthC_, ::dcool::core::Boolean singleUnitC_> struct LimbTypeHelper_ {
+			using Result_ = ::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<false, widthC_>;
+		};
+
+		template <::dcool::core::Length widthC_> struct LimbTypeHelper_<widthC_, false> {
+			using Result_ = ::dcool::core::UnsignedMaxInteger;
+		};
 	}
+
+	template <::dcool::core::Length widthC_> using LimbType = ::dcool::core::detail_::LimbTypeHelper_<
+		widthC_, !::dcool::core::detail_::DigitsHoldable_<::dcool::core::UnsignedMaxInteger, widthC_>
+	>::Result_;
 
 	namespace detail_ {
 		template <
@@ -395,13 +407,13 @@ namespace dcool::core {
 			public: static constexpr ::dcool::core::Boolean width = widthC_;
 
 			public: static constexpr ::dcool::core::Boolean negatable =
-				::dcool::core::detail_::extractedNegatableForIntegerValue_<Config>(true)
+				::dcool::core::detail_::extractedNegatableForIntegerValue_<Config>(hasSigness)
 			;
 			public: static constexpr ::dcool::core::Length foldedWidth =
 				::dcool::core::detail_::extractedFoldedWidthForIntegerValue_<Config>(0)
 			;
 			public: static constexpr ::dcool::core::SusbicionStrategy outOfRangeStrategy =
-				::dcool::core::detail_::extractedOutOfRangeStrategryForIntegerValue_<Config>(
+				::dcool::core::detail_::extractedOutOfRangeStrategyForIntegerValue_<Config>(
 					hasSigness ? ::dcool::core::SusbicionStrategy::undefined : ::dcool::core::SusbicionStrategy::ignore
 				)
 			;

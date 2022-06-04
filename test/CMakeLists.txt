@@ -7,6 +7,7 @@ set(
 	"./concurrency/thread_pool.cpp"
 	"./core/integer.cpp"
 	"./core/layout.cpp"
+	"./core/storage.cpp"
 	"./coroutine/async_mutex.cpp"
 	"./coroutine/generator.cpp"
 	"./coroutine/task.cpp"

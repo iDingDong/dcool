@@ -258,33 +258,33 @@ namespace dcool::concurrency {
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto lockFreeAtomicityOnExecution(
 		ValueT_ const& object_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).is_lock_free();
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto lockFreeAtomicityOnExecution(
 		::std::atomic<ValueT_> const& atom_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.is_lock_free();
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		ValueT_& object_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return ::std::atomic_ref<ValueT_>(object_).load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		::std::atomic<ValueT_> const& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return atom_.load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		::std::atomic<ValueT_>& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyLoad(::dcool::core::constantize(atom_), order_);
 	}
 
@@ -292,7 +292,7 @@ namespace dcool::concurrency {
 		ValueT_& object_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) {
+	) noexcept {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		::std::atomic_ref<ValueT_>(object_).store(newValue_, order_);
 	}
@@ -301,7 +301,7 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& atom_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) {
+	) noexcept {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		atom_.store(newValue_, order_);
 	}
@@ -310,7 +310,7 @@ namespace dcool::concurrency {
 		ValueT_& object_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		return ::std::atomic_ref<ValueT_>(object_).exchange(newValue_, order_);
 	}
 
@@ -327,7 +327,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_weak(expected_, newValue_, order_);
 	}
 
@@ -337,7 +337,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
@@ -347,7 +347,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.compare_exchange_weak(expected_, newValue_, order_);
 	}
 
@@ -357,7 +357,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return atom_.compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
@@ -367,7 +367,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_strong(expected_, newValue_, order_);
 	}
 
@@ -387,7 +387,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.compare_exchange_strong(expected_, newValue_, order_);
 	}
 
@@ -1109,27 +1109,27 @@ namespace dcool::concurrency {
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomicallyFetch##Operation_( \
 				ValueT_& object_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				::std::atomic_ref<ValueT_> atom_(object_); \
 				return ::dcool::concurrency::detail_::atomicallyFetch##Operation_##_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomicallyFetch##Operation_( \
 				::std::atomic<ValueT_>& atom_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				return ::dcool::concurrency::detail_::atomicallyFetch##Operation_##_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomically##Operation_##Fetch( \
 				ValueT_& object_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				::std::atomic_ref<ValueT_> atom_(object_); \
 				return ::dcool::concurrency::detail_::atomically##Operation_##Fetch_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomically##Operation_##Fetch( \
 				::std::atomic<ValueT_>& atom_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				return ::dcool::concurrency::detail_::atomically##Operation_##Fetch_(atom_, operand_, order_); \
 			} \
 		}

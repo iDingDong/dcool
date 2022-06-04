@@ -3,7 +3,6 @@
 
 #	include <dcool/container.hpp>
 #	include <dcool/core.hpp>
-#	include <dcool/coroutine.hpp>
 #	include <dcool/resource.hpp>
 #	include <dcool/utility.hpp>
 
@@ -51,7 +50,6 @@ namespace dcool::concurrency {
 	> using ThreadPoolConfigAdaptor = ::dcool::concurrency::detail_::ThreadPoolConfigAdaptor_<ConfigT_>;
 
 	template <::dcool::concurrency::ThreadPoolConfig ConfigT_ = ::dcool::core::Empty<>> class ThreadPoolChassis {
-		private: using Self_ = ThreadPoolChassis<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::concurrency::detail_::ThreadPoolConfigAdaptor_<Config>;
@@ -60,18 +58,19 @@ namespace dcool::concurrency {
 
 		private: struct ThreadsConfig_ {
 			static constexpr ::dcool::core::Boolean stuffed = true;
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
 		};
 
 		private: struct TaskConfig_ {
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
+			static constexpr ::dcool::core::Boolean copyable = false;
 		};
 
 		private: struct TasksConfig_ {
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
 		};
 
 		private: using Task_ = ::dcool::utility::FunctionChassis<void () noexcept, TaskConfig_>;
@@ -85,7 +84,7 @@ namespace dcool::concurrency {
 		private: ::dcool::core::Length m_deparallelRequestCount_;
 		private: ::dcool::core::Boolean m_operational_;
 
-		private: static void taskConsumer_(Self_& self_, Engine& engine_) noexcept {
+		private: static void taskConsumer_(ThreadPoolChassis& self_, Engine& engine_) noexcept {
 			::std::unique_lock locker_(self_.m_mutex_);
 			for (; ; ) {
 				if (self_.m_deparallelRequestCount_ > 0) {
@@ -97,6 +96,7 @@ namespace dcool::concurrency {
 					self_.m_tasks_.popFront(engine_);
 					locker_.unlock();
 					task_.invokeSelf(engine_);
+					task_.uninitialize(engine_);
 					locker_.lock();
 				} else {
 					if (!(self_.m_operational_)) {

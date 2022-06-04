@@ -107,7 +107,6 @@ namespace dcool::utility {
 	;
 
 	template <::dcool::utility::AnyMutexConfig ConfigT_ = ::dcool::core::Empty<>> struct AnyMutexChassis {
-		private: using Self_ = AnyMutexChassis<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::utility::AnyMutexConfigAdaptor<Config>;
@@ -152,9 +151,9 @@ namespace dcool::utility {
 			}
 		};
 
-		private: using Locker_ = void(*)(Engine& engine_, Self_& self_);
-		private: using TryLocker_ = auto(*)(Engine& engine_, Self_& self_) -> ::dcool::core::Boolean;
-		private: using Unlocker_ = void(*)(Engine& engine_, Self_& self_);
+		private: using Locker_ = void(*)(Engine& engine_, AnyMutexChassis& self_);
+		private: using TryLocker_ = auto(*)(Engine& engine_, AnyMutexChassis& self_) -> ::dcool::core::Boolean;
+		private: using Unlocker_ = void(*)(Engine& engine_, AnyMutexChassis& self_);
 
 		private: struct OverloadedFunctionExtendedInformation_ {
 			::dcool::core::StorageRequirement actualStorageRequirement_;
@@ -170,9 +169,9 @@ namespace dcool::utility {
 			) noexcept:
 				actualStorageRequirement_(::dcool::core::storageRequirementFor<void>),
 				actualTypeInfo_(typeid(void)),
-				locker_(::dcool::utility::detail_::lockAnyMutexChassis_<Self_, void>),
-				tryLocker_(::dcool::utility::detail_::trylockAnyMutexChassis_<Self_, void>),
-				unlocker_(::dcool::utility::detail_::unlockAnyMutexChassis_<Self_, void>),
+				locker_(::dcool::utility::detail_::lockAnyMutexChassis_<AnyMutexChassis, void>),
+				tryLocker_(::dcool::utility::detail_::trylockAnyMutexChassis_<AnyMutexChassis, void>),
+				unlocker_(::dcool::utility::detail_::unlockAnyMutexChassis_<AnyMutexChassis, void>),
 				shareable_(::dcool::core::SharedMutex<void>),
 				extendedInformation_(typed_)
 			{
@@ -183,9 +182,9 @@ namespace dcool::utility {
 			) noexcept:
 				actualStorageRequirement_(::dcool::core::storageRequirementFor<ValueT__>),
 				actualTypeInfo_(typeid(ValueT__)),
-				locker_(::dcool::utility::detail_::lockAnyMutexChassis_<Self_, ValueT__>),
-				tryLocker_(::dcool::utility::detail_::trylockAnyMutexChassis_<Self_, ValueT__>),
-				unlocker_(::dcool::utility::detail_::unlockAnyMutexChassis_<Self_, ValueT__>),
+				locker_(::dcool::utility::detail_::lockAnyMutexChassis_<AnyMutexChassis, ValueT__>),
+				tryLocker_(::dcool::utility::detail_::trylockAnyMutexChassis_<AnyMutexChassis, ValueT__>),
+				unlocker_(::dcool::utility::detail_::unlockAnyMutexChassis_<AnyMutexChassis, ValueT__>),
 				shareable_(::dcool::core::SharedMutex<ValueT__>),
 				extendedInformation_(::dcool::core::typed<ValueT__>)
 			{
@@ -193,9 +192,9 @@ namespace dcool::utility {
 		};
 
 		private: struct OverloadedFunctionConfig_ {
-			using Pool = Pool;
+			using Pool = AnyMutexChassis::Pool;
 			using ExtendedInformation = OverloadedFunctionExtendedInformation_;
-			using Engine = Engine;
+			using Engine = AnyMutexChassis::Engine;
 			static constexpr ::dcool::core::Boolean copyable = copyable;
 			static constexpr ::dcool::core::Boolean moveable = moveable;
 			static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
@@ -240,20 +239,20 @@ namespace dcool::utility {
 			this->m_underlying_.uninitialize(engine_);
 		}
 
-		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, AnyMutexChassis& other_) const {
 			this->m_underlying_.cloneTo(engine_, otherEngine_, other_.m_underlying_);
 		}
 
 		public: template <
 			::dcool::core::Boolean engineWillBeUniformedC__ = false
-		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, AnyMutexChassis& other_) {
 			this->m_underlying_.template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, other_.m_underlying_);
 		}
 
 		public: public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
 			::dcool::core::Boolean engineWillBeSwappedC__ = false
-		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, AnyMutexChassis& other_) {
 			this->m_underlying_.template swapWith<strategyC__, engineWillBeSwappedC__>(engine_, otherEngine_, other_.m_underlying_);
 		}
 
