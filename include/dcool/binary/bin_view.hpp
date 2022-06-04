@@ -7,7 +7,6 @@
 
 namespace dcool::binary {
 	struct BinView {
-		private: using Self_ = BinView;
 		public: using Length = ::dcool::core::Length;
 		public: using Index = ::dcool::core::Index;
 
@@ -32,8 +31,8 @@ namespace dcool::binary {
 			return this->m_begin_;
 		}
 
-		public: constexpr auto sub(Index begin_, Index end_) const noexcept -> Self_ {
-			return Self_(::dcool::core::stepByByte(this->value(), begin_), end_ - begin_);
+		public: constexpr auto sub(Index begin_, Index end_) const noexcept -> BinView {
+			return BinView(::dcool::core::stepByByte(this->value(), begin_), end_ - begin_);
 		}
 
 		public: constexpr void trimLeft(Length toTrim_) noexcept {

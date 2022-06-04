@@ -25,7 +25,6 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 namespace dcool::concurrency {
 	namespace detail_ {
 		template <typename ConfigT_, typename ValueT_> class AtomConfigAdaptor_ {
-			private: using Self_ = AtomConfigAdaptor_<ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
 			public: using Value = ValueT_;
 			static_assert(::dcool::core::TriviallyCopyable<Value>);
@@ -90,7 +89,6 @@ namespace dcool::concurrency {
 		};
 
 		template <typename ValueT_, ::dcool::core::Length stampWidthC_> struct StampedValue_ {
-			private: using Self_ = StampedValue_<ValueT_, stampWidthC_>;
 			public: using Value = ValueT_;
 			public: static constexpr ::dcool::core::Length stampWidth = stampWidthC_;
 
@@ -99,7 +97,7 @@ namespace dcool::concurrency {
 			public: Value value;
 			public: [[no_unique_address]] Stamp stamp;
 
-			friend constexpr auto intelliHasEqualValueRepresentation(Self_ const& left_, Self_ const& right_) {
+			friend constexpr auto intelliHasEqualValueRepresentation(StampedValue_ const& left_, StampedValue_ const& right_) {
 				//::dcool::core::terminate();
 				return left_.stamp == right_.stamp && ::dcool::core::intelliHasEqualValueRepresentation(left_.value, right_.value);
 			}
@@ -107,7 +105,6 @@ namespace dcool::concurrency {
 	}
 
 	template <typename ValueT_, ::dcool::concurrency::AtomConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct Atom {
-		private: using Self_ = Atom<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
@@ -159,17 +156,17 @@ namespace dcool::concurrency {
 		public: constexpr Atom() noexcept: Atom(Value()) {
 		}
 
-		public: Atom(Self_ const&) = delete;
-		public: Atom(Self_&&) = delete;
+		public: Atom(Atom const&) = delete;
+		public: Atom(Atom&&) = delete;
 
 		public: constexpr Atom(Value const& desired_) noexcept: m_holder_ {
 			.underlying_ = toUnderlying_(desired_)
 		} {
 		}
 
-		public: auto operator =(Self_ const&)& -> Self_& = delete;
+		public: auto operator =(Atom const&)& -> Atom& = delete;
 
-		public: constexpr auto operator =(Value const& desired_)& noexcept -> Self_& {
+		public: constexpr auto operator =(Value const& desired_)& noexcept -> Atom& {
 			this->store(desired_);
 			return *this;
 		}

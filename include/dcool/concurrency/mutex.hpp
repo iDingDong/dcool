@@ -57,7 +57,6 @@ namespace dcool::concurrency {
 
 	namespace detail_ {
 		template <typename ConfigT_> class MutexConfigAdaptor_ {
-			private: using Self_ = MutexConfigAdaptor_<ConfigT_>;
 			public: using Config = ConfigT_;
 
 			public: static constexpr ::dcool::core::Boolean spinnable =
@@ -99,7 +98,6 @@ namespace dcool::concurrency {
 	;
 
 	template <::dcool::concurrency::MutexConfig ConfigT_ = ::dcool::core::Empty<>> class Mutex {
-		private: using Self_ = Mutex<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::concurrency::MutexConfigAdaptor<Config>;
@@ -1402,7 +1400,6 @@ namespace dcool::concurrency {
 	};
 
 	template <typename MutexT_> struct Locker {
-		private: using Self_ = Locker<MutexT_>;
 		public: using Mutex = MutexT_;
 
 		public: enum class Status {
@@ -1431,9 +1428,9 @@ namespace dcool::concurrency {
 		) noexcept: m_mutex_(::dcool::core::addressOf(mutex_)), m_status_(status_) {
 		}
 
-		public: Locker(Self_ const&) = delete;
+		public: Locker(Locker const&) = delete;
 
-		public: constexpr Locker(Self_&& other_) noexcept: m_mutex_(other_.m_mutex_), m_status_(other_.m_status_) {
+		public: constexpr Locker(Locker&& other_) noexcept: m_mutex_(other_.m_mutex_), m_status_(other_.m_status_) {
 #	if DCOOL_DEBUG_ENABLED
 			other_.m_mutex_ = ::dcool::core::nullPointer;
 #	endif

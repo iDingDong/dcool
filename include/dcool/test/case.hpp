@@ -9,6 +9,7 @@
 #	include <atomic>
 #	include <algorithm>
 #	include <iterator>
+#	include <source_location>
 
 namespace dcool::test {
 	class Case {
@@ -20,9 +21,7 @@ namespace dcool::test {
 				fatalForCase
 			};
 
-			// Use std::source_location instead once it is available. Effectively we are waiting for GCC 11 for the stablization.
-			::dcool::test::FileName fileName;
-			::dcool::test::LineNumber lineNumber;
+			::std::source_location location;
 			::dcool::test::TimePoint time;
 		};
 
@@ -32,22 +31,26 @@ namespace dcool::test {
 		};
 
 		public: struct ActiveRecord {
-			private: using Self_ = ActiveRecord;
-
 			private: ::std::atomic<::dcool::test::Count> m_checkCount_;
 			private: ::dcool::container::List<Failure> m_failures_;
 			private: mutable ::dcool::core::MinimalMutex m_mutex_;
 
 			public: ActiveRecord() noexcept;
-			public: ActiveRecord(Self_ const& other_);
-			public: ActiveRecord(Record record_);
-			public: auto operator =(Self_ const& other_) -> Self_&;
-			public: auto operator =(Record record_) -> Self_&;
+			public: ActiveRecord(ActiveRecord const& other_) = delete;
+			// public: ActiveRecord(Record record_);
+			public: auto operator =(ActiveRecord const& other_) -> ActiveRecord& = delete;
+			// public: auto operator =(Record record_) -> ActiveRecord&;
 			public: ~ActiveRecord() noexcept;
 
 			public: auto snapshot() const -> Record;
 			public: void recordSuccess();
 			public: void recordFailure(Failure failure_);
+		};
+
+		public: struct Context {
+			::dcool::test::Name const& suiteName;
+			::dcool::test::Name const& caseName;
+			ActiveRecord activeRecord;
 		};
 
 		public: struct Result {
@@ -57,9 +60,7 @@ namespace dcool::test {
 			Record record;
 		};
 
-		public: using Executor = void(*)(
-			ActiveRecord& dcoolTestRecord_, ::dcool::test::Name suiteName_, ::dcool::test::Name caseName
-		);
+		public: using Executor = void(*)(Context& context_);
 
 		private: Executor m_executor_;
 
@@ -69,28 +70,25 @@ namespace dcool::test {
 
 	namespace detail_ {
 		void check_(
-			::dcool::test::FileName fileName_,
-			::dcool::test::LineNumber lineNumber_,
+			::dcool::test::Case::Context& context_,
 			::dcool::test::Case::Failure::Level level_,
 			::dcool::core::Boolean predicate_,
-			::dcool::test::Case::ActiveRecord& record_
+			const ::std::source_location& location_ = ::std::source_location::current()
 		);
 
 		template <typename LeftRangeT_, typename RightRangeT_> void checkRangeEquality_(
-			::dcool::test::FileName fileName_,
-			::dcool::test::LineNumber lineNumber_,
+			::dcool::test::Case::Context& context_,
 			::dcool::test::Case::Failure::Level level_,
 			LeftRangeT_&& left_,
 			RightRangeT_&& right_,
-			::dcool::test::Case::ActiveRecord& record_
+			const ::std::source_location& location_ = ::std::source_location::current()
 		) {
 			// GCC 10.2.0 introduced an ICE if 'std::ranges::equal' is used.
 			::dcool::test::detail_::check_(
-				fileName_,
-				lineNumber_,
+				context_,
 				level_,
 				::std::equal(::std::begin(left_), ::std::end(left_), ::std::begin(right_), ::std::end(right_)),
-				record_
+				location_
 			);
 		}
 	}

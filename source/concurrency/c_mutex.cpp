@@ -34,7 +34,7 @@ namespace dcool::concurrency {
 					DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexShareable) &&
 					DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexRecursive)
 				) {
-					return DCOOL_CORE_Unsupported;
+					return DCOOL_CORE_resultUnsupported;
 				}
 				if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexTimed)) {
 					if (DCOOL_CORE_FLAG_ENABLED(attribute, DCOOL_CONCURRENCY_mutexShareable)) {
@@ -66,36 +66,36 @@ namespace dcool::concurrency {
 					}
 				}
 			} catch (std::bad_alloc const&) {
-				return DCOOL_CORE_OutOfMemory;
+				return DCOOL_CORE_resultOutOfMemory;
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto uninitializeCMutex(DCOOL_CONCURRENCY_Mutex* mutex) noexcept -> DCOOL_CORE_Result {
 			delete mutex->holder_;
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto lockCMutex(DCOOL_CONCURRENCY_Mutex* mutex_) noexcept -> DCOOL_CORE_Result {
 			try {
 				mutex_->holder_->mutex.lock();
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto tryLockCMutex(DCOOL_CONCURRENCY_Mutex* mutex_) noexcept -> DCOOL_CORE_Result {
 			try {
 				if (!(mutex_->holder_->mutex.tryLock())) {
-					return DCOOL_CORE_Busy;
+					return DCOOL_CORE_resultBusy;
 				}
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto tryLockCMutexUntil(
@@ -103,21 +103,21 @@ namespace dcool::concurrency {
 		) noexcept -> DCOOL_CORE_Result {
 			try {
 				if (!(mutex->holder_->mutex.tryLockUntil(core::toClockTimePoint(*time)))) {
-					return DCOOL_CORE_Busy;
+					return DCOOL_CORE_resultBusy;
 				}
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto unlockCMutex(DCOOL_CONCURRENCY_Mutex* mutex_) noexcept -> DCOOL_CORE_Result {
 			try {
 				mutex_->holder_->mutex.unlock();
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 	}
 }

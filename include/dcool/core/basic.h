@@ -1,8 +1,8 @@
 #ifndef DCOOL_CORE_BASIC_H_INCLUDED_
 #	define DCOOL_CORE_BASIC_H_INCLUDED_ 1
 
-#	include <cstdint>
-#	include <ctime>
+#	include <stdint.h>
+#	include <time.h>
 
 #	ifdef __cplusplus
 #		define DCOOL_CORE_NO_RETURN [[noreturn]]
@@ -11,20 +11,20 @@
 #	endif
 
 typedef enum {
-	DCOOL_CORE_Ok,
-	DCOOL_CORE_Error,
-	DCOOL_CORE_OutOfMemory,
-	DCOOL_CORE_Busy,
-	DCOOL_CORE_TimedOut,
-	DCOOL_CORE_Interrupted,
-	DCOOL_CORE_Unsupported
+	DCOOL_CORE_resultOk,
+	DCOOL_CORE_resultUnknownError,
+	DCOOL_CORE_resultOutOfMemory,
+	DCOOL_CORE_resultBusy,
+	DCOOL_CORE_resultTimedOut,
+	DCOOL_CORE_resultInterrupted,
+	DCOOL_CORE_resultUnsupported
 } DCOOL_CORE_Result;
 
 #	define DCOOL_CORE_FLAG_ENABLED(value, flag) (((value)& (flag)) != 0)
 
 typedef struct {
-	::std::time_t seconds;
-	::std::uint32_t nanoseconds;
+	time_t seconds;
+	uint32_t nanoseconds;
 } DCOOL_CORE_Duration;
 
 typedef struct {

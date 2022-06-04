@@ -86,7 +86,6 @@ namespace dcool::utility {
 	> struct OverloadedFunctionChassis<
 		::dcool::core::Types<PrototypeTs_...>, ConfigT_
 	>: private ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>... {
-		private: using Self_ = OverloadedFunctionChassis<::dcool::core::Types<PrototypeTs_...>, ConfigT_>;
 		public: using Prototypes = ::dcool::core::Types<PrototypeTs_...>;
 		public: using Config = ConfigT_;
 		public: template <
@@ -96,7 +95,9 @@ namespace dcool::utility {
 		private: using ConfigAdaptor_ = ::dcool::utility::OverloadedFunctionConfigAdaptor<Config, Prototypes>;
 		public: using Engine = ConfigAdaptor_::Engine;
 		private: using BaseExtendedInformations_ = ::dcool::core::Tuple<
-			typename ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>::template ExtendedInformation_<Self_>...
+			typename ::dcool::utility::detail_::OverloadedFunctionChassisBase_<PrototypeTs_>::template ExtendedInformation_<
+				OverloadedFunctionChassis
+			>...
 		>;
 		public: using ExtendedInformation = ConfigAdaptor_::ExtendedInformation;
 		public: static constexpr ::dcool::core::Boolean copyable = ConfigAdaptor_::copyable;
@@ -119,7 +120,7 @@ namespace dcool::utility {
 		private: struct UnderlyingConfig_ {
 			using Pool = ConfigAdaptor_::Pool;
 			using ExtendedInformation = UnderlyingExtendedInformation_;
-			using Engine = Engine;
+			using Engine = OverloadedFunctionChassis::Engine;
 			static constexpr ::dcool::core::Boolean copyable = copyable;
 			static constexpr ::dcool::core::Boolean moveable = moveable;
 			static constexpr ::dcool::core::StorageRequirement squeezedTankage = squeezedTankage;
@@ -152,7 +153,7 @@ namespace dcool::utility {
 			Engine& engine_, ::dcool::core::InPlaceTag tag_, ArgumentTs__&&... parameters_
 		) noexcept(
 			noexcept(
-				::dcool::core::declval<Self_&>().m_underlying_.template initialize<ValueT__>(
+				::dcool::core::declval<OverloadedFunctionChassis&>().m_underlying_.template initialize<ValueT__>(
 					engine_, tag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...
 				)
 			)
@@ -164,20 +165,20 @@ namespace dcool::utility {
 			this->m_underlying_.uninitialize(engine_);
 		}
 
-		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, OverloadedFunctionChassis& other_) const {
 			this->m_underlying_.cloneTo(engine_, otherEngine_, other_.underlying_);
 		}
 
 		public: template <
 			::dcool::core::Boolean engineWillBeUniformedC__ = false
-		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+		> constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, OverloadedFunctionChassis& other_) {
 			this->m_underlying_.template relocateTo<engineWillBeUniformedC__>(engine_, otherEngine_, other_.m_underlying_);
 		}
 
 		public: template <
 			::dcool::core::ExceptionSafetyStrategy strategyC__ = exceptionSafetyStrategy,
 			::dcool::core::Boolean engineWillBeSwappedC__ = false
-		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) {
+		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, OverloadedFunctionChassis& other_) {
 			this->m_underlying_.template swapWith<strategyC__, engineWillBeSwappedC__>(engine_, otherEngine_, other_.m_underlying_);
 		}
 

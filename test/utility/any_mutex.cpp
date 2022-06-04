@@ -57,9 +57,12 @@ DCOOL_TEST_CASE(dcoolUtility, anyMutexBasics) {
 	DCOOL_TEST_EXPECT(!(anyMutex1.valid()));
 	DCOOL_TEST_EXPECT(anyMutex1.typeInfo() == typeid(void));
 	DCOOL_TEST_EXPECT(dcool::core::size(anyMutex1.storageRequirement()) == 0);
-	DCOOL_TEST_EXPECT_THROW(dcool::utility::BadAnyMutexAction const&, {
-		static_cast<void>(anyMutex1.lock());
-	});
+	DCOOL_TEST_EXPECT_THROW(
+		dcool::utility::BadAnyMutexAction const&,
+		{
+			static_cast<void>(anyMutex1.lock());
+		}
+	);
 	using TimedAnyMutex = dcool::utility::AnyMutex<TimedAnyMutexConfig>;
 	auto anyMutex2 = TimedAnyMutex(dcool::core::typedInPlace<FakeMutex>);
 	DCOOL_TEST_EXPECT(anyMutex2.valid());

@@ -7,8 +7,6 @@
 
 namespace dcool::concurrency {
 	struct AtomicFlag {
-		private: using Self_ = AtomicFlag;
-
 		private: ::std::atomic_flag m_underlying_;
 
 		public: constexpr AtomicFlag() noexcept = default;
@@ -35,8 +33,6 @@ namespace dcool::concurrency {
 	};
 
 	class NegativeAtomicFlag {
-		private: using Self_ = NegativeAtomicFlag;
-
 		private: ::dcool::concurrency::AtomicFlag m_underlying_;
 
 		public: constexpr NegativeAtomicFlag() noexcept = default;

@@ -27,11 +27,11 @@ namespace dcool {
 	};
 
 	inline constexpr ::dcool::Version version = {
-		.major = ::dcool::majorVersion;
-		.minor = ::dcool::minorVersion;
-		.patch = ::dcool::patchVersion;
-		.name = ::dcool::versionName;
-		.nativeName = ::dcool::versionNativeName;
+		.major = ::dcool::majorVersion,
+		.minor = ::dcool::minorVersion,
+		.patch = ::dcool::patchVersion,
+		.name = ::dcool::versionName,
+		.nativeName = ::dcool::versionNativeName
 	};
 }
 

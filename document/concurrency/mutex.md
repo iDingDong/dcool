@@ -14,7 +14,7 @@ Its member shall customize the list as decribed:
 
 | Member | Default | Behavior |
 | - | - | - |
-| `static constexpr dcool::core::Boolean spinnable` | `false` | The mutex will not block on any actions if it takes value `true`; otherwise not. |
+| `static constexpr dcool::core::Boolean spinnable` | `false` | The mutex will prefer busy-waiting if it takes value `true`; otherwise not. |
 | `static constexpr dcool::core::Boolean timed` | `false` | Certain mutex actions requires this to take value `true`. This option is not stable. |
 | `static constexpr dcool::core::UnsignedMaxInteger maxShare` | `0` | Indicates the maximum shared owners allowed at the same time. |
 | `static constexpr dcool::core::Boolean downgradeable` | `false` | Certain mutex actions requires this to take value `true`. |
