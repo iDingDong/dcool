@@ -5,7 +5,6 @@
 #	include <dcool/config.hpp>
 #	include <dcool/core.hpp>
 
-#	include <atomic>
 #	include <thread>
 
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
@@ -66,7 +65,7 @@ namespace dcool::service {
 
 		private: using RegularFlag_ = ::dcool::core::ConditionalType<
 			synchronizationStrategy == ::dcool::service::OnceInvokerSynchronizationStrategy::regular,
-			::std::atomic<::dcool::core::Boolean>,
+			::dcool::concurrency::Atom<::dcool::core::Boolean>,
 			::dcool::core::Pit
 		>;
 
@@ -78,7 +77,7 @@ namespace dcool::service {
 
 		private: using BusyFlag_ = ::dcool::core::ConditionalType<
 			synchronizationStrategy == ::dcool::service::OnceInvokerSynchronizationStrategy::busy,
-			::std::atomic<BusyStatus_>,
+			::dcool::concurrency::Atom<BusyStatus_>,
 			::dcool::core::Pit
 		>;
 
@@ -174,8 +173,8 @@ namespace dcool::service {
 					}
 				} while (
 					!(
-						this->m_busyFlag_.compare_exchange_weak(
-							old_, BusyStatus_::invoking_, ::std::memory_order::relaxed, ::std::memory_order::acquire
+						this->m_busyFlag_.compareExchangeWeak(
+							old_, BusyStatus_::invoking_, ::std::memory_order::acq_rel, ::std::memory_order::acquire
 						)
 					)
 				);

@@ -2,6 +2,8 @@
 
 #include <dcool/core.hpp>
 
+#include <source_location>
+
 namespace dcool::test {
 	namespace {
 		class FatalCaseFailure: public ::std::runtime_error {
@@ -18,9 +20,12 @@ namespace dcool::test {
 		Result result = {};
 		result.startTime = Clock::now();
 		try {
-			Case::ActiveRecord activeRecord;
-			this->m_executor_(activeRecord, suiteName, caseName);
-			result.record = activeRecord.snapshot();
+			Case::Context context = {
+				.suiteName = core::move(suiteName),
+				.caseName = core::move(caseName)
+			};
+			this->m_executor_(context);
+			result.record = context.activeRecord.snapshot();
 			result.endedByFatal = false;
 		} catch (FatalCaseFailure const&) {
 			result.endedByFatal = true;
@@ -31,25 +36,25 @@ namespace dcool::test {
 
 	Case::ActiveRecord::ActiveRecord() noexcept = default;
 
-	Case::ActiveRecord::ActiveRecord(Case::ActiveRecord::Self_ const& other_): Case::ActiveRecord(other_.snapshot()) {
-	}
+	// Case::ActiveRecord::ActiveRecord(Case::ActiveRecord const& other_): Case::ActiveRecord(other_.snapshot()) {
+	// }
 
-	Case::ActiveRecord::ActiveRecord(
-		Case::Record record
-	): m_checkCount_(record.checkCount), m_failures_(::dcool::core::move(record.failures)) {
-	}
+	// Case::ActiveRecord::ActiveRecord(
+	// 	Case::Record record
+	// ): m_checkCount_(record.checkCount), m_failures_(::dcool::core::move(record.failures)) {
+	// }
 
-	auto Case::ActiveRecord::operator =(Case::ActiveRecord::Self_ const& other) -> Self_& {
-		(*this) = other.snapshot();
-		return *this;
-	}
+	// auto Case::ActiveRecord::operator =(Case::ActiveRecord const& other) -> Case::ActiveRecord& {
+	// 	(*this) = other.snapshot();
+	// 	return *this;
+	// }
 
-	auto Case::ActiveRecord::operator =(Case::Record record) -> Self_& {
-		core::PhoneySharedLockGuard locker(this->m_mutex_);
-		this->m_checkCount_.store(record.checkCount, ::std::memory_order::relaxed);
-		this->m_failures_ = ::dcool::core::move(record.failures);
-		return *this;
-	}
+	// auto Case::ActiveRecord::operator =(Case::Record record) -> Case::ActiveRecord& {
+	// 	core::PhoneySharedLockGuard locker(this->m_mutex_);
+	// 	this->m_checkCount_.store(record.checkCount, ::std::memory_order::relaxed);
+	// 	this->m_failures_ = ::dcool::core::move(record.failures);
+	// 	return *this;
+	// }
 
 	Case::ActiveRecord::~ActiveRecord() noexcept = default;
 
@@ -73,12 +78,12 @@ namespace dcool::test {
 
 	namespace detail_ {
 		void check_(
-			FileName fileName, LineNumber lineNumber, Case::Failure::Level level, core::Boolean predicate, Case::ActiveRecord& record
+			Case::Context& context, Case::Failure::Level level, core::Boolean predicate, const std::source_location& location
 		) {
 			if (predicate) {
-				record.recordSuccess();
+				context.activeRecord.recordSuccess();
 			} else {
-				record.recordFailure(Case::Failure { .fileName = fileName, .lineNumber = lineNumber, .time = Clock::now() });
+				context.activeRecord.recordFailure(Case::Failure { .location = location, .time = Clock::now() });
 				if (level == Case::Failure::Level::fatalForCase) {
 					throw FatalCaseFailure("Case encoutered fatal failure.");
 				}

@@ -33,9 +33,9 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 )
 DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 	dcool::core::detail_,
-	HasValueOutOfRangeStrategryForInteger_,
-	extractedOutOfRangeStrategryForIntegerValue_,
-	outOfRangeStrategry
+	HasValueOutOfRangeStrategyForInteger_,
+	extractedOutOfRangeStrategyForIntegerValue_,
+	outOfRangeStrategy
 )
 
 namespace dcool::core {
@@ -277,7 +277,19 @@ namespace dcool::core {
 				::dcool::core::UnsignedMaxInteger
 			>::Result_
 		>;
+
+		template <::dcool::core::Length widthC_, ::dcool::core::Boolean singleUnitC_> struct LimbTypeHelper_ {
+			using Result_ = ::dcool::core::detail_::SingleLimbIntegerUnderlyingType_<false, widthC_>;
+		};
+
+		template <::dcool::core::Length widthC_> struct LimbTypeHelper_<widthC_, false> {
+			using Result_ = ::dcool::core::UnsignedMaxInteger;
+		};
 	}
+
+	template <::dcool::core::Length widthC_> using LimbType = ::dcool::core::detail_::LimbTypeHelper_<
+		widthC_, !::dcool::core::detail_::DigitsHoldable_<::dcool::core::UnsignedMaxInteger, widthC_>
+	>::Result_;
 
 	namespace detail_ {
 		template <
@@ -312,13 +324,13 @@ namespace dcool::core {
 		::dcool::core::Integral IntegerT_, ::dcool::core::Length widthC_
 	> requires (
 		::dcool::core::UnsignedIntegral<IntegerT_> || widthC_ > 0
-	) constexpr IntegerT_ bitFieldMax = ::dcool::core::detail_::bitFieldMax_<IntegerT_>(widthC_);
+	) inline constexpr IntegerT_ bitFieldMax = ::dcool::core::detail_::bitFieldMax_<IntegerT_>(widthC_);
 
 	template <
 		::dcool::core::Integral IntegerT_, ::dcool::core::Length widthC_
 	> requires (
 		::dcool::core::UnsignedIntegral<IntegerT_> || widthC_ > 0
-	) constexpr IntegerT_ bitFieldMin = ::dcool::core::detail_::bitFieldMin_<IntegerT_>(widthC_);
+	) inline constexpr IntegerT_ bitFieldMin = ::dcool::core::detail_::bitFieldMin_<IntegerT_>(widthC_);
 
 	template <::dcool::core::Integral IntegerT_, ::dcool::core::Length widthC_> constexpr auto bitFieldAdditionResultWithinRange(
 		::dcool::core::UndeducedType<IntegerT_> const& left_, ::dcool::core::UndeducedType<IntegerT_> const& right_
@@ -377,7 +389,6 @@ namespace dcool::core {
 	> constexpr auto bitFieldDivisionResultWithinRange(
 		::dcool::core::UndeducedType<IntegerT_> const& left_, ::dcool::core::UndeducedType<IntegerT_> const& right_
 	) noexcept -> ::dcool::core::Boolean {
-		constexpr IntegerT_ max_ = ::dcool::core::detail_::bitFieldMax_<IntegerT_>(widthC_);
 		constexpr IntegerT_ min_ = ::dcool::core::detail_::bitFieldMin_<IntegerT_>(widthC_);
 		if constexpr (::dcool::core::SignedIntegral<IntegerT_>) {
 			if (left_ == min_ && right_ == -1) {
@@ -396,13 +407,13 @@ namespace dcool::core {
 			public: static constexpr ::dcool::core::Boolean width = widthC_;
 
 			public: static constexpr ::dcool::core::Boolean negatable =
-				::dcool::core::detail_::extractedNegatableForIntegerValue_<Config>(true)
+				::dcool::core::detail_::extractedNegatableForIntegerValue_<Config>(hasSigness)
 			;
 			public: static constexpr ::dcool::core::Length foldedWidth =
 				::dcool::core::detail_::extractedFoldedWidthForIntegerValue_<Config>(0)
 			;
 			public: static constexpr ::dcool::core::SusbicionStrategy outOfRangeStrategy =
-				::dcool::core::detail_::extractedOutOfRangeStrategryForIntegerValue_<Config>(
+				::dcool::core::detail_::extractedOutOfRangeStrategyForIntegerValue_<Config>(
 					hasSigness ? ::dcool::core::SusbicionStrategy::undefined : ::dcool::core::SusbicionStrategy::ignore
 				)
 			;
@@ -446,7 +457,7 @@ namespace dcool::core {
 		(minC_ < 0), ::dcool::core::max(::std::bit_width(maxC_), ::std::bit_width(minC_ < 0 ? minC_ + 1 : maxC_))
 	>;
 
-	constexpr ::dcool::core::Length builtInIntegerUnderlyingLimit = ::dcool::core::widthOfInteger<
+	inline constexpr ::dcool::core::Length builtInIntegerUnderlyingLimit = ::dcool::core::widthOfInteger<
 		::dcool::core::UnsignedMaxInteger
 	>;
 

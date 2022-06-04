@@ -40,6 +40,26 @@
 #		define DCOOL_POINTER_FOLDING_BY_ALIGNMENT_ENABLED 0
 #	endif
 
+#	ifdef DCOOLER_ENABLE_WIN32
+#		if __has_include(<windows.h>)
+#			define DCOOL_WIN32_ENABLED 1
+#		else
+#			define DCOOL_WIN32_ENABLED 0
+#		endif
+#	else
+#		define DCOOL_WIN32_ENABLED 0
+#	endif
+
+#	ifdef DCOOLER_ENABLE_POSIX_THREAD
+#		if __has_include(<windows.h>)
+#			define DCOOL_POSIX_THREAD_ENABLED 1
+#		else
+#			define DCOOL_POSIX_THREAD_ENABLED 0
+#		endif
+#	else
+#		define DCOOL_POSIX_THREAD_ENABLED 1 // TODO: change this to 0
+#	endif
+
 #	define DCOOL_C_CONFIG_NATIVE_DESCRIPTION_HELPER(seperator_, ending_) \
 	DCOOL_MACRO_DESCRIPTION(DCOOL_DEBUG_ENABLED) seperator_ \
 	DCOOL_MACRO_DESCRIPTION(DCOOL_AGGRESSIVE_DEBUG_ENABLED) seperator_ \

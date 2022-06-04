@@ -11,7 +11,7 @@
 #	include <stdexcept>
 
 namespace dcool::core {
-	constexpr ::dcool::core::Length dynamicExtent = ::std::dynamic_extent;
+	inline constexpr ::dcool::core::Length dynamicExtent = ::std::dynamic_extent;
 
 	template <typename ValueT_, ::dcool::core::Length extentC_> struct Span {
 		private: using Self_ = Span<ValueT_, extentC_>;

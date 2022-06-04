@@ -19,16 +19,16 @@ namespace dcool::core {
 
 	template <> constexpr ::dcool::core::Boolean isExtendedExecutionPolicy<::dcool::core::SerialExecution> = true;
 
-	constexpr ::dcool::core::SerialExecution serialExecution;
+	inline constexpr ::dcool::core::SerialExecution serialExecution;
 
 #	if DCOOL_CPP_P0024R2_ENABLED
 	using SequencedExecution = ::std::execution::sequenced_policy;
 	using ParallelExecution = ::std::execution::parallel_policy;
 	using VectorizedExecution = ::std::execution::unsequenced_policy;
 
-	constexpr ::dcool::core::SequencedExecution sequencedExecution = ::std::execution::seq;
-	constexpr ::dcool::core::ParallelExecution parallelExecution = ::std::execution::par;
-	constexpr ::dcool::core::VectorizedExecution vectorizedExecution = ::std::execution::unseq;
+	inline constexpr ::dcool::core::SequencedExecution sequencedExecution = ::std::execution::seq;
+	inline constexpr ::dcool::core::ParallelExecution parallelExecution = ::std::execution::par;
+	inline constexpr ::dcool::core::VectorizedExecution vectorizedExecution = ::std::execution::unseq;
 
 	template <typename T_> concept StandardExecutionPolicy = ::std::is_execution_policy_v<T_>;
 #	else
@@ -47,9 +47,9 @@ namespace dcool::core {
 
 	template <> constexpr ::dcool::core::Boolean isExtendedExecutionPolicy<::dcool::core::VectorizedExecution> = true;
 
-	constexpr ::dcool::core::SequencedExecution sequencedExecution;
-	constexpr ::dcool::core::ParallelExecution parallelExecution;
-	constexpr ::dcool::core::VectorizedExecution vectorizedExecution;
+	inline constexpr ::dcool::core::SequencedExecution sequencedExecution;
+	inline constexpr ::dcool::core::ParallelExecution parallelExecution;
+	inline constexpr ::dcool::core::VectorizedExecution vectorizedExecution;
 
 	template <typename T_> concept StandardExecutionPolicy = false;
 #	endif
@@ -57,14 +57,14 @@ namespace dcool::core {
 #	if DCOOL_CPP_P1001R2_ENABLED
 	using ParallelVectorizedExecution = ::std::execution::parallel_unsequenced_policy;
 
-	constexpr ::dcool::core::ParallelVectorizedExecution parallelVectorizedExecution = ::std::execution::par_unseq;
+	inline constexpr ::dcool::core::ParallelVectorizedExecution parallelVectorizedExecution = ::std::execution::par_unseq;
 #	else
 	struct ParallelVectorizedExecution {
 	};
 
 	template <> constexpr ::dcool::core::Boolean isExtendedExecutionPolicy<::dcool::core::ParallelVectorizedExecution> = true;
 
-	constexpr ::dcool::core::ParallelVectorizedExecution parallelVectorizedExecution;
+	inline constexpr ::dcool::core::ParallelVectorizedExecution parallelVectorizedExecution;
 #	endif
 
 	template <typename T_> concept ExtentedExecutionPolicy = ::dcool::core::isExtendedExecutionPolicy<T_>;

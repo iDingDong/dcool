@@ -10,14 +10,19 @@
 #	include <memory>
 
 namespace dcool::core {
-	constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-	constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
-	constexpr ::dcool::core::Alignment maxRepresentableAlignment = std::bit_floor(
+	inline constexpr ::dcool::core::Alignment defaultNewAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+	inline constexpr ::dcool::core::Alignment minRepresentableAlignment = 1;
+	inline constexpr ::dcool::core::Alignment maxRepresentableAlignment = std::bit_floor(
 		::std::numeric_limits<::dcool::core::Alignment>::max()
 	);
 	template <::dcool::core::Size sizeC_> constexpr ::dcool::core::Alignment defaultAlignmentFor = alignof(
 		::std::aligned_storage_t<sizeC_>
 	);
+
+	inline auto aligned(void* pointer_, ::dcool::core::Alignment required_) noexcept -> ::dcool::core::Boolean {
+		::std::size_t assumedSize_ = 1;
+		return ::std::align(required_, 1, pointer_, assumedSize_) != ::dcool::core::nullPointer;
+	}
 
 #	if DCOOL_DEPENDENCY_BUG_1
 	// Workaround for a compiler bug.
@@ -135,6 +140,78 @@ namespace dcool::core {
 	}
 
 	template <typename ValueT_> using StorableType = ::dcool::core::detail_::StorableTypeHelper_<ValueT_>::Result_;
+
+	template <typename ValueT_> struct StorageAgent {
+		public: using Value = ValueT_;
+
+		private: using Underlying_ = ::dcool::core::StorableType<ValueT_>;
+		private: using UnderlyingStorage_ = ::dcool::core::StorageFor<Underlying_>;
+
+		private: UnderlyingStorage_ m_underlyingStorage_;
+
+		private: void emplaceReference_(Value value_) noexcept {
+			new (::dcool::core::addressOf(this->m_underlyingStorage_)) Underlying_(::dcool::core::addressOf(value_));
+		}
+
+		public: template <typename... ArgumentTs__> void emplace(ArgumentTs__&&... arguments_) {
+			if constexpr (::dcool::core::Reference<Value>) {
+				this->emplaceReference_(arguments_...);
+			} else {
+				new (::dcool::core::addressOf(this->m_underlyingStorage_)) Value(::dcool::core::forward<ArgumentTs__>(arguments_)...);
+			}
+		}
+
+		public: constexpr auto value() const -> Value {
+			auto underlying_ = ::dcool::core::launder(
+				reinterpret_cast<Underlying_*>(::dcool::core::addressOf(this->m_underlyingStorage_))
+			);
+			if constexpr (::dcool::core::Reference<Value>) {
+				return static_cast<Value>(**underlying_);
+			} else {
+				return ::dcool::core::move(*underlying_);
+			}
+		}
+
+		public: constexpr auto fetch() const -> Value {
+			if constexpr (::dcool::core::Reference<Value>) {
+				return this->value();
+			} else {
+				Value result_ = ::dcool::core::move(
+					*::dcool::core::launder(reinterpret_cast<Value*>(::dcool::core::addressOf(this->m_underlyingStorage_)))
+				);
+				this->destruct();
+				return result_;
+			}
+		}
+
+		public: void destruct() noexcept {
+			reinterpret_cast<Value&>(this->m_underlyingStorage_);
+		}
+	};
+
+	template <typename T_> constexpr ::dcool::core::Boolean storableInUniversalPointer = false;
+	template <
+		::dcool::core::Pointer T_
+	> constexpr ::dcool::core::Boolean storableInUniversalPointer<T_> = ::dcool::core::ConvertibleTo<T_, void const volatile*>;
+	template <::dcool::core::Reference T_> constexpr ::dcool::core::Boolean storableInUniversalPointer<T_> = true;
+
+	template <typename T_> concept StorableInUniversalPointer = ::dcool::core::storableInUniversalPointer<T_>;
+
+	template <::dcool::core::StorableInUniversalPointer T_> constexpr auto packAsUniversalPointer(void* source_) noexcept -> T_ {
+		if constexpr (::dcool::core::Pointer<T_>) {
+			return static_cast<T_>(source_);
+		}
+		return static_cast<T_>(*::dcool::core::packAsUniversalPointer<::dcool::core::PointerAddedType<T_>>());
+	}
+
+	template <typename T_> constexpr auto unpackFromUniversalPointer(::dcool::core::UndeducedType<T_> source_) noexcept -> void* {
+		if constexpr (::dcool::core::Pointer<T_>) {
+			using ObjectType_ = ::dcool::core::PointerRemovedType<T_>;
+			return const_cast<::dcool::core::PointerAddedType<::dcool::core::QualifierRemovedType<ObjectType_>>>(source_);
+		} else {
+			return ::dcool::core::unpackFromUniversalPointer<::dcool::core::PointerAddedType<T_>>(::dcool::core::addressOf(source_));
+		}
+	}
 
 	constexpr auto padSizeToMatchAligment(
 		::dcool::core::Size size_, ::dcool::core::Alignment alignmentToMatch_

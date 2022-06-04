@@ -24,7 +24,7 @@ namespace dcool::core {
 		}
 	};
 
-	constexpr ::dcool::core::DefaultDereferencer defaultDereferencer;
+	inline constexpr ::dcool::core::DefaultDereferencer defaultDereferencer;
 
 	template <typename PointerT_> constexpr decltype(auto) dereference(
 		const PointerT_& pointer_

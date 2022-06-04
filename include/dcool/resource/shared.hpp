@@ -602,13 +602,13 @@ namespace dcool::resource {
 		public: constexpr SharedStrongPointer(::dcool::core::NullPointer) noexcept: Self_() {
 		}
 
-		private: constexpr SharedStrongPointer(Agent& agent_) noexcept: m_intrusive_(::dcool::core::addressOf(agent_)) {
+		public: constexpr SharedStrongPointer(Agent& agent_) noexcept: m_intrusive_(::dcool::core::addressOf(agent_)) {
 		}
 
 		public: template <typename... ArgumentTs__> constexpr SharedStrongPointer(
 			::dcool::core::InPlaceTag inPlaceTag_, ArgumentTs__&&... parameters_
 		) requires (compact): Self_(
-			*new ::dcool::resource::SharedAgent<Value, AgentConfig>(inPlaceTag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
+			*new Agent(inPlaceTag_, ::dcool::core::forward<ArgumentTs__>(parameters_)...)
 		) {
 		}
 
@@ -625,12 +625,12 @@ namespace dcool::resource {
 			return this->m_intrusive_;
 		}
 
-		private: constexpr auto agent_() const noexcept -> Agent& {
+		public: constexpr auto agent() const noexcept -> Agent& {
 			return this->intrusive().dereferenceSelf();
 		}
 
 		public: constexpr auto strongReferenceCount() const noexcept -> StrongCountUnderlying {
-			return this->agent_().strongReferenceCount();
+			return this->agent().strongReferenceCount();
 		}
 
 		public: constexpr auto valid() const noexcept -> ::dcool::core::Boolean {
@@ -638,7 +638,7 @@ namespace dcool::resource {
 		}
 
 		public: constexpr auto dereferenceSelf() const noexcept -> Value& {
-			return this->agent_().value();
+			return this->agent().value();
 		}
 
 		public: constexpr auto operator *() const noexcept -> Value& {
@@ -712,7 +712,7 @@ namespace dcool::resource {
 	}
 
 	namespace detail_ {
-		template <typename ValueT_, typename BaseConfigT_> struct CompactSharedAgentConfig_: BaseConfigT_ {
+		template <typename ValueT_, typename BaseConfigT_> struct CompactSharedAgentConfig_: public BaseConfigT_ {
 			public: static constexpr ::dcool::core::Boolean compact = true;
 		};
 	}

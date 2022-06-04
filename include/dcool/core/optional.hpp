@@ -12,7 +12,7 @@ namespace dcool::core {
 	using BadOptionalAccess = ::std::bad_optional_access;
 	using NullOptional = ::std::nullopt_t;
 
-	constexpr ::dcool::core::NullOptional nullOptional = ::std::nullopt;
+	inline constexpr ::dcool::core::NullOptional nullOptional = ::std::nullopt;
 
 	namespace detail_ {
 		template <

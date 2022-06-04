@@ -176,115 +176,115 @@ namespace dcool::concurrency {
 		}
 	}
 
-	template <typename T_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic =
+	template <typename T_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic =
 		::std::atomic<T_>::is_always_lock_free() ? ::dcool::core::determinateTrue : ::dcool::core::indeterminate
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<::dcool::core::Boolean> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<::dcool::core::Boolean> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_BOOL_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char8_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char8_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR8_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char16_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char16_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR16_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char32_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<char32_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_CHAR32_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<wchar_t> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<wchar_t> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_WCHAR_T_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned short> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned short> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_SHORT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed short> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed short> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_SHORT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned int> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned int> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_INT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed int> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed int> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_INT_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<unsigned long long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LLONG_LOCK_FREE)
 	;
 
-	template <> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long long> =
+	template <> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<signed long long> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_LLONG_LOCK_FREE)
 	;
 
-	template <typename ValueT_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<ValueT_*> =
+	template <typename ValueT_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomic<ValueT_*> =
 		::dcool::concurrency::detail_::intepretStandardLockFree(ATOMIC_POINTER_LOCK_FREE)
 	;
 
-	template <typename T_> constexpr ::dcool::core::Triboolean lockFreeInStandardAtomicRef =
+	template <typename T_> inline constexpr ::dcool::core::Triboolean lockFreeInStandardAtomicRef =
 		::std::atomic_ref<T_>::is_always_lock_free() ? ::dcool::core::determinateTrue : ::dcool::core::indeterminate
 	;
 
-	template <::dcool::core::TriviallyCopyable ValueT_> constexpr ::dcool::core::Alignment requiredAtomAlignment =
+	template <::dcool::core::TriviallyCopyable ValueT_> inline constexpr ::dcool::core::Alignment requiredAtomAlignment =
 		::std::atomic_ref<ValueT_>::required_alignment
 	;
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto lockFreeAtomicityOnExecution(
 		ValueT_ const& object_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).is_lock_free();
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto lockFreeAtomicityOnExecution(
 		::std::atomic<ValueT_> const& atom_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.is_lock_free();
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		ValueT_& object_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return ::std::atomic_ref<ValueT_>(object_).load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		::std::atomic<ValueT_> const& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validLoadOrder(order_));
 		return atom_.load(order_);
 	}
 
 	template <::dcool::core::TriviallyCopyable ValueT_> auto atomicallyLoad(
 		::std::atomic<ValueT_>& atom_, ::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		return ::dcool::concurrency::atomicallyLoad(::dcool::core::constantize(atom_), order_);
 	}
 
@@ -292,7 +292,7 @@ namespace dcool::concurrency {
 		ValueT_& object_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) {
+	) noexcept {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		::std::atomic_ref<ValueT_>(object_).store(newValue_, order_);
 	}
@@ -301,7 +301,7 @@ namespace dcool::concurrency {
 		::std::atomic<ValueT_>& atom_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) {
+	) noexcept {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validStoreOrder(order_));
 		atom_.store(newValue_, order_);
 	}
@@ -310,7 +310,7 @@ namespace dcool::concurrency {
 		ValueT_& object_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ValueT_ {
+	) noexcept -> ValueT_ {
 		return ::std::atomic_ref<ValueT_>(object_).exchange(newValue_, order_);
 	}
 
@@ -327,7 +327,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_weak(expected_, newValue_, order_);
 	}
 
@@ -337,7 +337,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
@@ -347,7 +347,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.compare_exchange_weak(expected_, newValue_, order_);
 	}
 
@@ -357,7 +357,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order successOrder_,
 		::std::memory_order failureOrder_
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		DCOOL_CORE_ASSERT(::dcool::concurrency::validReadConditionalWriteOrder(successOrder_, failureOrder_));
 		return atom_.compare_exchange_weak(expected_, newValue_, successOrder_, failureOrder_);
 	}
@@ -367,7 +367,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return ::std::atomic_ref<ValueT_>(object_).compare_exchange_strong(expected_, newValue_, order_);
 	}
 
@@ -387,7 +387,7 @@ namespace dcool::concurrency {
 		::dcool::core::UndeducedType<ValueT_>& expected_,
 		::dcool::core::UndeducedType<ValueT_> const& newValue_,
 		::std::memory_order order_ = ::std::memory_order::seq_cst
-	) -> ::dcool::core::Boolean {
+	) noexcept -> ::dcool::core::Boolean {
 		return atom_.compare_exchange_strong(expected_, newValue_, order_);
 	}
 
@@ -1109,27 +1109,27 @@ namespace dcool::concurrency {
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomicallyFetch##Operation_( \
 				ValueT_& object_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				::std::atomic_ref<ValueT_> atom_(object_); \
 				return ::dcool::concurrency::detail_::atomicallyFetch##Operation_##_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomicallyFetch##Operation_( \
 				::std::atomic<ValueT_>& atom_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				return ::dcool::concurrency::detail_::atomicallyFetch##Operation_##_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomically##Operation_##Fetch( \
 				ValueT_& object_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				::std::atomic_ref<ValueT_> atom_(object_); \
 				return ::dcool::concurrency::detail_::atomically##Operation_##Fetch_(atom_, operand_, order_); \
 			} \
 			\
 			template <::dcool::core::TriviallyCopyable ValueT_, typename OperandT_> auto atomically##Operation_##Fetch( \
 				::std::atomic<ValueT_>& atom_, OperandT_ const& operand_, ::std::memory_order order_ = ::std::memory_order::seq_cst \
-			) -> ValueT_ { \
+			) noexcept -> ValueT_ { \
 				return ::dcool::concurrency::detail_::atomically##Operation_##Fetch_(atom_, operand_, order_); \
 			} \
 		}

@@ -759,10 +759,12 @@ namespace dcool::resource {
 		public: using Super_::allocatePointer;
 
 		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocate(Pool& pool_, Length length_) -> ArrayHandle {
+			DCOOL_CORE_ASSERT(length_ > 0);
 			return pool_.template allocate<storageRequirement>(length_);
 		}
 
 		public: [[nodiscard("Might leak memory.")]] static constexpr auto allocatePointer(Pool& pool_, Length length_) -> void* {
+			DCOOL_CORE_ASSERT(length_ > 0);
 			return fromArrayHandle(pool_, allocate(pool_, length_));
 		}
 

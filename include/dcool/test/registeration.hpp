@@ -8,24 +8,17 @@
 #define DCOOL_TEST_TOKEN_CAT_3_(leading_, middle_, following_) DCOOL_TEST_TOKEN_CAT_3_HELPER_(leading_, middle_, following_)
 
 #define DCOOL_TEST_CASE(suiteName_, caseName_) \
-		static void DCOOL_TEST_TOKEN_CAT_3_( \
-			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)( \
-			::dcool::test::Case::ActiveRecord& dcoolTestRecord_, \
-			::dcool::test::Name dcoolTestSuiteName_, \
-			::dcool::test::Name dcoolTestCaseName_ \
+		static void DCOOL_TEST_TOKEN_CAT_3_(dcoolImplementationTestExecutor, suiteName_, caseName_)( \
+			::dcool::test::Case::Context& dcoolTestContext_ \
 		); \
 		static int DCOOL_TEST_TOKEN_CAT_3_( \
 			dcoolImplementationTestExecutorTestCaseHelper, suiteName_, caseName_ \
 		) = ::dcool::test::detail_::registerCase_( \
 			#suiteName_, #caseName_, DCOOL_TEST_TOKEN_CAT_3_(dcoolImplementationTestExecutor, suiteName_, caseName_) \
 		); \
-		static void DCOOL_TEST_TOKEN_CAT_3_( \
-			dcoolImplementationTestExecutor, suiteName_, caseName_ \
-		)( \
-			::dcool::test::Case::ActiveRecord& dcoolTestRecord_, \
-			::dcool::test::Name dcoolTestSuiteName_, \
-			::dcool::test::Name dcoolTestCaseName_ \
+		\
+		static void DCOOL_TEST_TOKEN_CAT_3_(dcoolImplementationTestExecutor, suiteName_, caseName_)( \
+			::dcool::test::Case::Context& dcoolTestContext_ \
 		)
 
 #define DCOOL_TEST_BEFORE_FULL_EXECUTION \

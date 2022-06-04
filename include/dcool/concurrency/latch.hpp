@@ -44,7 +44,6 @@ namespace dcool::concurrency {
 	> using LatchConfigAdaptor = ::dcool::concurrency::detail_::LatchConfigAdaptor_<ConfigT_>;
 
 	template <::dcool::concurrency::LatchConfig ConfigT_ = ::dcool::core::Empty<>> struct Latch {
-		private: using Self_ = Latch<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::concurrency::LatchConfigAdaptor<Config>;
@@ -77,10 +76,10 @@ namespace dcool::concurrency {
 			}
 		}
 
-		public: Latch(Self_ const&) = delete;
-		public: Latch(Self_&&) = delete;
-		public: auto operator =(Self_ const&) -> Self_& = delete;
-		public: auto operator =(Self_&&) -> Self_& = delete;
+		public: Latch(Latch const&) = delete;
+		public: Latch(Latch&&) = delete;
+		public: auto operator =(Latch const&) -> Latch& = delete;
+		public: auto operator =(Latch&&) -> Latch& = delete;
 
 		public: constexpr void countDown() {
 			if constexpr (booleanCount_) {
@@ -249,15 +248,14 @@ namespace dcool::concurrency {
 	};
 
 	namespace detail_ {
-		template <typename CountT_> struct TimedLatchConfig_ {
-			using Count = CountT_;
+		template <typename BaseConfigT_ = ::dcool::core::Empty<>> struct TimedLatchConfig_: public BaseConfigT_ {
 			static constexpr ::dcool::core::Boolean timed = true;
 		};
 	}
 
 	template <
-		typename CountT_ = ::dcool::core::Length
-	> using TimedLatchOf = ::dcool::concurrency::Latch<::dcool::concurrency::detail_::TimedLatchConfig_<CountT_>>;
+		typename BaseConfigT_ = ::dcool::core::Empty<>
+	> using TimedLatchOf = ::dcool::concurrency::Latch<::dcool::concurrency::detail_::TimedLatchConfig_<BaseConfigT_>>;
 	using TimedLatch = ::dcool::concurrency::TimedLatchOf<>;
 }
 

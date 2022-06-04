@@ -44,7 +44,7 @@ namespace dcool::core {
 	template <typename T_> constexpr ::dcool::core::TypedInPlaceTag<T_> typedInPlace = ::std::in_place_type<T_>;
 
 	using InPlaceTag = ::std::in_place_t;
-	constexpr ::dcool::core::InPlaceTag inPlace = ::std::in_place;
+	inline constexpr ::dcool::core::InPlaceTag inPlace = ::std::in_place;
 
 	template <typename T_> struct TypedTag {
 		using Type = T_;
@@ -58,7 +58,7 @@ namespace dcool::core {
 		constexpr explicit ReservationTag() noexcept = default;
 	};
 
-	constexpr ::dcool::core::ReservationTag reservation = ::dcool::core::ReservationTag();
+	inline constexpr ::dcool::core::ReservationTag reservation = ::dcool::core::ReservationTag();
 }
 
 #endif

@@ -99,7 +99,7 @@ constexpr auto sequencedLoad() const noexcept -> Value;
 
 Note the camel case naming.
 
-Non-atomic operations should be handled with extreme care. Behavior is undefined if any non-atomic operation neither strongly happens before nor happens after another atomic operation (read-only operations are no except due to ISO/IEC 14882:2020 `std::atomic_ref` constraints). Behavior is undefined if any non-atomic write operation neither strongly happens before nor happens after another operation.
+Non-atomic operations should be handled with extreme care. Behavior is undefined if any non-atomic operation neither strongly happens before nor after another atomic operation (read-only operations are no except due to ISO/IEC 14882:2020 `std::atomic_ref` constraints). Behavior is undefined if any non-atomic write operation neither strongly happens before nor happens after another operation.
 
 ### Load operations
 

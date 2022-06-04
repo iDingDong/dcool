@@ -47,11 +47,11 @@ namespace dcool::concurrency {
 					.thread = dcool::core::move(createdThread)
 				};
 			} catch (std::bad_alloc const&) {
-				return DCOOL_CORE_OutOfMemory;
+				return DCOOL_CORE_resultOutOfMemory;
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto joinCThread(DCOOL_CONCURRENCY_Thread* thread, void** outputResult) noexcept -> DCOOL_CORE_Result {
@@ -60,11 +60,11 @@ namespace dcool::concurrency {
 			try {
 				thread->holder_->thread.join();
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
 			*outputResult = *(thread->holder_->result);
 			delete thread->holder_;
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto detachCThread(DCOOL_CONCURRENCY_Thread* thread) noexcept -> DCOOL_CORE_Result {
@@ -72,10 +72,10 @@ namespace dcool::concurrency {
 			try {
 				thread->holder_->thread.detach();
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
 			delete thread->holder_;
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto sleepCurrentCThreadUntil(DCOOL_CORE_TimePoint const* deadline) noexcept -> DCOOL_CORE_Result {
@@ -83,23 +83,23 @@ namespace dcool::concurrency {
 			try {
 				std::this_thread::sleep_until(core::toClockTimePoint(*deadline));
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto sleepCurrentCThreadFor(DCOOL_CORE_Duration const* duration) noexcept -> DCOOL_CORE_Result {
 			try {
 				std::this_thread::sleep_for(core::toDuration(*duration));
 			} catch (...) {
-				return DCOOL_CORE_Error;
+				return DCOOL_CORE_resultUnknownError;
 			}
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 
 		static auto yieldCurrentCThread() noexcept -> DCOOL_CORE_Result {
 			std::this_thread::yield();
-			return DCOOL_CORE_Ok;
+			return DCOOL_CORE_resultOk;
 		}
 	}
 }

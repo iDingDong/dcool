@@ -46,7 +46,7 @@ DCOOL_TEST_CASE(dcoolUtility, cowBasics) {
 		DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0));
 		DCOOL_TEST_EXPECT(dcool::core::addressOf(object1.value()) != dcool::core::addressOf(object2.mutableValue()));
 		DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0, 1));
-		auto object2Address = dcool::core::addressOf(object2.value());
+		A const* object2Address = dcool::core::addressOf(object2.value());
 		DCOOL_TEST_EXPECT(object2Address == dcool::core::addressOf(object2.mutableValue()));
 		DCOOL_TEST_EXPECT_RANGE_EQUALITY(A::living(), DCOOL_TEST_SEQUENCE(0, 1));
 	}

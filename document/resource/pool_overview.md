@@ -1,5 +1,7 @@
 # Pool overview
 
+This feature is unstable.
+
 Pool is intended to be an alternative for standard allocators.
 
 ## Define customized pool

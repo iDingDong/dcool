@@ -8,8 +8,8 @@ namespace dcool::coroutine {
 	using SuspendAlways = ::std::suspend_always;
 	using SuspendNever = ::std::suspend_never;
 
-	constexpr ::dcool::coroutine::SuspendAlways suspendAlways;
-	constexpr ::dcool::coroutine::SuspendNever suspendNever;
+	inline constexpr ::dcool::coroutine::SuspendAlways suspendAlways;
+	inline constexpr ::dcool::coroutine::SuspendNever suspendNever;
 
 	template <typename PromiseT_> using Handle = ::std::coroutine_handle<PromiseT_>;
 

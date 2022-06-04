@@ -74,7 +74,7 @@ namespace dcool::test {
 		return result;
 	}
 
-	auto Center::instance() -> Self_& {
+	auto Center::instance() -> Center& {
 		static Center center;
 		return center;
 	}

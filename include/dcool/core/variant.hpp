@@ -330,14 +330,16 @@ namespace dcool::core {
 				VisitorT__&& visitor_
 			) const -> ResultT__ requires (alternativeCount > 0) {
 				DCOOL_CORE_ASSERT(this->valid());
-				return visitorTable_<VisitorT__, ResultT__>[this->index()](this->data_(), ::dcool::core::forward<visitor_>);
+				return visitorTable_<VisitorT__, ResultT__>[this->index()](this->data_(), ::dcool::core::forward<VisitorT__>(visitor_));
 			}
 
 			public: template <typename ResultT__, typename VisitorT__> constexpr auto visit(
 				VisitorT__&& visitor_
 			) -> ResultT__ requires (alternativeCount > 0) {
 				DCOOL_CORE_ASSERT(this->valid());
-				return mutableVisitorTable_<VisitorT__, ResultT__>[this->index()](this->data_(), ::dcool::core::forward<visitor_>);
+				return mutableVisitorTable_<VisitorT__, ResultT__>[this->index()](
+					this->data_(), ::dcool::core::forward<VisitorT__>(visitor_)
+				);
 			}
 		};
 

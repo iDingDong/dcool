@@ -16,6 +16,12 @@ If a user-provided configuration type have the public(or accessible by correspon
 
 If a user-provided configuration is not a inheritable class type, the behavior is undefined.
 
+### Named requirements
+
+A named requirement *R* might accompanied with a corresponding concpet `C`. For ease of elaboration, unless otherwise specified, all detailed requirements described in this document are covered by the corresponding concept (if exist) unless marked as semantic requirements.
+
+Note that *R* might not be satisfied even if `C` is met, but `C` is always met if *R* is satisfied. Unless otherwise specified, for term `T` that satisfy *R* but fail to meet `C`, a future version making `C` met for `T` is not considered as a breaking change.
+
 ## Reserved names
 
 Unless otherwise specified, the behavior is undefined if a user-defined name

@@ -3,110 +3,120 @@
 
 #	include <dcool/container.hpp>
 #	include <dcool/core.hpp>
-#	include <dcool/coroutine.hpp>
 #	include <dcool/resource.hpp>
 #	include <dcool/utility.hpp>
 
 #	include <atomic>
 #	include <condition_variable>
 #	include <mutex>
-#	include <stop_token>
+#	include <stdexcept>
 #	include <thread>
-#	include <utility>
 
 namespace dcool::concurrency {
-	template <typename ConfigT_ = ::dcool::core::Empty<>> class ThreadPoolChassis {
-		private: using Self_ = ThreadPoolChassis<ConfigT_>;
+	namespace detail_ {
+		template <::dcool::core::Complete ConfigT_> class ThreadPoolConfigAdaptor_ {
+			private: using Self_ = ThreadPoolConfigAdaptor_<ConfigT_>;
+			public: using Config = ConfigT_;
+
+			public: using Pool = ::dcool::resource::PoolType<Config>;
+
+			private: struct DefaultEngine_ {
+				private: using Self_ = DefaultEngine_;
+
+				public: [[no_unique_address]] Pool partPool;
+
+				public: constexpr auto pool() noexcept -> Pool& {
+					return this->partPool;
+				}
+
+				public: friend auto operator ==(Self_ const&, Self_ const&) -> ::dcool::core::Boolean = default;
+				public: friend auto operator !=(Self_ const&, Self_ const&) -> ::dcool::core::Boolean = default;
+			};
+
+			public: using Engine = ::dcool::core::ExtractedEngineType<Config, DefaultEngine_>;
+			static_assert(
+				::dcool::core::isSame<decltype(::dcool::core::declval<Engine>().pool()), Pool&>,
+				"User-defined 'Pool' does not match return value of 'Engine::pool'"
+			);
+		};
+	}
+
+	template <typename T_> concept ThreadPoolConfig = requires {
+		typename ::dcool::concurrency::detail_::ThreadPoolConfigAdaptor_<T_>;
+	};
+
+	template <
+		::dcool::concurrency::ThreadPoolConfig ConfigT_
+	> using ThreadPoolConfigAdaptor = ::dcool::concurrency::detail_::ThreadPoolConfigAdaptor_<ConfigT_>;
+
+	template <::dcool::concurrency::ThreadPoolConfig ConfigT_ = ::dcool::core::Empty<>> class ThreadPoolChassis {
 		public: using Config = ConfigT_;
 
-		private: using Pool = ::dcool::resource::DefaultPool;
-		private: using Thread_ = ::std::jthread;
-
-		private: struct Engine {
-			public: Pool partPool;
-
-			public: constexpr auto pool() -> Pool {
-				return this->partPool;
-			}
-		};
+		private: using ConfigAdaptor_ = ::dcool::concurrency::detail_::ThreadPoolConfigAdaptor_<Config>;
+		public: using Pool = ConfigAdaptor_::Pool;
+		public: using Engine = ConfigAdaptor_::Engine;
 
 		private: struct ThreadsConfig_ {
 			static constexpr ::dcool::core::Boolean stuffed = true;
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
 		};
 
 		private: struct TaskConfig_ {
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
+			static constexpr ::dcool::core::Boolean copyable = false;
 		};
 
 		private: struct TasksConfig_ {
-			static constexpr ::dcool::core::Boolean circular = true;
-			using Pool = Pool;
-			using Engine = Engine;
+			using Pool = ThreadPoolChassis::Pool;
+			using Engine = ThreadPoolChassis::Engine;
 		};
 
-		private: using Threads_ = ::dcool::container::ListChassis<Thread_, ThreadsConfig_>;
-		private: using Task_ = ::dcool::utility::FunctionChassis<void() noexcept, TaskConfig_>;
-		private: using Tasks_ = ::dcool::container::ListChassis<Task_, TasksConfig_>;
+		private: using Task_ = ::dcool::utility::FunctionChassis<void () noexcept, TaskConfig_>;
+		private: using Threads_ = ::dcool::container::ListChassis<::std::jthread, ThreadsConfig_>;
+		private: using Tasks_ = ::dcool::container::BidirectionalLinkedChassis<Task_, TasksConfig_>;
 
+		private: ::std::mutex m_mutex_;
+		private: ::std::condition_variable m_blocker_;
 		private: Threads_ m_threads_;
 		private: Tasks_ m_tasks_;
-		private: mutable ::std::condition_variable m_consumerBlocker_;
-		private: mutable ::std::condition_variable m_destructorBlocker_;
-		private: mutable ::std::mutex m_mutex_;
-		private: ::dcool::core::Length m_busyCount_;
-		private: mutable ::std::condition_variable m_busyCountBlocker_;
-		private: mutable ::std::mutex m_busyCountMutex_;
+		private: ::dcool::core::Length m_deparallelRequestCount_;
+		private: ::dcool::core::Boolean m_operational_;
 
-		public: constexpr void initialize(Engine& engine_, ::dcool::core::Length parallelLimit_ = Thread_::hardware_concurrency()) {
+		private: static void taskConsumer_(ThreadPoolChassis& self_, Engine& engine_) noexcept {
+			::std::unique_lock locker_(self_.m_mutex_);
+			for (; ; ) {
+				if (self_.m_deparallelRequestCount_ > 0) {
+					--(self_.m_deparallelRequestCount_);
+					break;
+				}
+				if (!(self_.m_tasks_.vacant(engine_))) {
+					Task_ task_ = ::dcool::core::move(self_.m_tasks_.front(engine_));
+					self_.m_tasks_.popFront(engine_);
+					locker_.unlock();
+					task_.invokeSelf(engine_);
+					task_.uninitialize(engine_);
+					locker_.lock();
+				} else {
+					if (!(self_.m_operational_)) {
+						break;
+					}
+					self_.m_blocker_.wait(locker_);
+				}
+			}
+		}
+
+		public: constexpr void initialize(
+			Engine& engine_, ::dcool::core::Length parallelLimit_ = ::std::jthread::hardware_concurrency()
+		) {
+			this->m_deparallelRequestCount_ = 0;
+			this->m_operational_ = true;
 			this->m_threads_.initialize(engine_);
 			try {
 				this->m_tasks_.initialize(engine_);
 				try {
-					for (::dcool::core::Length i = 0; i < parallelLimit_; ++i) {
-						this->m_threads_.emplaceBack(engine_, [](
-							::std::stop_token stopToken_, Self_& threadPool_, Engine& engine_
-						) noexcept {
-							while (!(stopToken_.stop_requested())) [[likely]] {
-								Task_ fetched_;
-								::dcool::core::Boolean isLastTask_;
-								{
-									::std::unique_lock locker_(threadPool_.m_mutex_);
-									while (threadPool_.m_tasks_.vacant(engine_)) {
-										if (stopToken_.stop_requested()) [[unlikely]] {
-											return;
-										}
-										threadPool_.m_consumerBlocker_.wait(locker_);
-									}
-									{
-										::std::lock_guard busyCountLocker_(threadPool_.m_busyCountMutex_);
-										++(threadPool_.m_busyCount_);
-									}
-									threadPool_.m_tasks_.front(engine_).relocateTo<true>(engine_, engine_, fetched_);
-									// This can be done without throw
-									threadPool_.m_tasks_.popFront(engine_);
-									isLastTask_ = threadPool_.m_tasks_.vacant(engine_);
-								}
-								if (isLastTask_) {
-									threadPool_.m_destructorBlocker_.notify_one();
-								}
-								// The task is already marked to be noexcept
-								fetched_.invokeSelf(engine_);
-								::dcool::core::Boolean isLastNonIdle_;
-								{
-									::std::lock_guard busyCountLocker_(threadPool_.m_busyCountMutex_);
-									--(threadPool_.m_busyCount_);
-									isLastNonIdle_ = threadPool_.m_busyCount_ == 0;
-								}
-								if (isLastNonIdle_) {
-									this->m_busyCountBlocker_.notify_all();
-								}
-								fetched_.uninitialize(engine_);
-							}
-						});
-					}
+					this->enparallel(engine_, parallelLimit_);
 				} catch (...) {
 					this->m_tasks_.uninitialize(engine_);
 					throw;
@@ -118,32 +128,20 @@ namespace dcool::concurrency {
 		}
 
 		public: constexpr void uninitialize(Engine& engine_) noexcept {
-			static_cast<void>(this->waitUntilNoPending(engine_));
-			for (auto& thread_: this->m_threads_) {
-				static_cast<void>(thread_.request_stop());
+			{
+				::dcool::core::PhoneyLockGuard guard_(this->m_mutex_);
+				this->m_operational_ = false;
 			}
-			this->m_consumerBlocker_.notify_all();
+			this->m_blocker_.notify_all();
 			this->m_threads_.uninitialize(engine_);
+			this->m_tasks_.uninitialize(engine_);
 		}
 
-		public: constexpr auto waitUntilNoPending(Engine& engine_) const noexcept {
-			::std::unique_lock locker_(this->m_mutex_);
-			this->m_destructorBlocker_.wait(locker_, [this, &engine_]() noexcept -> ::dcool::core::Boolean {
-				return this->m_tasks_.vacant(engine_);
-			});
-			return locker_;
-		}
-
-		public: constexpr auto waitUntilIdle(Engine& engine_) const noexcept {
-			auto result_ = ::std::pair{ this->waitUntilNoPending(engine_), ::std::unique_lock(this->m_busyCountMutex_) };
-			this->m_busyCountBlocker_.wait(result_.second, [this]() noexcept -> ::dcool::core::Boolean {
-				return this->m_busyCount_ == 0;
-			});
-			return result_;
-		}
-
-		public: template <typename TaskT__> constexpr void enqueTask(Engine& engine_, TaskT__&& task_) noexcept {
+		public: template <typename TaskT__> constexpr void enqueTask(Engine& engine_, TaskT__&& task_) {
 			::std::lock_guard locker_(this->m_mutex_);
+			if (!(this->m_operational_)) {
+				throw ::std::runtime_error("Thread pool no longer operational.");
+			}
 			this->m_tasks_.emplaceBack(engine_);
 			try {
 				this->m_tasks_.back(engine_).initialize(engine_, ::dcool::core::forward<TaskT__>(task_));
@@ -151,6 +149,73 @@ namespace dcool::concurrency {
 				this->m_tasks_.popBack(engine_);
 				throw;
 			}
+			this->m_blocker_.notify_one();
+		}
+
+		public: constexpr void enparallel(Engine& engine_, ::dcool::core::Length count_ = 1) {
+			while (count_ > 0) {
+				this->m_threads_.emplaceBack(engine_, taskConsumer_, ::std::ref(*this), ::std::ref(engine_));
+				--count_;
+			}
+		}
+
+		public: constexpr void deparallel(Engine& engine_, ::dcool::core::Length count_ = 1) noexcept {
+			if (count_ == 0) {
+				return;
+			}
+			{
+				::dcool::core::PhoneyLockGuard guard_(this->m_mutex_);
+				DCOOL_CORE_ASSERT(this->m_threads_.length(engine_) - this->m_deparallelRequestCount_ >= count_);
+				this->m_deparallelRequestCount_ += count_;
+			}
+			if (count_ > 1) {
+				this->m_blocker_.notify_all();
+			} else {
+				this->m_blocker_.notify_one();
+			}
+		}
+	};
+
+	template <typename ConfigT_ = ::dcool::core::Empty<>> class ThreadPool {
+		private: using Self_ = ThreadPoolChassis<ConfigT_>;
+		public: using Config = ConfigT_;
+
+		public: using Chassis = ::dcool::concurrency::ThreadPoolChassis<Config>;
+		public: using Engine = Chassis::Engine;
+
+		private: Chassis m_chassis_;
+		private: [[no_unique_address]] mutable Engine m_engine_;
+
+		public: constexpr explicit ThreadPool(::dcool::core::Length parallelLimit_ = ::std::jthread::hardware_concurrency()) {
+			this->chassis().initialize(this->engine(), parallelLimit_);
+		}
+
+		public: constexpr ~ThreadPool() noexcept {
+			this->chassis().uninitialize(this->engine());
+		}
+
+		public: constexpr auto chassis() const noexcept -> Chassis const& {
+			return this->m_chassis_;
+		}
+
+		public: constexpr auto chassis() noexcept -> Chassis& {
+			return this->m_chassis_;
+		}
+
+		public: constexpr auto engine() const noexcept -> Engine& {
+			return this->m_engine_;
+		}
+
+		public: template <typename TaskT__> constexpr void enqueTask(TaskT__&& task_) {
+			this->chassis().enqueTask(this->engine(), ::dcool::core::forward<TaskT__>(task_));
+		}
+
+		public: constexpr void enparallel(::dcool::core::Length count_ = 1) {
+			this->chassis().enparallel(this->engine(), count_);
+		}
+
+		public: constexpr void deparallel(::dcool::core::Length count_ = 1) noexcept {
+			this->chassis().deparallel(this->engine(), count_);
 		}
 	};
 }

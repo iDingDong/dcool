@@ -25,7 +25,6 @@ DCOOL_CORE_DEFINE_CONSTANT_MEMBER_DETECTOR(
 namespace dcool::concurrency {
 	namespace detail_ {
 		template <typename ConfigT_, typename ValueT_> class AtomConfigAdaptor_ {
-			private: using Self_ = AtomConfigAdaptor_<ConfigT_, ValueT_>;
 			public: using Config = ConfigT_;
 			public: using Value = ValueT_;
 			static_assert(::dcool::core::TriviallyCopyable<Value>);
@@ -90,7 +89,6 @@ namespace dcool::concurrency {
 		};
 
 		template <typename ValueT_, ::dcool::core::Length stampWidthC_> struct StampedValue_ {
-			private: using Self_ = StampedValue_<ValueT_, stampWidthC_>;
 			public: using Value = ValueT_;
 			public: static constexpr ::dcool::core::Length stampWidth = stampWidthC_;
 
@@ -99,7 +97,7 @@ namespace dcool::concurrency {
 			public: Value value;
 			public: [[no_unique_address]] Stamp stamp;
 
-			friend constexpr auto intelliHasEqualValueRepresentation(Self_ const& left_, Self_ const& right_) {
+			friend constexpr auto intelliHasEqualValueRepresentation(StampedValue_ const& left_, StampedValue_ const& right_) {
 				//::dcool::core::terminate();
 				return left_.stamp == right_.stamp && ::dcool::core::intelliHasEqualValueRepresentation(left_.value, right_.value);
 			}
@@ -107,7 +105,6 @@ namespace dcool::concurrency {
 	}
 
 	template <typename ValueT_, ::dcool::concurrency::AtomConfig<ValueT_> ConfigT_ = ::dcool::core::Empty<>> struct Atom {
-		private: using Self_ = Atom<ValueT_, ConfigT_>;
 		public: using Value = ValueT_;
 		public: using Config = ConfigT_;
 
@@ -159,17 +156,17 @@ namespace dcool::concurrency {
 		public: constexpr Atom() noexcept: Atom(Value()) {
 		}
 
-		public: Atom(Self_ const&) = delete;
-		public: Atom(Self_&&) = delete;
+		public: Atom(Atom const&) = delete;
+		public: Atom(Atom&&) = delete;
 
 		public: constexpr Atom(Value const& desired_) noexcept: m_holder_ {
 			.underlying_ = toUnderlying_(desired_)
 		} {
 		}
 
-		public: auto operator =(Self_ const&)& -> Self_& = delete;
+		public: auto operator =(Atom const&)& -> Atom& = delete;
 
-		public: constexpr auto operator =(Value const& desired_)& noexcept -> Self_& {
+		public: constexpr auto operator =(Value const& desired_)& noexcept -> Atom& {
 			this->store(desired_);
 			return *this;
 		}
@@ -359,6 +356,58 @@ namespace dcool::concurrency {
 		}
 
 		private: template <typename TransformerT__> constexpr auto sequencedFetchTransformOrLoadUnderlying_(
+			TransformerT__&& transformer_
+		)& noexcept -> UnderlyingValue {
+			UnderlyingValue result_ = this->sequencedLoadUnderlying_();
+			auto new_ = ::dcool::core::invoke(
+				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
+			);
+			if (new_.valid()) {
+				this->sequencedStoreUnderlying_(new_.access());
+			}
+			return result_;
+		}
+
+		private: template <typename TransformerT__> constexpr auto atomicallyTransformFetchUnderlying_(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			if constexpr (usingAtomicBasicOperation_) {
+				return ::dcool::concurrency::atomicallyTransformFetch(
+					this->m_holder_.underlying_, ::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			::dcool::core::PhoneyLockGuard guard_(this->m_locker_.mutex_);
+			return this->sequencedTransformFetchUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		private: template <typename TransformerT__> constexpr auto sequencedTransformFetchUnderlying_(
+			TransformerT__&& transformer_
+		)& noexcept -> UnderlyingValue {
+			if constexpr (usingStandardAtomic_) {
+				return this->atomicallyTransformFetchUnderlying_(
+					::dcool::core::forward<TransformerT__>(transformer_), ::std::memory_order::relaxed, ::std::memory_order::relaxed
+				);
+			}
+			UnderlyingValue result_ = this->m_holder_.underlying_;
+			this->m_holder_.underlying_ = ::dcool::core::invoke(
+				::dcool::core::forward<TransformerT__>(transformer_), ::dcool::core::constantize(result_)
+			);
+			return result_;
+		}
+
+		private: template <typename TransformerT__> constexpr auto atomicallyTransformFetchOrLoadUnderlying_(
+			TransformerT__&& transformer_, ::std::memory_order transformOrder_, ::std::memory_order loadOrder_
+		)& noexcept -> UnderlyingValue requires (supportAtomicOperation_) {
+			if constexpr (usingAtomicBasicOperation_) {
+				return ::dcool::concurrency::atomicallyTransformFetchOrLoad(
+					this->m_holder_.underlying_, ::dcool::core::forward<TransformerT__>(transformer_), transformOrder_, loadOrder_
+				);
+			}
+			::dcool::core::PhoneyLockGuard guard_(this->m_locker_.mutex_);
+			return this->sequencedTransformFetchOrLoadUnderlying_(::dcool::core::forward<TransformerT__>(transformer_));
+		}
+
+		private: template <typename TransformerT__> constexpr auto sequencedTransformFetchOrLoadUnderlying_(
 			TransformerT__&& transformer_
 		)& noexcept -> UnderlyingValue {
 			UnderlyingValue result_ = this->sequencedLoadUnderlying_();

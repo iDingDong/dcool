@@ -9,8 +9,10 @@ namespace dcool::core {
 	template <typename T_> using UndeducedType = ::std::type_identity_t<T_>;
 
 	template <typename T_> using LvalueReferenceAddedType = ::std::add_lvalue_reference_t<T_>;
+	template <typename T_> using PointerAddedType = ::std::add_pointer_t<T_>;
 	template <typename T_> using ConstAddedType = ::std::add_const_t<T_>;
 	template <typename T_> using ReferenceRemovedType = ::std::remove_reference_t<T_>;
+	template <typename T_> using PointerRemovedType = ::std::remove_pointer_t<T_>;
 	template <typename T_> using ConstRemovedType = ::std::remove_const_t<T_>;
 	template <typename T_> using VolatileRemovedType = ::std::remove_volatile_t<T_>;
 	template <typename T_> using QualifierRemovedType = ::std::remove_cv_t<T_>;
@@ -161,6 +163,55 @@ namespace dcool::core {
 	template <typename LeftT_, typename RightT_> using UseRightType = RightT_;
 
 	template <typename LeftT_, auto rightC_> constexpr decltype(rightC_) useRightValue = rightC_;
+
+	namespace detail_ {
+		struct VoidStub_;
+
+		template <typename T_> struct StubReferenceableHelper_ {
+			using Result_ = T_;
+		};
+
+		template <> struct StubReferenceableHelper_<void> {
+			using Result_ = ::dcool::core::detail_::VoidStub_;
+		};
+	}
+
+	template <typename T_> using StubReferenceableType = ::dcool::core::IdenticallyQualifiedType<
+		typename ::dcool::core::detail_::StubReferenceableHelper_<::dcool::core::ReferenceRemovedType<T_>>::Result_, T_
+	>;
+
+	template <typename T_> using EnumUnderlyingType = ::std::underlying_type_t<T_>;
+
+	template <typename T_> using InvokeResultType = ::std::invoke_result_t<T_>;
+
+	template <auto... valueCs_> struct IntegerSequence {
+		static_assert(sizeof...(valueCs_) == 0);
+		using Standard = ::std::integer_sequence<int>;
+	};
+
+	template <auto firstC_, decltype(firstC_)... restCs_> struct IntegerSequence<firstC_, restCs_...> {
+		using Standard = ::std::integer_sequence<decltype(firstC_), firstC_, restCs_...>;
+	};
+
+	namespace detail_ {
+		template <
+			::dcool::core::Size followingLengthC_, auto currentC_, auto stepC_, decltype(currentC_)... valueCs_
+		> struct ProgressionIntegerSequenceHelper_ {
+			using Result_ = ::dcool::core::detail_::ProgressionIntegerSequenceHelper_<
+				followingLengthC_ - 1, currentC_ + stepC_, stepC_, valueCs_..., currentC_
+			>::Result_;
+		};
+
+		template <
+			auto currentC_, auto stepC_, decltype(currentC_)... valueCs_
+		> struct ProgressionIntegerSequenceHelper_<0, currentC_, stepC_, valueCs_...> {
+			using Result_ = ::dcool::core::IntegerSequence<valueCs_...>;
+		};
+	}
+
+	template <
+		::dcool::core::Size lengthC_, auto beginC_, auto stepC_
+	> using ProgressionIntegerSequence = ::dcool::core::detail_::ProgressionIntegerSequenceHelper_<lengthC_, beginC_, stepC_>;
 }
 
 #endif

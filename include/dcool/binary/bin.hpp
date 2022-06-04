@@ -18,7 +18,6 @@ namespace dcool::binary {
 	template <::dcool::binary::BinConfig ConfigT_> using BinConfigAdaptor = ::dcool::binary::detail_::BinConfigAdaptor_<ConfigT_>;
 
 	template <::dcool::binary::BinConfig ConfigT_ = ::dcool::core::Empty<>> struct BinChassis {
-		private: using Self_ = BinChassis<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		private: using ConfigAdaptor_ = ::dcool::binary::BinConfigAdaptor<Config>;
@@ -37,17 +36,17 @@ namespace dcool::binary {
 			this->m_storage_.uninitialize(engine_);
 		}
 
-		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, Self_& other_) const {
+		public: constexpr void cloneTo(Engine& engine_, Engine& otherEngine_, BinChassis& other_) const {
 			this->m_storage_.cloneTo(engine_, otherEngine_, other_.m_storage_);
 		}
 
-		public: constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, Self_& other_) noexcept {
+		public: constexpr void relocateTo(Engine& engine_, Engine& otherEngine_, BinChassis& other_) noexcept {
 			this->m_storage_.relocateTo(engine_, otherEngine_, other_.m_storage_);
 		}
 
 		public: template <
 			typename ::dcool::core::Boolean engineWillBeSwappedC__ = false
-		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, Self_& other_) noexcept {
+		> constexpr void swapWith(Engine& engine_, Engine& otherEngine_, BinChassis& other_) noexcept {
 			this->m_storage_.swapWith(engine_, otherEngine_, other_.m_storage_);
 		}
 
@@ -87,7 +86,7 @@ namespace dcool::binary {
 			this->m_storage_.batchInsertN(engine_, this->m_storage_.end(engine_), reinterpret_cast<Unit const*>(toWrite_), length_);
 		}
 
-		public: constexpr void append(Engine& engine_, Engine& otherEngine_, Self_ const& other_) {
+		public: constexpr void append(Engine& engine_, Engine& otherEngine_, BinChassis const& other_) {
 			this->write(engine_, other_.value(otherEngine_), other_.length(otherEngine_));
 		}
 
@@ -114,7 +113,6 @@ namespace dcool::binary {
 	};
 
 	template <::dcool::binary::BinConfig ConfigT_ = ::dcool::core::Empty<>> struct Bin {
-		private: using Self_ = Bin<ConfigT_>;
 		public: using Config = ConfigT_;
 
 		public: using Chassis = ::dcool::binary::BinChassis<Config>;
@@ -129,11 +127,11 @@ namespace dcool::binary {
 			this->chassis().initialize(this->mutableEngine());
 		}
 
-		public: constexpr Bin(Self_ const& other_): m_engine_(other_.mutableEngine()) {
+		public: constexpr Bin(Bin const& other_): m_engine_(other_.mutableEngine()) {
 			other_.chassis().cloneTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
 		}
 
-		public: constexpr Bin(Self_&& other_): m_engine_(other_.mutableEngine()) {
+		public: constexpr Bin(Bin&& other_): m_engine_(other_.mutableEngine()) {
 			other_.chassis().relocateTo(other_.mutableEngine(), this->mutableEngine(), this->chassis());
 			other_.chassis().initialize(other_.mutableEngine());
 		}
@@ -142,18 +140,18 @@ namespace dcool::binary {
 			this->chassis().uninitialize(this->mutableEngine());
 		}
 
-		public: constexpr auto operator =(Self_ const& other_) -> Self_& {
-			Self_ middleMan_(other_);
+		public: constexpr auto operator =(Bin const& other_) -> Bin& {
+			Bin middleMan_(other_);
 			this->swapWith(other_);
 			return *this;
 		}
 
-		public: constexpr auto operator =(Self_&& other_) noexcept -> Self_& {
+		public: constexpr auto operator =(Bin&& other_) noexcept -> Bin& {
 			this->swapWith(other_);
 			return *this;
 		}
 
-		public: constexpr void swapWith(Self_& other_) noexcept {
+		public: constexpr void swapWith(Bin& other_) noexcept {
 			this->m_chassis_.swapWith<true>(this->mutableEngine(), other_.mutableEngine(), other_);
 			::dcool::core::intelliSwap(this->mutableEngine(), other_.mutableEngine());
 		}
@@ -204,7 +202,7 @@ namespace dcool::binary {
 			this->chassis().write(this->mutableEngine(), toWrite_, length_);
 		}
 
-		public: constexpr void append(Self_ const& other_) {
+		public: constexpr void append(Bin const& other_) {
 			this->chassis().append(this->mutableEngine(), other_.mutableEngine(), other_.chassis());
 		}
 
